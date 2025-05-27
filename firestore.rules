@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Reglas para la colección USUARIOS
+    match /USUARIOS/{userId} {
+      // Los usuarios pueden leer y escribir su propio documento
+      allow read, write: if request.auth != null && request.auth.token.email == userId;
+      
+      // Los administradores pueden leer y escribir cualquier usuario
+      allow read, write: if request.auth != null && 
+        get(/databases/$(database)/documents/USUARIOS/$(request.auth.token.email)).data.rol == 'admin';
+    }
+    
+    // Reglas para la colección PEDIDOS
+    match /PEDIDOS/{pedidoId} {
+      // Todos los usuarios autenticados pueden leer pedidos
+      allow read: if request.auth != null;
+      
+      // Solo usuarios autenticados pueden crear pedidos
+      allow create: if request.auth != null;
+      
+      // Solo el creador o admin pueden modificar/eliminar
+      allow update, delete: if request.auth != null && 
+        (resource.data.creadoPor == request.auth.token.email || 
+         get(/databases/$(database)/documents/USUARIOS/$(request.auth.token.email)).data.rol == 'admin');
+    }
+    
+    // Reglas para la colección PRODUCTOS
+    match /PRODUCTOS/{productoId} {
+      // Todos pueden leer productos
+      allow read: if request.auth != null;
+      
+      // Solo administradores pueden crear/modificar/eliminar productos
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/USUARIOS/$(request.auth.token.email)).data.rol == 'admin';
+    }
+    
+    // Reglas para futuras colecciones de RRHH
+    match /NOMINAS/{nominaId} {
+      // Los usuarios solo pueden ver sus propias nóminas
+      allow read: if request.auth != null && 
+        (resource.data.empleadoId == request.auth.token.email ||
+         get(/databases/$(database)/documents/USUARIOS/$(request.auth.token.email)).data.rol == 'admin');
+      
+      // Solo administradores pueden crear/modificar nóminas
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/USUARIOS/$(request.auth.token.email)).data.rol == 'admin';
+    }
+    
+    match /VACACIONES/{vacacionId} {
+      // Los usuarios pueden ver sus propias solicitudes
+      allow read: if request.auth != null && 
+        (resource.data.empleadoId == request.auth.token.email ||
+         get(/databases/$(database)/documents/USUARIOS/$(request.auth.token.email)).data.rol == 'admin');
+      
+      // Los usuarios pueden crear sus propias solicitudes
+      allow create: if request.auth != null && 
+        request.resource.data.empleadoId == request.auth.token.email;
+      
+      // Solo administradores pueden aprobar/rechazar
+      allow update, delete: if request.auth != null && 
+        get(/databases/$(database)/documents/USUARIOS/$(request.auth.token.email)).data.rol == 'admin';
+    }
+  }
+}
