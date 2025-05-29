@@ -1,75 +1,116 @@
-
-
 // netlify/functions/create-employee.mjs
 import admin from 'firebase-admin';
 
 // Inicializar Firebase Admin solo una vez
 if (!admin.apps.length) {
-    try {
-    // ✅ Verificar que las variables existen
+  try {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
+    console.log('🔍 Verificando variables de entorno:');
+    console.log('PROJECT_ID:', projectId ? '✅ OK' : '❌ FALTA');
+    console.log('CLIENT_EMAIL:', clientEmail ? '✅ OK' : '❌ FALTA');
+    console.log('PRIVATE_KEY:', privateKey ? '✅ OK' : '❌ FALTA');
+
     if (!projectId || !clientEmail || !privateKey) {
       throw new Error('Faltan variables de entorno de Firebase');
     }
+
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: projectId,
         clientEmail: clientEmail,
-        privateKey: privateKey.replace(/\\n/g, '\n'), // ✅ Convertir \n a saltos de línea reales
+        privateKey: privateKey.replace(/\\n/g, '\n'),
       }),
     });
     
     console.log('✅ Firebase Admin inicializado correctamente');
   } catch (error) {
-    console.error('❌ Error inicializando Firebase Admin:', error);
-    throw error;
+    console.error('❌ Error inicializando Firebase Admin:', error.message);
+    // NO hacer throw aquí - manejar en el handler
   }
 }
 
 export default async (request, context) => {
-  // Headers CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json' // ✅ IMPORTANTE: Siempre JSON
   };
 
-  // Manejar preflight OPTIONS
-  if (request.method === 'OPTIONS') {
-    return new Response('', {
-      status: 200,
-      headers
-    });
-  }
-
-  // Solo permitir POST
-  if (request.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      {
-        status: 405,
-        headers: { ...headers, 'Content-Type': 'application/json' }
-      }
-    );
-  }
-
   try {
-    // Leer datos del request
-    const { email, password, nombre, rol = 'user' } = await request.json();
+    // Manejar preflight OPTIONS
+    if (request.method === 'OPTIONS') {
+      return new Response(JSON.stringify({ message: 'OK' }), {
+        status: 200,
+        headers
+      });
+    }
+
+    // Solo permitir POST
+    if (request.method !== 'POST') {
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Method not allowed' 
+        }),
+        {
+          status: 405,
+          headers
+        }
+      );
+    }
+
+    // ✅ VERIFICAR que Firebase esté inicializado
+    if (!admin.apps.length) {
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Firebase no está configurado correctamente' 
+        }),
+        {
+          status: 500,
+          headers
+        }
+      );
+    }
+
+    // Leer y validar datos del request
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Datos JSON inválidos' 
+        }),
+        {
+          status: 400,
+          headers
+        }
+      );
+    }
+
+    const { email, password, nombre, rol = 'user', telefono, vacaDias, vacaHoras } = requestData;
 
     // Validar datos requeridos
     if (!email || !password || !nombre) {
       return new Response(
-        JSON.stringify({ error: 'Email, password y nombre son requeridos' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Email, password y nombre son requeridos' 
+        }),
         {
           status: 400,
-          headers: { ...headers, 'Content-Type': 'application/json' }
+          headers
         }
       );
     }
+
+    console.log(`📝 Creando usuario: ${email}`);
 
     // Crear usuario en Firebase Auth
     const userRecord = await admin.auth().createUser({
@@ -79,13 +120,20 @@ export default async (request, context) => {
       emailVerified: false
     });
 
+    console.log(`✅ Usuario creado en Auth: ${userRecord.uid}`);
+
     // Crear documento en Firestore
     await admin.firestore().collection('USUARIOS').doc(email).set({
       id: email,
       nombre: nombre,
-      favoritos:[],
-      rol: rol
+      email: email,
+      rol: rol,
+      telefono: telefono || '',
+      vacaDias: vacaDias || 0,
+      vacaHoras: vacaHoras || 0
     });
+
+    console.log(`✅ Documento creado en Firestore para: ${email}`);
 
     return new Response(
       JSON.stringify({
@@ -95,25 +143,27 @@ export default async (request, context) => {
       }),
       {
         status: 200,
-        headers: { ...headers, 'Content-Type': 'application/json' }
+        headers
       }
     );
 
   } catch (error) {
-    console.error('Error creando usuario:', error);
+    console.error('❌ Error en create-employee:', error);
+    
+    // ✅ SIEMPRE retornar JSON válido, incluso en errores
     return new Response(
       JSON.stringify({ 
+        success: false,
         error: `Error interno: ${error.message}` 
       }),
       {
         status: 500,
-        headers: { ...headers, 'Content-Type': 'application/json' }
+        headers
       }
     );
   }
 };
 
-// Configuración de la función
 export const config = {
   path: "/api/create-employee",
   method: ["POST", "OPTIONS"]

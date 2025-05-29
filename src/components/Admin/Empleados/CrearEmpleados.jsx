@@ -34,6 +34,7 @@ const CrearEmpleado = () => {
     setMessage('');
 
     try {
+       console.log('📤 Enviando datos:', formData);
       const response = await fetch('/api/create-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,6 +42,7 @@ const CrearEmpleado = () => {
       });
 
       const result = await response.json();
+       console.log('📥 Respuesta recibida:', response.status, response.statusText);
       
       if (response.ok) {
         setMessage(result.message);

@@ -24,8 +24,12 @@ dist-ssr
 *.sw?
 
 # Environment variables
+# .gitignore
 .env
 .env.local
 .env.production
+.env.development.local
+.env.test.local
+.env.production.local
 # Local Netlify folder
 .netlify
