@@ -110,7 +110,7 @@ const Login = () => {
                 <RestaurantIcon sx={{ fontSize: 30, color: 'white' }} />
               </Box>
               <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-                Pedidos Colectivos
+                Mecaformas 3D
               </Typography>
               <Typography variant="body1" color="text.secondary" align="center">
                 Inicia sesión para acceder a la aplicación
@@ -155,7 +155,8 @@ const Login = () => {
                 onChange={handleChange}
                 required
                 margin="normal"
-                InputProps={{
+                  slotProps={{
+                    input:{
                   startAdornment: (
                     <InputAdornment position="start">
                       <LockIcon color="action" />
@@ -172,6 +173,7 @@ const Login = () => {
                       </IconButton>
                     </InputAdornment>
                   ),
+                  }
                 }}
                 sx={{ mb: 3 }}
               />

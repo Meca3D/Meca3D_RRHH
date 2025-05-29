@@ -44,7 +44,7 @@ const CreateOrder = () => {
  setHoraLlegada('')
  // Redirigir al detalle del pedido recién creado
   setTimeout(() => {
-   navigate(`/orders/${pedidoId}`);
+   navigate(`/desayunos/orders/${pedidoId}`);
  }, 1500);
  
 } catch (err) {

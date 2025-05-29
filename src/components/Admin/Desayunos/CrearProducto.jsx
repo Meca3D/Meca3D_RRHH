@@ -6,7 +6,7 @@ import {
   Paper, Snackbar, Alert,IconButton
 } from '@mui/material';
 import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { db } from '../../../firebase/config';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 
@@ -81,7 +81,7 @@ const CrearProducto = () => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <IconButton 
             aria-label="atras"       
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/admin/desayunos')}
         >
             <ArrowBackIcon fontSize="large" />         
         </IconButton>

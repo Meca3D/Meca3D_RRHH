@@ -111,7 +111,7 @@ const OrderList = () => {
           color="primary" 
           startIcon={<AddCircleOutlineIcon />}
           component={RouterLink} 
-          to="/orders/create"
+          to="/desayunos/orders/create"
           fullWidth
           sx={{borderRadius:2}}
           
@@ -151,7 +151,7 @@ const OrderList = () => {
                 </Fab>) : <></>}
                 <CardActionArea 
                   component={RouterLink} 
-                  to={`/orders/${order.id}`}
+                  to={`/desayunos/orders/${order.id}`}
                   sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
                 >
                   <CardContent sx={{ flexGrow: 0, textAlign:'center'}}>

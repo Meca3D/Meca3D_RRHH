@@ -11,7 +11,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { db } from '../../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 
 const ModificarProducto = () => {
@@ -142,7 +142,7 @@ useEffect(() => {
       <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <IconButton 
           aria-label="atras"        
-          onClick={() => navigate('/admin')}
+          onClick={() => navigate('/admin/desayunos')}
         >
           <ArrowBackIcon fontSize="large" />         
         </IconButton>

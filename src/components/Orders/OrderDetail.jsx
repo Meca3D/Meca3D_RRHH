@@ -34,12 +34,20 @@ const OrderDetail = () => {
 
   // Cargar datos del pedido
   useEffect(() => {
+    if (!orderId) {
+      console.error('OrderId no está definido');
+      navigate('/desayunos/orders');
+      return;
+    }
     if (!currentUser) {
       navigate('/login');
       return;
     }
 
     const fetchOrderData = async () => {
+       if (!orderId || orderId.trim() === '') {
+          throw new Error('ID de pedido inválido');
+        }
       try {
         const orderRef = doc(db, 'PEDIDOS', orderId);
         const orderSnap = await getDoc(orderRef);
@@ -68,7 +76,7 @@ const OrderDetail = () => {
           });
         }
         } else {
-          navigate('/orders');
+          navigate('/desayunos/orders');
         }
       } catch (error) {
         console.error("Error al cargar el pedido:", error);
@@ -172,7 +180,7 @@ useEffect(() => {
         aria-label="atras" 
         size='small'
         color='secondary'       
-        onClick={() => navigate('/orders')}
+        onClick={() => navigate('/desayunos/orders')}
       >
         <ArrowBackIcon fontSize="large"/>         
       </Fab>

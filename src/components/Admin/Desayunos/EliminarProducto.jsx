@@ -10,7 +10,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ClearIcon from '@mui/icons-material/Clear';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { db } from '../../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 
 const EliminarProducto = () => {
@@ -119,7 +119,7 @@ const EliminarProducto = () => {
       <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <IconButton 
           aria-label="atras"        
-          onClick={() => navigate('/admin')}
+          onClick={() => navigate('/admin/desayunos')}
         >
           <ArrowBackIcon fontSize="large" />         
         </IconButton>
