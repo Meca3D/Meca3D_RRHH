@@ -70,24 +70,47 @@ const UserProfile = ({ open, onClose, user, loading }) => {
   };
   // Función para subir imagen a ImgBB
   const uploadImageToImgBB = async (file) => {
-    const formData = new FormData();
-    formData.append('key', IMGBB_API_KEY);
-    formData.append('image', file);
-
-    try {
-      setUploading(true);
-      const response = await axios.post('https://api.imgbb.com/1/upload', formData);
-      setUploading(false);
-      
-      // Retorna la URL de la imagen subida
-      return response.data.data.display_url;
-    } catch (error) {
-      setUploading(false);
-      console.error('Error al subir imagen a ImgBB:', error);
-      throw new Error('Error al subir imagen: ' + (error.response?.data?.message || error.message));
+  try {
+    // ✅ Verificar tipo de archivo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Formato de archivo no soportado. Usa JPG, PNG o GIF.');
     }
-  };
 
+    // ✅ Verificar tamaño (máximo 32MB para ImgBB)
+    if (file.size > 32 * 1024 * 1024) {
+      throw new Error('El archivo es demasiado grande. Máximo 32MB.');
+    }
+
+    const formData = new FormData();
+    formData.append('image', file); // ✅ IMPORTANTE: usar "image" no "file"
+
+    const response = await axios.post(
+      `https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`,
+      formData,
+      {
+        headers: {
+          // ✅ NO incluir Content-Type manualmente - axios lo hace automáticamente
+        }
+      }
+    );
+
+    if (response.data && response.data.success) {
+      return response.data.data.url;
+    } else {
+      throw new Error('Error en la respuesta de ImgBB');
+    }
+  } catch (error) {
+    console.error('Error al subir imagen a ImgBB:', error);
+    
+    // ✅ Manejo específico de errores de ImgBB
+    if (error.response?.status === 400) {
+      throw new Error('Formato de imagen no válido o archivo corrupto');
+    }
+    
+    throw error;
+  }
+};
   const handleUpdateProfile = async () => {
     try {
            let photoURL = previewUrl; // Valor predeterminado: URL actual
