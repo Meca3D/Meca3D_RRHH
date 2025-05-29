@@ -1,11 +1,10 @@
-
 {
   "name": "netlify-functions",
   "version": "1.0.0",
   "type": "module",
   "description": "Modern Netlify Functions for RRHH App",
   "dependencies": {
-    "firebase-admin": "^12.0.0"
+    "firebase-admin": "^12.7.0"
   },
   "engines": {
     "node": ">=18.0.0"
