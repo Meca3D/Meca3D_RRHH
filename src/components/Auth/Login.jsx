@@ -15,7 +15,7 @@ import {
   IconButton,
   CssBaseline
 } from '@mui/material';
-import RestaurantIcon from '@mui/icons-material/Restaurant';
+import FactoryIcon from '@mui/icons-material/Factory';
 import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
 import Visibility from '@mui/icons-material/Visibility';
@@ -107,7 +107,7 @@ const Login = () => {
                   mb: 2
                 }}
               >
-                <RestaurantIcon sx={{ fontSize: 30, color: 'white' }} />
+                <FactoryIcon sx={{ fontSize: 30, color: 'white' }} />
               </Box>
               <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
                 Mecaformas 3D

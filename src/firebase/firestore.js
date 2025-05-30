@@ -176,22 +176,17 @@ export const crearPedido = async (nombrePedido, usuarioEmail, productos = [], fe
 // Obtener todos los pedidos
 export const getPedidos = async () => {
   try {
-
     const q = query(collection(db, 'PEDIDOS'), orderBy('fechaCreacion', 'desc'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
-      // Asegurarnos que tenemos una estructura consistente
       return {
         id: doc.id,
         nombre: data.nombre,
         creadoPor: data.creadoPor,
         fechaReserva: data.fechaReserva,
-        usuarios: data.usuarios?.map(u => ({
-          id: u.email,
-          nombre: u.nombre,
-          productos: u.productos
-        })) || [],
+        fechaCreacion: data.fechaCreacion,
+        usuarios: data.usuarios || [], // ✅ Mantener estructura original
         ...data
       };
     });
@@ -201,25 +196,19 @@ export const getPedidos = async () => {
   }
 };
 
-// Obtener un pedido específico
 export const getPedido = async (pedidoId) => {
   try {
     const docRef = doc(db, 'PEDIDOS', pedidoId);
     const docSnap = await getDoc(docRef);
-    
     if (docSnap.exists()) {
       const data = docSnap.data();
-      // Asegurarnos que tenemos una estructura consistente
       return {
         id: docSnap.id,
         nombre: data.nombre,
-        creadoPor:data.creadoPor,
+        creadoPor: data.creadoPor,
         fechaReserva: data.fechaReserva,
-        usuarios:  data.usuarios?.map(u => ({
-          id: u.email,
-          nombre: u.nombre,
-          productos: u.productos
-        })) || [],
+        fechaCreacion: data.fechaCreacion,
+        usuarios: data.usuarios || [], // ✅ Mantener estructura original
         ...data
       };
     } else {
@@ -231,6 +220,7 @@ export const getPedido = async (pedidoId) => {
     throw error;
   }
 };
+
 
 // Unirse a un pedido existente
 export const unirseAPedido = async (pedidoId, usuarioEmail, productos) => {

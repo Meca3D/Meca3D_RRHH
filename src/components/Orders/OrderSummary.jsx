@@ -468,7 +468,7 @@ const OrderSummary = ({ order: initialOrder }) => {
             Desayuno Mecaformas 3D
           </Typography>
           <Typography variant="h4" color="secondary">
-             Reserva: {formatDate(order.horaReserva)}
+             Reserva: {formatDate(order.fechaReserva)}
           </Typography>
           <Typography variant="h4" color="black">
             Mesa para: {order?.usuarios?.length || 0} personas

@@ -34,60 +34,68 @@ const OrderDetail = () => {
 
 
   // Cargar datos del pedido
-  useEffect(() => {
-    if (!orderId) {
-      console.error('OrderId no está definido');
-      navigate('/desayunos/orders');
-      return;
-    }
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
+useEffect(() => {
+  if (!orderId) {
+    console.error('OrderId no está definido');
+    navigate('/desayunos/orders');
+    return;
+  }
 
-    const fetchOrderData = async () => {
-       if (!orderId || orderId.trim() === '') {
-          throw new Error('ID de pedido inválido');
-        }
-      try {
-        const orderRef = doc(db, 'PEDIDOS', orderId);
-        const orderSnap = await getDoc(orderRef);
+  if (!currentUser) {
+    navigate('/login');
+    return;
+  }
+
+  const fetchOrderData = async () => {
+    try {
+      if (!orderId || orderId.trim() === '') {
+        throw new Error('ID de pedido inválido');
+      }
+
+      const orderRef = doc(db, 'PEDIDOS', orderId);
+      const orderSnap = await getDoc(orderRef);
+      
+      if (orderSnap.exists()) {
+        const orderData = {
+          id: orderSnap.id,
+          ...orderSnap.data()
+        };
+        setOrder(orderData);
         
-        if (orderSnap.exists()) {
-          const orderData = { 
-            id: orderSnap.id, 
-            ...orderSnap.data() 
-          };
-          
-          setOrder(orderData);
-          
-          // Verificar si el usuario ya está participando
-          const userParticipant = orderData.usuarios?.find(
-            p => p.id === currentUser.email
-          );         
-          if (userParticipant) {
-            setSelectedProducts(userParticipant.productos || []);
-            // Si el usuario no está participando, unirlo automáticamente
+        // Verificar si el usuario ya está participando
+        const userParticipant = orderData.usuarios?.find(
+          p => p.id === currentUser.email
+        );
+        
+        if (userParticipant) {
+          // ✅ Usuario ya está en el pedido
+          setSelectedProducts(userParticipant.productos || []);
+        } else {
+          // ✅ Usuario no está, unirlo automáticamente
           await unirseAPedido(orderId, currentUser.email, []);
           // Volver a cargar el pedido para ver la actualización
           const updatedOrderSnap = await getDoc(orderRef);
-          setOrder({ 
-            id: updatedOrderSnap.id, 
-            ...updatedOrderSnap.data() 
-          });
+          const updatedOrderData = {
+            id: updatedOrderSnap.id,
+            ...updatedOrderSnap.data()
+          };
+          setOrder(updatedOrderData);
+          setSelectedProducts([]);
         }
-        } else {
-          navigate('/desayunos/orders');
-        }
-      } catch (error) {
-        console.error("Error al cargar el pedido:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error('El pedido no existe');
+        navigate('/desayunos/orders');
       }
-    };
+    } catch (error) {
+      console.error("Error al cargar el pedido:", error);
+      navigate('/desayunos/orders');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchOrderData();
-  }, [orderId, currentUser, navigate]);
+  fetchOrderData();
+}, [orderId, currentUser, navigate]);
 
   
 
@@ -98,41 +106,36 @@ const OrderDetail = () => {
 
   // Añadir o quitar producto de la selección
 
-  const toggleProductSelection = async (product) => {
-     setSelectedProducts(prevSelected => {
+const toggleProductSelection = (product) => {
+  setSelectedProducts(prevSelected => {
     const safeArray = Array.isArray(prevSelected) ? prevSelected : [];
-    
     const isAlreadySelected = safeArray.some(p => p.id === product.id);
-    const newSelectedProducts = isAlreadySelected
-      ? safeArray.filter(p => p.id !== product.id)
-      : [...safeArray, product];
     
-    // Actualizar la base de datos con el nuevo estado
-    actualizarProductosEnPedido(orderId, currentUser.email, newSelectedProducts)
-      .catch(error => console.error("Error al actualizar productos:", error));
-    
-    return newSelectedProducts;
+    if (isAlreadySelected) {
+      return safeArray.filter(p => p.id !== product.id);
+    } else {
+      return [...safeArray, product];
+    }
   });
 };
 
-
-// Añadir este efecto para sincronizar cambios locales con la base de datos
+// ✅ useEffect separado para sincronizar con BD (con debounce)
 useEffect(() => {
-  // No ejecutar en la carga inicial
-  if (!loading && order) {
+  if (!loading && order && orderId) {
     const syncProductsWithDatabase = async () => {
       try {
         await actualizarProductosEnPedido(orderId, currentUser.email, selectedProducts);
+        console.log('✅ Productos sincronizados:', selectedProducts);
       } catch (error) {
         console.error("Error al sincronizar productos:", error);
       }
     };
-    
-    // Usar un temporizador para evitar actualizaciones excesivas
+
+    // Debounce para evitar actualizaciones excesivas
     const timeoutId = setTimeout(() => {
       syncProductsWithDatabase();
-    }, 500);
-    
+    }, 1000); // Aumentar a 1 segundo
+
     return () => clearTimeout(timeoutId);
   }
 }, [selectedProducts, orderId, currentUser, loading, order]);
