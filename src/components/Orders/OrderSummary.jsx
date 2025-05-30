@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { formatDate } from '../Helpers';
 import {
   Typography, Box, Divider, List, ListItem, ListItemText, ListItemButton,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead,
@@ -467,7 +468,7 @@ const OrderSummary = ({ order: initialOrder }) => {
             Desayuno Mecaformas 3D
           </Typography>
           <Typography variant="h4" color="secondary">
-             Llegada: {order.horaLlegada}
+             Reserva: {formatDate(order.horaReserva)}
           </Typography>
           <Typography variant="h4" color="black">
             Mesa para: {order?.usuarios?.length || 0} personas

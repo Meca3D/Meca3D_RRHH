@@ -3,16 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { Link as RouterLink } from 'react-router-dom';
 import { 
   Button, TextField, Typography, Container, Box, 
-  CircularProgress, Paper, Snackbar, Alert
+  CircularProgress, Paper, Snackbar, Alert, InputAdornment
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ClearIcon from '@mui/icons-material/Clear';
 import { crearPedido } from '../../firebase/firestore';
 import { useAuth } from '../../hooks/useAuth';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { es } from 'date-fns/locale';
 
 const CreateOrder = () => {
   const [orderName, setOrderName] = useState('');
-  const [horaLlegada, setHoraLlegada] = useState('');
+  const [fechaReserva, setFechaReserva] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000)); // ✅ Date object por defecto
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -38,10 +42,10 @@ const CreateOrder = () => {
       setLoading(true);
       setError('');     
       // Crear el pedido con estructura correcta
- const pedidoId=await crearPedido(orderName.trim(),currentUser.email,[], horaLlegada)
+ const pedidoId=await crearPedido(orderName.trim(),currentUser.email,[], fechaReserva)
  setSuccess(true);
  setOrderName('');
- setHoraLlegada('')
+ setFechaReserva('')
  // Redirigir al detalle del pedido recién creado
   setTimeout(() => {
    navigate(`/desayunos/orders/${pedidoId}`);
@@ -61,48 +65,45 @@ const CreateOrder = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h5" component="h1" color='primary' gutterBottom align="center">
-          Crear Nuevo Pedido
-        </Typography>
-        
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <TextField
-            fullWidth
-            label="Nombre del pedido"
-            variant="outlined"
-            value={orderName}
-            onChange={(e) => setOrderName(e.target.value)}
-            disabled={loading}
-            margin="normal"
-            required
-          />
-           <TextField
-            fullWidth
-            label="Hora de Llegada"
-            type="time"
-            slotProps={{
-              InputLabelProps:{
-                shrink: true},
-              inputProps:{
-                  step: 300} // 5 minutos de intervalo
-            
-            }}
-            variant="outlined"
-            value={horaLlegada}
-            onChange={(e) => setHoraLlegada(e.target.value)}
-            disabled={loading}
-            margin="normal"
-            required
-          />
+ <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Typography variant="h4" component="h1" gutterBottom textAlign="center" color="primary">
+            Crear Nuevo Pedido
+          </Typography>
+
+          <Box component="form" onSubmit={handleSubmit}>
+            <TextField
+              label="Nombre del pedido"
+              fullWidth
+              value={orderName}
+              onChange={(e) => setOrderName(e.target.value)}
+              disabled={loading}
+              margin="normal"
+              required
+            />
+
+            {/* ✅ Reemplazar input datetime-local por DateTimePicker */}
+            <DateTimePicker
+              label="Fecha y hora de reserva"
+              value={fechaReserva}
+              onChange={(newValue) => setFechaReserva(newValue)}
+              minDateTime={new Date()} // No permitir fechas pasadas
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  required: true,
+                  margin: 'normal'
+                }
+              }}
+            />
 
           <Button 
             variant="contained" 
             color='secondary'   
             startIcon={<ClearIcon />}  
             component={RouterLink} 
-            to="/orders" 
+            to="/desayunos/orders" 
             disabled={loading}
             fullWidth
             sx={{  mt: 5, mb: 2 }}
@@ -133,6 +134,7 @@ const CreateOrder = () => {
         </Alert>
       </Snackbar>
     </Container>
+    </LocalizationProvider>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { formatDate } from '../Helpers';
 import {
   Container, IconButton, Typography, Box, CircularProgress, Tabs, Tab,
   Button, Card, CardContent, Divider, List, ListItem, ListItemText,
@@ -193,6 +194,7 @@ useEffect(() => {
         textAlign: 'center',
         width: '100%'
       }}>
+        <Box sx={{display:'flex', flexDirection:'column'}}>
         <Typography 
           color='primary.dark' 
           variant="h4"
@@ -205,6 +207,19 @@ useEffect(() => {
         >
           {order?.nombre}
         </Typography>
+        <Typography 
+          color='primary.dark' 
+          variant="h4"
+          component="h1" 
+          sx={{
+            fontSize: { xs: '1.25rem', sm: '1.5rem' },
+            lineHeight: 1.2,
+            width: '100%'
+          }}
+        >
+          {formatDate(order?.fechaReserva)}
+        </Typography>
+        </Box>
       </Box>
       
       {/* Fab Resumen - Solo si es creador */}
@@ -346,9 +361,32 @@ useEffect(() => {
         maxWidth="md"
       >
         <DialogTitle>
-          <Typography fontSize="2rem"  color="primary.dark" align="center">
-            {order?.nombre}
-           </Typography>
+        <Typography 
+          textAlign='center'
+          color='primary.dark' 
+          variant="h4"
+          component="h1" 
+          sx={{
+            fontSize: { xs: '1.75rem', sm: '2rem' },
+            lineHeight: 1.2,
+            width: '100%'
+          }}
+        >
+          {order?.nombre}
+        </Typography>
+        <Typography 
+          textAlign='center'
+          color='primary.dark' 
+          variant="h4"
+          component="h1" 
+          sx={{
+            fontSize: { xs: '1.25rem', sm: '1.5rem' },
+            lineHeight: 1.2,
+            width: '100%'
+          }}
+        >
+          {formatDate(order?.fechaReserva)}
+        </Typography>
         </DialogTitle>
         <DialogContent dividers>
           <OrderSummary order={order} />

@@ -9,9 +9,10 @@ import {
   arrayRemove, 
   query, 
   orderBy, 
-  serverTimestamp, 
   addDoc,
-  where
+  where,
+  Timestamp,
+  
 } from 'firebase/firestore';
 import { db } from './config';
 
@@ -35,17 +36,6 @@ export const getUsuario = async (email) => {
   }
 };
 
-
-export const asignarRolUsuario = async (email, rol) => {
-  try {
-    const userRef = doc(db, 'USUARIOS', email);
-    await updateDoc(userRef, {rol});
-    return true;
-  } catch (error) {
-    console.error("Error al asignar rol:", error);
-    throw error;
-  }
-};
 
 
 // Actualizar favoritos de un usuario
@@ -146,7 +136,7 @@ export const getProductosFavoritos = async (email) => {
 // ---- PEDIDOS ----
 
 // Crear un nuevo pedido
-export const crearPedido = async (nombrePedido, usuarioEmail, productos = [],horaLlegada) => {
+export const crearPedido = async (nombrePedido, usuarioEmail, productos = [], fechaReserva) => {
   try {
     
     // Intentar obtener el usuario (si no existe usaremos solo el email)
@@ -165,9 +155,8 @@ export const crearPedido = async (nombrePedido, usuarioEmail, productos = [],hor
 
     const nuevoPedido = {
       nombre: nombrePedido,
-      fechaCreacion: serverTimestamp(),
       creadoPor: usuarioEmail,
-      horaLlegada:horaLlegada,
+      fechaReserva: Timestamp.fromDate(fechaReserva),
       usuarios: [{
         id: usuarioEmail,
         nombre: nombreUsuario,
@@ -197,8 +186,7 @@ export const getPedidos = async () => {
         id: doc.id,
         nombre: data.nombre,
         creadoPor: data.creadoPor,
-        fechaCreacion: data.fechaCreacion,
-        horaLlegada: data.horaLlegada,
+        fechaReserva: data.fechaReserva,
         usuarios: data.usuarios?.map(u => ({
           id: u.email,
           nombre: u.nombre,
@@ -226,8 +214,7 @@ export const getPedido = async (pedidoId) => {
         id: docSnap.id,
         nombre: data.nombre,
         creadoPor:data.creadoPor,
-        fechaCreacion: data.fechaCreacion,
-        horaLlegada:data.horaLlegada,
+        fechaReserva: data.fechaReserva,
         usuarios:  data.usuarios?.map(u => ({
           id: u.email,
           nombre: u.nombre,

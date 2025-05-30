@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { formatDate } from '../Helpers';
 import { 
   Typography, Container, Box, Grid, Card, CardContent, 
   CardActionArea, CircularProgress, Fab ,DialogTitle,
@@ -29,7 +30,7 @@ const OrderList = () => {
     if (!currentUser) return;
 
     const ordersRef = collection(db, 'PEDIDOS');
-    const q = query(ordersRef, orderBy('fechaCreacion', 'desc'));
+    const q = query(ordersRef, orderBy('fechaReserva', 'desc'));
 
     // Usar onSnapshot para actualización en tiempo real
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -39,7 +40,7 @@ const OrderList = () => {
           id: doc.id,
           ...doc.data(),
           // Convertir timestamp a Date para mostrar fecha correctamente
-          fechaCreacion: doc.data().fechaCreacion ? doc.data().fechaCreacion.toDate() : new Date()
+          fechaReserva: doc.data().fechaReserva ? doc.data().fechaReserva.toDate() : new Date()
         });
       });
       setOrders(ordersData);
@@ -54,16 +55,6 @@ const OrderList = () => {
 
 
   // Formatear fecha para mostrar
-  const formatDate = (date) => {
-    if (!date) return '';
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   // Manejadores para el diálogo de confirmación de borrado
   const handleDeleteClick = (event, order) => {
@@ -159,12 +150,11 @@ const OrderList = () => {
                       sx={{textShadow:"1px 1px 1px black, 0 0 3em blue, 0 0 0.1em",fontSize: { xs: '1.5rem', sm: '1.75rem' }}}>
                       {order.nombre}
                     </Typography>
-                    <Typography color="primary.light" display="flex" justifyContent='center' textAlign="center" gutterBottom sx={{fontSize: { xs: '1.1rem', sm: '1.35rem' }}}>
-                      Hora de reserva: {order.horaLlegada}
-                    </Typography>
-                    
-                    <Typography fontSize='medium' display="flex" justifyContent="center" variant="caption" color="black" sx={{ mb: 1, fontSize: { xs: '0.8rem', sm: '1rem' } }}>
-                      Creado: {formatDate(order.fechaCreacion)}
+                    <Typography color="primary.dark" display="flex" justifyContent='center' textAlign="center" sx={{fontSize: { xs: '1.1rem', sm: '1.35rem' }}}>
+                      Fecha de reserva
+                    </Typography>                   
+                    <Typography  display="flex" justifyContent="center"  color="black" sx={{ mt:0, mb: 1 }}>
+                      {formatDate(order.fechaReserva)}
                     </Typography>
                     
                     <Divider sx={{ my: 1 }} />
