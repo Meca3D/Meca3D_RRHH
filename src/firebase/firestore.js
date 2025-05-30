@@ -282,16 +282,18 @@ export const actualizarProductosEnPedido = async (pedidoId, usuarioEmail, produc
   try {
     const pedidoRef = doc(db, 'PEDIDOS', pedidoId);
     const pedidoSnap = await getDoc(pedidoRef);
-    
+
     if (!pedidoSnap.exists()) {
       throw new Error('El pedido no existe');
     }
-    
+
     const pedidoData = pedidoSnap.data();
+    
     if (pedidoData.usuarios) {
       const usuarioIndex = pedidoData.usuarios.findIndex(u => u.id === usuarioEmail);
       
       if (usuarioIndex !== -1) {
+        // Usuario existe, actualizar sus productos
         const usuariosActualizados = [...pedidoData.usuarios];
         usuariosActualizados[usuarioIndex] = {
           ...usuariosActualizados[usuarioIndex],
@@ -301,10 +303,13 @@ export const actualizarProductosEnPedido = async (pedidoId, usuarioEmail, produc
         await updateDoc(pedidoRef, {
           usuarios: usuariosActualizados
         });
+        
+        console.log(`✅ Productos actualizados para ${usuarioEmail}:`, productos);
+        return true;
       }
     }
     
-    return true;
+    return false;
   } catch (error) {
     console.error("Error al actualizar productos en el pedido:", error);
     throw error;
@@ -364,6 +369,39 @@ export const getResumenPedido = async (pedidoId) => {
     return resultado;
   } catch (error) {
     console.error("Error al obtener resumen del pedido:", error);
+    throw error;
+  }
+};
+
+export const eliminarUsuarioDePedido = async (pedidoId, usuarioEmail) => {
+  try {
+    const pedidoRef = doc(db, 'PEDIDOS', pedidoId);
+    const pedidoSnap = await getDoc(pedidoRef);
+
+    if (!pedidoSnap.exists()) {
+      throw new Error('El pedido no existe');
+    }
+
+    const pedidoData = pedidoSnap.data();
+    
+    if (pedidoData.usuarios) {
+      // Filtrar el array para eliminar el usuario
+      const usuariosActualizados = pedidoData.usuarios.filter(
+        usuario => usuario.id !== usuarioEmail
+      );
+      
+      // Actualizar el documento con el array sin el usuario
+      await updateDoc(pedidoRef, {
+        usuarios: usuariosActualizados
+      });
+      
+      console.log(`✅ Usuario ${usuarioEmail} eliminado del pedido ${pedidoId}`);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error("Error al eliminar usuario del pedido:", error);
     throw error;
   }
 };

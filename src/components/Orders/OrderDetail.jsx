@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formatDate } from '../Helpers';
+import { eliminarUsuarioDePedido } from '../../firebase/firestore';
 import {
   Container, IconButton, Typography, Box, CircularProgress, Tabs, Tab,
   Button, Card, CardContent, Divider, List, ListItem, ListItemText,
@@ -8,6 +9,8 @@ import {
   ListItemIcon,Paper
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CheckIcon from '@mui/icons-material/Check';
+import { Alert } from '@mui/material';
 import LunchDiningIcon from '@mui/icons-material/LunchDining';
 import LocalCafeIcon from '@mui/icons-material/LocalCafe';
 import ReceiptLongIcon from '@mui/icons-material/Summarize';
@@ -31,6 +34,8 @@ const OrderDetail = () => {
   const [activeTab, setActiveTab] = useState(2);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [confirmingSelection, setConfirmingSelection] = useState(false);
+  const [selectionMessage, setSelectionMessage] = useState('');
 
 
   // Cargar datos del pedido
@@ -119,27 +124,57 @@ const toggleProductSelection = (product) => {
   });
 };
 
-// ✅ useEffect separado para sincronizar con BD (con debounce)
-useEffect(() => {
-  if (!loading && order && orderId) {
-    const syncProductsWithDatabase = async () => {
-      try {
-        await actualizarProductosEnPedido(orderId, currentUser.email, selectedProducts);
-        console.log('✅ Productos sincronizados:', selectedProducts);
-      } catch (error) {
-        console.error("Error al sincronizar productos:", error);
+const confirmarSeleccion = async () => {
+  if (!orderId || !currentUser) return;
+  
+  setConfirmingSelection(true);
+  setSelectionMessage('');
+  
+  try {
+    const userParticipant = order.usuarios?.find(p => p.id === currentUser.email);
+    
+    if (selectedProducts.length === 0) {
+      // ✅ Sin productos - eliminar del pedido si estaba
+      if (userParticipant) {
+        await eliminarUsuarioDePedido(orderId, currentUser.email);
+        setSelectionMessage('Te has retirado del pedido correctamente');
+      } else {
+        setSelectionMessage('No tienes productos seleccionados');
       }
-    };
-
-    // Debounce para evitar actualizaciones excesivas
-    const timeoutId = setTimeout(() => {
-      syncProductsWithDatabase();
-    }, 1000); // Aumentar a 1 segundo
-
-    return () => clearTimeout(timeoutId);
+    } else {
+      // ✅ Con productos - unirse o actualizar
+      if (userParticipant) {
+        // Usuario ya está, actualizar productos
+        await actualizarProductosEnPedido(orderId, currentUser.email, selectedProducts);
+        setSelectionMessage(`Selección actualizada: ${selectedProducts.length} producto${selectedProducts.length !== 1 ? 's' : ''}`);
+      } else {
+        // Usuario no está, unirse al pedido
+        await unirseAPedido(orderId, currentUser.email, selectedProducts);
+        setSelectionMessage(`Te has unido al pedido con ${selectedProducts.length} producto${selectedProducts.length !== 1 ? 's' : ''}`);
+      }
+    }
+    
+    // ✅ Recargar pedido para mostrar cambios
+    const orderRef = doc(db, 'PEDIDOS', orderId);
+    const updatedOrderSnap = await getDoc(orderRef);
+    if (updatedOrderSnap.exists()) {
+      const updatedOrderData = {
+        id: updatedOrderSnap.id,
+        ...updatedOrderSnap.data()
+      };
+      setOrder(updatedOrderData);
+    }
+    
+    // Limpiar mensaje después de 3 segundos
+    setTimeout(() => setSelectionMessage(''), 3000);
+    
+  } catch (error) {
+    console.error('Error al confirmar selección:', error);
+    setSelectionMessage('Error al confirmar la selección');
+  } finally {
+    setConfirmingSelection(false);
   }
-}, [selectedProducts, orderId, currentUser, loading, order]);
-
+};
 
   // Abrir/cerrar diálogo de resumen
   const toggleSummary = () => {
@@ -155,11 +190,13 @@ useEffect(() => {
   }
 
   return (
-<Box sx={{ 
+<Container 
+    maxWidth="md"
+    sx={{ 
     width: '100%',
-    maxWidth: '100vw',
+    maxWidth: '100%',
     overflow: 'hidden',
-    px: 2, // Padding lateral mínimo
+    px: 0, // Padding lateral mínimo
     mt: 0, 
     mb: 4,
     boxSizing: 'border-box'
@@ -245,80 +282,96 @@ useEffect(() => {
     </Box>
     
 
-    <Box>
-      <Typography
-        mb={2} 
-        textAlign="center" 
-        variant='h5' 
-        sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem' } }}
-      >
-        <strong>Mi Selección</strong>
-      </Typography>
-    </Box>
+  <Card elevation={3} sx={{ mb: 3 }}>
+  <CardContent >
+    <Typography  textAlign="center" variant="h6" gutterBottom color="primary">
+      Mi Selección
+    </Typography>
+    <Divider sx={{mb:2}}/>
     
-    <Card sx={{
-      mt: 1,
-      borderRadius: 2,
-      border: '2px solid #3f51b5',
-      width: '100%',
-      maxWidth: '100%',
-      overflow: 'hidden'
-    }} elevation={5}>
-      {selectedProducts.length > 0 ? (
-        selectedProducts.sort((a, b) => a.nombre.localeCompare(b.nombre)).map((producto, index) => (
-          <Box 
-            key={index} 
-            sx={{ 
-              backgroundColor: 'white',
-              display: 'flex', 
-              alignItems: 'center',
-              py: 0.5,
-              px: 1,
-              width: '100%',
-              boxSizing: 'border-box'
-            }}
-          >
-            <Box sx={{ width: '10%', minWidth: '32px' }}>
-              <ClearIcon   
-                sx={{ 
-                  verticalAlign: 'middle',
-                  fontSize: { xs: '1.5rem', sm: '1.75rem' }
-                }}
-                color="secondary" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleProductSelection(producto);
-                }} 
-              />
-            </Box>
-            <Box sx={{ 
-              width: '90%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              <Typography 
-                sx={{ 
-                  fontSize: { xs: '1.2rem', sm: '1.5rem' },
-                  wordBreak: 'break-word'
-                }}
-              >
-                {producto.nombre}
-              </Typography>
-            </Box>                   
-          </Box>
-        ))
-      ) : (
-        <Typography 
-          align='center'
-          sx={{ 
-            p: 2,
-            fontSize: { xs: '1.2rem', sm: '1.5rem' }
-          }}
-        >
+    {selectedProducts.length > 0 ? (
+      <>
+        <List dense>
+          {selectedProducts.sort((a, b) => a.nombre.localeCompare(b.nombre)).map((producto, index) => (
+            <ListItem key={index} sx={{ pl: 0, marginY:-1.3 }}>
+              <ListItemIcon>
+                <IconButton
+                  edge="start"
+                  color="error"
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleProductSelection(producto);
+                  }}
+                >
+                  <ClearIcon />
+                </IconButton>
+              </ListItemIcon>
+              <ListItemText slotProps={{
+                primary:{
+                  ml:-3,
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  letterSpacing: 0,}
+                }} primary={producto.nombre} />
+            </ListItem>
+          ))}
+        </List>
+      </>
+    ) : (
+      <Box sx={{ textAlign: 'center', py: 2 }}>
+        <Typography variant="body2" color="textSecondary">
           Aún no has seleccionado ningún producto
         </Typography>
-      )}
-    </Card>
+        <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+          Selecciona productos de las pestañas de abajo
+        </Typography>
+      </Box>
+      
+    )}
+    
+    {/* ✅ BOTÓN DE CONFIRMACIÓN */}
+    <Box sx={{ mt: 2, textAlign: 'center' }}>
+      <Button
+        variant="contained"
+        onClick={confirmarSeleccion}
+        disabled={confirmingSelection}
+        startIcon={confirmingSelection ? <CircularProgress size={15} /> : <CheckIcon size={15}/>}
+        sx={{
+          py: 1,
+          px: 4,
+          borderRadius: 3,
+          fontSize: '1rem',
+          background: selectedProducts.length > 0 
+            ? 'linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%)'
+            : 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)',
+          '&:hover': {
+            background: selectedProducts.length > 0
+              ? 'linear-gradient(135deg, #1b5e20 0%, #4caf50 100%)'
+              : 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)',
+          }
+        }}
+      >
+        {confirmingSelection 
+          ? 'Confirmando...' 
+          : selectedProducts.length > 0 
+            ? 'Confirmar mi Selección'
+            : 'Retirarme del Pedido'
+        }
+      </Button>
+    </Box>
+    
+    {/* ✅ Mensaje de confirmación */}
+    {selectionMessage && (
+      <Alert 
+        severity={selectionMessage.includes('Error') ? 'error' : 'success'} 
+        sx={{ mt: 2 }}
+      >
+        {selectionMessage}
+      </Alert>
+    )}
+  </CardContent>
+</Card>
            
       <Box sx={{ width: '100%', mt:1}}>
         <Box sx={{ borderBottom: 2, borderColor: 'divider' }}>
@@ -406,7 +459,7 @@ useEffect(() => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 };
 

@@ -187,7 +187,7 @@ const isProductSelected = (productId) => {
               >
                 <CardContent> 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding:0}}>
-                    <Typography  fontFamily='Verdana' sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' }}}>
+                    <Typography  fontFamily='Verdana' sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' }}}>
                       {product.nombre}
                     </Typography>
                     <IconButton 
