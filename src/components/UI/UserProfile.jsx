@@ -8,6 +8,8 @@ import {
 } from '@mui/material';
 
 import LogoutIcon from '@mui/icons-material/Logout';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -37,6 +39,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const auth = getAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -48,7 +51,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
       });
       setPreviewUrl(user.photoURL || '');
     }
-  }, [user]);
+  }, [user,editMode]);
 
   // Si no hay usuario o está cargando, mostrar un estado de carga
     if (!user || loading) {
@@ -133,7 +136,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
         photoURL: photoURL // Añadir la URL de la foto
       });
 
-      // Actualizar pedidos (ejemplo básico)
+      // Actualizar pedidos
       const pedidosQuery = query(collection(db, 'PEDIDOS'), where('usuarios', 'array-contains', user.id));
       const pedidosSnapshot = await getDocs(pedidosQuery);
       
@@ -170,9 +173,14 @@ const UserProfile = ({ open, onClose, user, loading }) => {
       
       setSnackbar({ open: true, message: 'Contraseña actualizada!', severity: 'success' });
       setPasswordDialogOpen(false);
+      setEditMode(false)
     } catch (error) {
       setSnackbar({ open: true, message: 'Error: ' + error.message, severity: 'error' });
     }
+  };
+
+    const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -235,6 +243,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
           }}
         />
 
+        {editMode && (
         <Box mt={2} textAlign="center">
           <Button
             variant="outlined"
@@ -245,6 +254,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
             Cambiar Contraseña
           </Button>
         </Box>
+        )}
       </DialogContent>
 
 <DialogActions sx={{display:'flex', justifyContent:'space-between', px: 3, pb: 2}}>
@@ -304,24 +314,81 @@ const UserProfile = ({ open, onClose, user, loading }) => {
         <DialogContent>
           <TextField
             fullWidth
+            variant="outlined"
+            type={showPassword ? 'text' : 'password'}
             margin="normal"
             label="Contraseña Actual"
-            type="password"
             value={formData.currentPassword}
             onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+            required
+            slotProps={{
+              input:{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockIcon color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={toggleShowPassword}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+            }
+          }}
+          sx={{ mb: 2 }}
           />
           <TextField
             fullWidth
+            variant="outlined"
+            type={showPassword ? 'text' : 'password'}
             margin="normal"
             label="Nueva Contraseña"
-            type="password"
             value={formData.newPassword}
             onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+            required
+            slotProps={{
+              input:{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockIcon color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={toggleShowPassword}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+            }
+          }}
+          sx={{ mb: 2 }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPasswordDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handlePasswordChange}>Cambiar</Button>
+        <DialogActions sx={{display:'flex', justifyContent:'space-between', px: 3, pb: 2}}>
+          <Button 
+            variant="outlined" 
+            color="secondary" 
+            size="small"
+            startIcon={<CancelIcon />}
+            sx={{ fontSize: '1rem', textTransform: 'none' }}
+            onClick={() => setPasswordDialogOpen(false)}>Cancelar</Button>
+          <Button
+            variant="contained" 
+            size="small"
+            startIcon={<SaveIcon />}
+            sx={{ fontSize: '1rem', textTransform: 'none' }} 
+            onClick={handlePasswordChange}>Cambiar</Button>
         </DialogActions>
       </Dialog>
 

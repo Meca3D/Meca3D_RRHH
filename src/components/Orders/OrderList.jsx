@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { formatDate } from '../Helpers';
+import { formatearNombre } from '../Helpers';
 import { 
   Typography, Container, Box, Grid, Card, CardContent, 
   CardActionArea, CircularProgress, Fab ,DialogTitle,
@@ -28,7 +29,6 @@ const OrderList = () => {
 
   useEffect(() => {
     if (!currentUser) return;
-
     const ordersRef = collection(db, 'PEDIDOS');
     const q = query(ordersRef, orderBy('fechaReserva', 'desc'));
 
@@ -126,7 +126,7 @@ const OrderList = () => {
         <Grid container spacing={3}>
           {orders.map((order) => (
             <Grid size={{xs:12, sm:6, md:4}} key={order.id}>
-              <Card elevation={5} sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              <Card elevation={5} sx={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
                 {order.creadoPor==currentUser.email ? (<Fab
                   size='small'
                   color='secondary'           
@@ -170,14 +170,12 @@ const OrderList = () => {
                         justifyContent: 'center', 
                         flexWrap: 'wrap', 
                         gap: 0.5,
-                        maxHeight: '60px',
-                        overflow: 'hidden'
                       }}>
                         {order.usuarios && order.usuarios.length > 0 ? (
                           order.usuarios.map((usuario, index) => (
                             <Chip 
                               key={index}
-                              label={usuario.nombre}
+                              label={formatearNombre(usuario.nombre)}
                               variant="outlined"
                               size="small"
                               color="primary"

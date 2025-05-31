@@ -36,6 +36,9 @@ const OrderDetail = () => {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [confirmingSelection, setConfirmingSelection] = useState(false);
   const [selectionMessage, setSelectionMessage] = useState('');
+  const [userRole, setUserRole] = useState('user');
+  const [isCreator, setIsCreator] = useState(false);
+  const [canManageOrder, setCanManageOrder] = useState(false);
 
 
   // Cargar datos del pedido
@@ -66,6 +69,22 @@ useEffect(() => {
           ...orderSnap.data()
         };
         setOrder(orderData);
+
+        // ✅ Obtener rol del usuario
+        const userRef = doc(db, 'USUARIOS', currentUser.email);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.exists() ? userSnap.data() : null;
+        const role = userData?.rol || 'user';
+        
+        setUserRole(role);
+        
+        // ✅ Verificar si es el creador
+        const isOrderCreator = orderData.creadoPor === currentUser.email;
+        setIsCreator(isOrderCreator);
+        
+        // ✅ Calcular permisos
+        const hasPermissions = role === 'admin' || isOrderCreator;
+        setCanManageOrder(hasPermissions);
         
         // Verificar si el usuario ya está participando
         const userParticipant = orderData.usuarios?.find(
@@ -167,6 +186,7 @@ const confirmarSeleccion = async () => {
     
     // Limpiar mensaje después de 3 segundos
     setTimeout(() => setSelectionMessage(''), 3000);
+    setTimeout(() => navigate('/desayunos/orders'),2000);
     
   } catch (error) {
     console.error('Error al confirmar selección:', error);
@@ -196,7 +216,7 @@ const confirmarSeleccion = async () => {
     width: '100%',
     maxWidth: '100%',
     overflow: 'hidden',
-    px: 0, // Padding lateral mínimo
+    px: 0, 
     mt: 0, 
     mb: 4,
     boxSizing: 'border-box'
@@ -261,9 +281,7 @@ const confirmarSeleccion = async () => {
         </Typography>
         </Box>
       </Box>
-      
-      {/* Fab Resumen - Solo si es creador */}
-      {order.creadoPor === currentUser.email && (
+
         <Fab 
           color='primary'
           size='small'
@@ -278,7 +296,6 @@ const confirmarSeleccion = async () => {
         >
           <ReceiptLongIcon fontSize="large" />
         </Fab>
-      )}
     </Box>
     
 
@@ -421,7 +438,7 @@ const confirmarSeleccion = async () => {
           textAlign='center'
           color='primary.dark' 
           variant="h4"
-          component="h1" 
+          component="div" 
           sx={{
             fontSize: { xs: '1.75rem', sm: '2rem' },
             lineHeight: 1.2,
@@ -434,7 +451,7 @@ const confirmarSeleccion = async () => {
           textAlign='center'
           color='primary.dark' 
           variant="h4"
-          component="h1" 
+          component="div" 
           sx={{
             fontSize: { xs: '1.25rem', sm: '1.5rem' },
             lineHeight: 1.2,
@@ -445,7 +462,7 @@ const confirmarSeleccion = async () => {
         </Typography>
         </DialogTitle>
         <DialogContent dividers>
-          <OrderSummary order={order} />
+          <OrderSummary order={order} canManageOrder={canManageOrder} />
         </DialogContent>
         <DialogActions>
           <Button 

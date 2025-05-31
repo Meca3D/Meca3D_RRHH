@@ -8,11 +8,6 @@ if (!admin.apps.length) {
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-    console.log('🔍 Verificando variables de entorno:');
-    console.log('PROJECT_ID:', projectId ? '✅ OK' : '❌ FALTA');
-    console.log('CLIENT_EMAIL:', clientEmail ? '✅ OK' : '❌ FALTA');
-    console.log('PRIVATE_KEY:', privateKey ? '✅ OK' : '❌ FALTA');
-
     if (!projectId || !clientEmail || !privateKey) {
       throw new Error('Faltan variables de entorno de Firebase');
     }
@@ -124,13 +119,11 @@ export default async (request, context) => {
 
     // Crear documento en Firestore
     await admin.firestore().collection('USUARIOS').doc(email).set({
-      id: email,
       nombre: nombre,
-      email: email,
       rol: rol,
       telefono: telefono || '',
-      vacaDias: vacaDias || 0,
-      vacaHoras: vacaHoras || 0
+      vacaDias: Number(vacaDias) || 0,
+      vacaHoras: Number(vacaHoras) || 0
     });
 
     console.log(`✅ Documento creado en Firestore para: ${email}`);

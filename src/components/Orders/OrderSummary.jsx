@@ -16,7 +16,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import html2canvas from 'html2canvas';
 
-const OrderSummary = ({ order: initialOrder }) => {
+const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
   const [order, setOrder] = useState(initialOrder);
   const [selectedUser, setSelectedUser] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -248,8 +248,8 @@ const OrderSummary = ({ order: initialOrder }) => {
           Resumen total del pedido
         </Typography>
         
-        <Box sx={{ display: 'flex', justifyContent:'space-between', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: canManageOrder ? 'space-between' : 'center', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, }}>
             <Box sx={{ textAlign: 'center' }}>
               <LunchDiningIcon color='comida' sx={{ fontSize: 40 }} />
               <Typography variant="h5">{totals.COMIDA}</Typography>
@@ -263,7 +263,10 @@ const OrderSummary = ({ order: initialOrder }) => {
             </Box>
           </Box>
           
+          
           <Box sx={{ display: 'flex', justifyContent:'right', alignItems: 'center', mb: 2 }}>
+          {canManageOrder && (
+        <>
           <Fab 
             sx={{mr:1}}
             size='medium' 
@@ -275,12 +278,14 @@ const OrderSummary = ({ order: initialOrder }) => {
           </Fab>
           <Fab 
             size='medium' 
-            color="primary"
+            color="success"
             aria-label='compartir' 
             onClick={handleShareImage}
           >
             <ShareIcon />
           </Fab>
+          </>
+          )}
           </Box>
         </Box>
       </Box>
