@@ -2,198 +2,351 @@ import React, { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { formatDate } from '../Helpers';
 import { formatearNombre } from '../Helpers';
-import { 
-  Typography, Container, Box, Grid, Card, CardContent, 
-  CardActionArea, CircularProgress, Fab ,DialogTitle,
-  DialogActions,DialogContent,DialogContentText,Dialog,
-  Button, Chip, Divider,
-  IconButton
+import {
+  Typography, Container, Box, Grid, Card, CardContent,
+  CardActionArea, CircularProgress, Fab, DialogTitle,
+  DialogActions, DialogContent, DialogContentText, Dialog,
+  Button, Chip, Divider, IconButton, Paper, Avatar
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import CancelIcon from '@mui/icons-material/Cancel';
 import ClearIcon from '@mui/icons-material/Clear';
-import { collection, onSnapshot, query, orderBy,deleteDoc,doc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { useAuth } from '../../hooks/useAuth';
+import DeleteIcon from '@mui/icons-material/Delete';
+import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
+import PeopleIcon from '@mui/icons-material/People';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { useAuthStore } from '../../stores/authStore';
+import { useOrdersStore } from '../../stores/ordersStore';
+import { useUIStore } from '../../stores/uiStore';
 
 const OrderList = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { currentUser } = useAuth();
+  const { orders, loading, fetchOrders, deleteOrder } = useOrdersStore();
+  const { user, userProfile } = useAuthStore();
+  const { showSuccess, showError } = useUIStore();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
 
   useEffect(() => {
-    if (!currentUser) return;
-    const ordersRef = collection(db, 'PEDIDOS');
-    const q = query(ordersRef, orderBy('fechaReserva', 'desc'));
+    if (orders.length === 0 && !loading) {
+      fetchOrders();
+    }
+  }, [orders.length, loading]);
 
-    // Usar onSnapshot para actualización en tiempo real
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const ordersData = [];
-      querySnapshot.forEach((doc) => {
-        ordersData.push({
-          id: doc.id,
-          ...doc.data(),
-          // Convertir timestamp a Date para mostrar fecha correctamente
-          fechaReserva: doc.data().fechaReserva ? doc.data().fechaReserva.toDate() : new Date()
-        });
-      });
-      setOrders(ordersData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error al obtener pedidos:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [currentUser]);
-
-
-  // Formatear fecha para mostrar
-
-  // Manejadores para el diálogo de confirmación de borrado
   const handleDeleteClick = (event, order) => {
     event.stopPropagation();
     event.preventDefault();
     setOrderToDelete(order);
     setDeleteDialogOpen(true);
   };
-  
+
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
     setOrderToDelete(null);
   };
-  
+
   const handleConfirmDelete = async () => {
     if (!orderToDelete) return;
-    
     try {
-      setLoading(true);
-      await deleteDoc(doc(db, 'PEDIDOS', orderToDelete.id));
-      setDeleteDialogOpen(false);
-      setOrderToDelete(null);
-      // No necesitamos actualizar orders manualmente, ya que onSnapshot lo hará automáticamente
+      await deleteOrder(orderToDelete.id);
+      showSuccess('Pedido borrado con éxito');
     } catch (error) {
-      console.error("Error al eliminar el pedido:", error);
-    } finally {
-      setLoading(false);
+      showError(`Error al borrar el pedido: ${error}`);
     }
+    setDeleteDialogOpen(false);
+    setOrderToDelete(null);
   };
-
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box textAlign="center" p={4}>
+          <CircularProgress size={60} />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Cargando pedidos...
+          </Typography>
+        </Box>
+      </Container>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 1, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4}}>
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {/* Header corporativo para pedidos */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          mb: 4, 
+          background: 'linear-gradient(135deg, #6D3B07 0%, #4A2505 50%, #2D1603 100%)', // Dorado para desayunos
+          color: 'white',
+          borderRadius: 4,
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Decoraciones de fondo */}
+        <Box 
+          sx={{
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 150,
+            height: 150,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.1)',
+            zIndex: 0
+          }}
+        />
+        
+        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}>
+          <Avatar 
+            sx={{ 
+              width: 80, 
+              height: 80, 
+              bgcolor: 'rgba(255,255,255,0.2)',
+              fontSize: '2rem',
+              ml:1,
+              border:'3px solid',
+            }}
+          >
+            <LocalCafeOutlinedIcon sx={{fontSize: '2rem' }} />
+          </Avatar>
+          <Box flex={1} >
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+              Desayunos Sábados
+            </Typography>
+            <Typography variant="h6" sx={{ opacity: 0.9, mb: 1 }}>
+               Gestión de Pedidos
+            </Typography>
+            <Chip 
+              icon={<AssignmentOutlinedIcon color='white'/>}
+              label={`${orders.length} pedidos disponibles`}
+              sx={{ 
+                bgcolor: 'rgba(255,255,255,0.2)', 
+                color: 'white',
+                fontWeight: 600,
+                mb:1
+              }} 
+            />
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* Botón de nuevo pedido con estilo corporativo */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          mb: 4,
+          borderRadius: 4,
+          border: '1px solid rgba(0,0,0,0.1)'
+        }}
+      >
         <Button 
           variant="contained" 
-          color="primary" 
+          size="large"
           startIcon={<AddCircleOutlineIcon />}
           component={RouterLink} 
           to="/desayunos/orders/create"
           fullWidth
-          sx={{borderRadius:2}}
-          
+          sx={{
+            py: 2,
+            borderRadius: 3,
+            background: 'linear-gradient(to bottom, #003399, #3366CC, #003399)',
+            fontSize: '1.2rem',
+            fontWeight: 600,
+            textTransform: 'none',
+            boxShadow: '0 4px 15px rgba(109, 59, 7, 0.3)',
+            '&:hover': {
+              background: 'linear-gradient(to right, #004080, #007BFF, #004080)',
+              boxShadow: '0 6px 20px rgba(109, 59, 7, 0.4)',
+              transform: 'translateY(-2px)'
+            },
+            transition: 'all 0.3s ease'
+          }}
         >
-          <Typography  fontSize='large' component='h2'>
-          Nuevo Pedido
-          </Typography>
+          Crear Nuevo Pedido
         </Button>
-      </Box>
+      </Paper>
 
+      {/* Lista de pedidos */}
       {orders.length === 0 ? (
-        <Box sx={{ textAlign: 'center', mt: 2, p: 3, bgcolor: 'background.paper', borderRadius: 2 }}>
-          <Typography variant="h6">
+        <Paper 
+          elevation={0}
+          sx={{ 
+            textAlign: 'center', 
+            p: 3, 
+            borderRadius: 5,
+            border: '2px solid rgba(0,0,0,0.1)',
+            bgcolor: 'dorado.fondoFuerte'
+          }}
+        >
+          <LocalCafeOutlinedIcon sx={{ fontSize: 80, color: 'dorado.main', mb: 1 }} />
+          <Typography variant="h5" fontWeight="bold" color="dorado.main" gutterBottom>
             No hay pedidos activos
           </Typography>
-          <Typography variant="body1" color="textSecondary" sx={{ mt: 1 }}>
-            ¡Crea un nuevo pedido para empezar!
+          <Typography variant="body1" color="text.secondary">
+            ¡Crea un nuevo pedido para empezar a organizar desayunos colectivos!
           </Typography>
-        </Box>
+        </Paper>
       ) : (
         <Grid container spacing={3}>
           {orders.map((order) => (
             <Grid size={{xs:12, sm:6, md:4}} key={order.id}>
-              <Card elevation={5} sx={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                {order.creadoPor==currentUser.email ? (<Fab
-                  size='small'
-                  color='secondary'           
-                  aria-label="eliminar pedido" 
-                  sx={{ 
-                    position: 'absolute', 
-                    top: 1, 
-                    right: 1, 
-                  }}
-                  onClick={(e) => handleDeleteClick(e, order)}
-                >
-                  <ClearIcon/>
-                </Fab>) : <></>}
+              <Card 
+                elevation={0}
+                sx={{ 
+                  height: '100%',
+                  position: 'relative',
+                  border: '2px solid rgba(0,0,0,0.1)',
+                  borderRadius: 4,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 8px 25px rgba(109, 59, 7, 0.15)',
+                    transform: 'translateY(-4px)',
+                    borderColor: 'dorado.main'
+                  }
+                }}
+              >
+                {/* Botón de eliminar con estilo corporativo */}
+                {order.creadoPor === user?.email && (
+                  <IconButton
+                    size="small"
+                    sx={{ 
+                      position: 'absolute', 
+                      top: 2, 
+                      right: 2,
+                      bgcolor: 'rojo.fondoFuerte',
+                      border:'2px solid',
+                      color: 'rojo.main',
+                      zIndex: 3,
+                      '&:hover': {
+                        bgcolor: 'rojo.main',
+                        color: 'white',
+                        transform: 'scale(1.1)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                    onClick={(e) => handleDeleteClick(e, order)}
+                  >
+                    <ClearIcon fontSize="1rem" sx={{fontWeight:'bold'}} />
+                  </IconButton>
+                )}
+
                 <CardActionArea 
                   component={RouterLink} 
                   to={`/desayunos/orders/${order.id}`}
-                  sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+                  sx={{ height: '100%' }}
                 >
-                  <CardContent sx={{ flexGrow: 0, textAlign:'center'}}>
-                    <Typography   color="primary" display="flex" justifyContent='center' textAlign="center" gutterBottom 
-                      sx={{textShadow:"1px 1px 1px black, 0 0 3em blue, 0 0 0.1em",fontSize: { xs: '1.5rem', sm: '1.75rem' }}}>
-                      {order.nombre}
-                    </Typography>
-                    <Typography color="primary.dark" display="flex" justifyContent='center' textAlign="center" sx={{fontSize: { xs: '1.1rem', sm: '1.35rem' }}}>
-                      Fecha de reserva
-                    </Typography>                   
-                    <Typography  display="flex" justifyContent="center"  color="black" sx={{ mt:0, mb: 1 }}>
-                      {formatDate(order.fechaReserva)}
-                    </Typography>
-                    
-                    <Divider sx={{ my: 1 }} />
-                    
-                    <Typography  variant="h6" textAlign='center' color="secondary.light">
-                      <strong>Participantes: {order.usuarios?.length || 0} </strong>
-                    </Typography>
-                    
-                    <Box sx={{ mt: 1 }}>
+                  <CardContent sx={{ p: 3 }}>
+                    {/* Header del pedido */}
+                    <Box sx={{                    
+                        textAlign: 'center', 
+                        mb: 2,
+                        p: 2,
+                        borderRadius: 4,
+                        background: 'linear-gradient(135deg, rgba(109, 59, 7, 0.05) 0%, rgba(109, 59, 7, 0.1) 100%)'
+                      }}>
+                      <Avatar 
+                        sx={{ 
+                          width: 50, 
+                          height: 50, 
+                          mx: 'auto', 
+                          mb: 1,
+                          border:'2px solid',
+                          bgcolor: 'dorado.fondo',
+                          color: 'dorado.main'
+                        }}
+                      >
+                        <LocalCafeOutlinedIcon />
+                      </Avatar>
                       
+                      <Typography 
+                        variant="h6" 
+                        fontWeight="bold" 
+                        color="dorado.main" 
+                        sx={{ 
+                          fontSize: { xs: '1.15rem', sm: '1.30rem' },
+                          lineHeight: 1.2
+                        }}
+                      >
+                        {order.nombre}
+                      </Typography>
+                    </Box>
+
+                    <Divider sx={{ my: 1 }} />
+
+                    {/* Información del pedido */}
+                    <Box sx={{ mb: 1 }}>
+                      <Box display="flex" justifySelf="center" gap={1} mb={1}>
+                        <CalendarTodayIcon sx={{ fontSize: 25, color: 'dorado.main' }} />
+                        <Typography variant="body1" color="dorado.main">
+                          Fecha de reserva
+                        </Typography>
+                        </Box>
+                      <Typography variant="body1" textAlign="center" fontWeight="600" color="dorado.main">
+                        {formatDate(order.fechaReserva)}
+                      </Typography>
+                    </Box>
+                    <Divider />
+
+                    <Box sx={{ mt:1 }}>
+                      <Box display="flex" justifySelf="center" gap={1} mb={1}>
+                        <PeopleIcon sx={{ mt:1, fontSize: 25, color: 'dorado.main' }} />
+                        <Typography sx={{ mt:1}} variant="body1" color="dorado.main">
+                          Participantes: 
+                        </Typography>
+                      <Typography sx={{ml:1,fontWeight:'bold'}} variant="h4" fontWeight="bold" color="dorado.main">
+                        {order.usuarios?.length || 0}
+                      </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Chips de participantes */}
+                    <Box display="flex" justifyContent="center">
                       <Box sx={{ 
                         display: 'flex', 
-                        justifyContent: 'center', 
                         flexWrap: 'wrap', 
                         gap: 0.5,
+                        minHeight: 32
                       }}>
                         {order.usuarios && order.usuarios.length > 0 ? (
-                          order.usuarios.map((usuario, index) => (
+                          order.usuarios.slice(0, 3).map((usuario, index) => (
                             <Chip 
                               key={index}
                               label={formatearNombre(usuario.nombre)}
                               variant="outlined"
                               size="small"
-                              color="primary"
                               sx={{ 
-                                fontSize: '0.75rem',
-                                height: '26px',
-                                borderRadius: 2,
-                                backgroundColor: 'rgba(63, 81, 181, 0.04)',
+                                fontSize: '0.7rem',
+                                height: '24px',
+                                borderColor: 'dorado.main',
+                                color: 'dorado.main',
+                                bgcolor: 'dorado.fondo',
                                 '&:hover': {
-                                  backgroundColor: 'rgba(63, 81, 181, 0.08)'
+                                  bgcolor: 'dorado.fondoFuerte'
                                 }
                               }}
                             />
                           ))
                         ) : (
-                          <Typography variant="caption" color="textSecondary">
+                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                             Sin participantes aún
                           </Typography>
+                        )}
+                        {order.usuarios && order.usuarios.length > 3 && (
+                          <Chip 
+                            label={`+${order.usuarios.length - 3}`}
+                            variant="outlined"
+                            size="small"
+                            sx={{ 
+                              fontSize: '0.7rem',
+                              height: '24px',
+                              borderColor: 'dorado.main',
+                              color: 'dorado.main',
+                              bgcolor: 'dorado.fondo'
+                            }}
+                          />
                         )}
                       </Box>
                     </Box>
@@ -205,65 +358,85 @@ const OrderList = () => {
         </Grid>
       )}
 
-      {/* Diálogo de confirmación para eliminar pedido */}
+      {/* Diálogo de confirmación con estilo corporativo */}
       <Dialog
         open={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
+        maxWidth="sm"
+        fullWidth
         sx={{
           '& .MuiPaper-root': {
-            borderRadius: 5,}
+            borderRadius: 4,
+            border: '1px solid rgba(0,0,0,0.08)'
+          }
         }}
       >
-        <DialogTitle color='secondary' textAlign='center' fontWeight='bold' id="alert-dialog-title">
-          Eliminar pedido
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <Avatar 
+            sx={{ 
+              width: 60, 
+              height: 60, 
+              mx: 'auto', 
+              mb: 2,
+              bgcolor: 'rojo.fondo',
+              color: 'rojo.main'
+            }}
+          >
+            <DeleteIcon />
+          </Avatar>
+          <Typography component="div" variant="h6" fontWeight="bold" color="rojo.main">
+            Eliminar Pedido
+          </Typography>
         </DialogTitle>
-        <DialogContent>
-          <DialogContentText textAlign='center' id="alert-dialog-description">
-            ¿Estás seguro de que deseas eliminar el pedido "{orderToDelete?.nombre}"? 
-          </DialogContentText>
+        <Divider/>
+        
+        <DialogContent sx={{ textAlign: 'center', py: 2 }}>
+          <Typography variant="body1" color="text.primary" gutterBottom>
+            ¿Estás seguro de que deseas eliminar el pedido
+          </Typography>
+          <Typography variant="h6" fontWeight="bold" color="dorado.main">
+            "{orderToDelete?.nombre}"?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Esta acción no se puede deshacer
+          </Typography>
         </DialogContent>
-<DialogActions sx={{
-  display: "flex",
-  justifyContent: "space-between",
-  px: 2,
-  pb: 2,
-  gap: 1,
-  
-}}>
-  <Button 
-    onClick={handleCloseDeleteDialog} 
-    variant="outlined"
-    color="primary"
-    size="small"
-    startIcon={<CloseIcon />}
-    sx={{
-      borderRadius: 3,
-      fontSize: '1rem',
-      textTransform: 'none',
-      height: '32px'
-    }}
-  >
-    Cancelar
-  </Button>
-  <Button 
-    onClick={handleConfirmDelete} 
-    variant="contained" 
-    color="error" 
-    size="small"
-    startIcon={<DeleteIcon />}
-    autoFocus
-    sx={{
-      borderRadius: 3,
-      fontSize: '1rem',
-      textTransform: 'none',
-      height: '32px'
-    }}
-  >
-    Eliminar
-  </Button>
-</DialogActions>
+        <Divider/>
+        <DialogActions sx={{ p: 3, gap: 2, justifyContent: 'center' }}>
+          <Button 
+            onClick={handleCloseDeleteDialog} 
+            variant="outlined"
+            size="large"
+            startIcon={<CloseIcon />}
+            sx={{
+              borderRadius: 3,
+              px: 4,
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete} 
+            variant="contained" 
+            color="error"
+            size="large"
+            startIcon={<DeleteIcon />}
+            sx={{
+              borderRadius: 3,
+              px: 4,
+              textTransform: 'none',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)'
+              }
+            }}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );

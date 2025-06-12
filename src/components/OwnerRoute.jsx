@@ -1,9 +1,9 @@
-// components/AdminRoute.jsx
+// components/OwnerRoute.jsx
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import LoadingScreen from './Layout/LoadingScreen';
 
-const AdminRoute = ({ children }) => {
+const OwnerRoute = ({ children }) => {
   const { userRole, loading, isAuthenticated } = useAuthStore();
 
   if (loading) {
@@ -14,14 +14,14 @@ const AdminRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Solo admin y owner pueden acceder a rutas de administración
-  const isAdminOrOwner = userRole === 'admin' || userRole === 'owner';
+  // Solo el owner puede acceder
+  const isOwner = userRole === 'owner';
 
-  if (!isAdminOrOwner) {
+  if (!isOwner) {
     return <Navigate to="/dashboard" replace />;
   }
 
   return children;
 };
 
-export default AdminRoute;
+export default OwnerRoute;

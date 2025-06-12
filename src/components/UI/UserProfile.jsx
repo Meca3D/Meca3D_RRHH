@@ -15,20 +15,22 @@ import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import LockIcon from '@mui/icons-material/Lock';
-import { doc, updateDoc, query,getDocs,where,collection } from 'firebase/firestore';
+import { doc, updateDoc} from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { updateProfile, getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import {useAuth} from '../../hooks/useAuth'
+import { updateProfile, getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider,signOut } from 'firebase/auth';
+import { useAuthStore } from '../../stores/authStore';
+import { useUIStore } from '../../stores/uiStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const IMGBB_API_KEY = import.meta.env.VITE_MY_IMGBB_API_KEY;
-const UserProfile = ({ open, onClose, user, loading }) => {
+const UserProfile = ({ open, onClose }) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { isAuthenticated, logout, setUserProfile, userProfile } = useAuthStore();
+  const { showSuccess, showError } = useUIStore();
   const [editMode, setEditMode] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
@@ -42,27 +44,30 @@ const UserProfile = ({ open, onClose, user, loading }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (isAuthenticated) {
       setFormData({
-        nombre: user.nombre || '',
-        email: user.id || '',
+        nombre: userProfile.nombre || '',
+        email: userProfile.email || '',
         currentPassword: '',
         newPassword: ''
       });
-      setPreviewUrl(user.photoURL || '');
+      setPreviewUrl(userProfile.photoURL || '');
     }
-  }, [user,editMode]);
+  }, [isAuthenticated,userProfile,editMode]);
 
   // Si no hay usuario o está cargando, mostrar un estado de carga
-    if (!user || loading) {
-      return (
-        <Dialog open={open} onClose={onClose}>
-          <DialogContent>
+    if (!isAuthenticated || !userProfile) {
+    return (
+      <Dialog open={open} onClose={onClose}>
+        <DialogContent>
+          <Box display="flex" justifyContent="center" alignItems="center" p={4}>
             <CircularProgress />
-          </DialogContent>
-        </Dialog>
-      );
-    }
+            <Typography sx={{ ml: 2 }}>Cargando perfil...</Typography>
+          </Box>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -87,7 +92,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
 
     const formData = new FormData();
     formData.append('image', file); // ✅ IMPORTANTE: usar "image" no "file"
-
+    setUploading(true);
     const response = await axios.post(
       `https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`,
       formData,
@@ -116,7 +121,9 @@ const UserProfile = ({ open, onClose, user, loading }) => {
 };
   const handleUpdateProfile = async () => {
     try {
-           let photoURL = previewUrl; // Valor predeterminado: URL actual
+          setLoading(true); // ✅ Usar loading para estado general
+          setUploading(true);
+          let photoURL = previewUrl; // Valor predeterminado: URL actual
 
       // Si hay un archivo seleccionado, súbelo a Imgur
       if (selectedFile) {
@@ -124,7 +131,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
       }
 
     // Actualizar Firestore
-    const userRef = doc(db, 'USUARIOS', user.id);
+    const userRef = doc(db, 'USUARIOS', userProfile.email);
     await updateDoc(userRef, {
       nombre: formData.nombre,
       photoURL: photoURL // Añadir la URL de la foto
@@ -135,47 +142,48 @@ const UserProfile = ({ open, onClose, user, loading }) => {
         displayName: formData.nombre,
         photoURL: photoURL // Añadir la URL de la foto
       });
+        setUserProfile({
+        ...userProfile,
+        nombre: formData.nombre,
+        photoURL: photoURL
+      });7
 
-      // Actualizar pedidos
-      const pedidosQuery = query(collection(db, 'PEDIDOS'), where('usuarios', 'array-contains', user.id));
-      const pedidosSnapshot = await getDocs(pedidosQuery);
-      
-      pedidosSnapshot.forEach(async (doc) => {
-        const pedidoRef = doc.ref;
-        const usuarios = doc.data().usuarios.map(u => 
-          u.id === user.id ? { ...u, nombre: formData.nombre } : u
-        );
-        await updateDoc(pedidoRef, { usuarios });
-      });
-
-      setSnackbar({ open: true, message: 'Perfil actualizado!', severity: 'success' });
+      showSuccess('Perfil actualizado correctamente!');
       setEditMode(false);
+      setSelectedFile(null);
     } catch (error) {
-      setSnackbar({ open: true, message: 'Error al actualizar: ' + error.message, severity: 'error' });
+      showError('Error al actualizar: ' + error.message);
+    } finally {
+      setUploading(false);
+      setLoading(false)
     }
   };
 
     const handleLogout = async () => {
       try {
-        await logout();
+        await signOut(auth);
+        logout();
         onClose()
         navigate('/login');
       } catch (error) {
         console.error("Error al cerrar sesión:", error);
+        showError("Error al cerrar sesión");
       }
     };
 
   const handlePasswordChange = async () => {
     try {
-      const credential = EmailAuthProvider.credential(user.id, formData.currentPassword);
+      const credential = EmailAuthProvider.credential(userProfile.email, formData.currentPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
       await updatePassword(auth.currentUser, formData.newPassword);
       
-      setSnackbar({ open: true, message: 'Contraseña actualizada!', severity: 'success' });
+      showSuccess('Contraseña actualizada correctamente!');
       setPasswordDialogOpen(false);
       setEditMode(false)
+      setLoading(false)
+      setFormData({ ...formData, currentPassword: '', newPassword: '' });
     } catch (error) {
-      setSnackbar({ open: true, message: 'Error: ' + error.message, severity: 'error' });
+      showError('Error: ' + error.message);
     }
   };
 
@@ -193,6 +201,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
             id="icon-button-file"
             type="file"
             onChange={handleFileChange}
+            disabled={loading || uploading}
           />
           {editMode &&
           <label htmlFor="icon-button-file">
@@ -201,12 +210,14 @@ const UserProfile = ({ open, onClose, user, loading }) => {
             </IconButton>
           </label>}
           {uploading ? (
-            <Box sx={{ position: 'relative', width: 120, height: 120, mb: 2 }}>
-              <CircularProgress size={120} />
-              <Typography variant="caption" sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                Subiendo...
-              </Typography>
-            </Box>
+                <Box
+                  position="absolute"
+                  top="50%"
+                  left="50%"
+                  sx={{ transform: 'translate(-50%, -50%)' }}
+                >
+                  <CircularProgress />
+                </Box>
           ) : (
             <Avatar
               src={previewUrl}
@@ -236,9 +247,10 @@ const UserProfile = ({ open, onClose, user, loading }) => {
           margin="normal"
           label="Email"
           value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           slotProps={{
             input: {
-              readOnly: true,
+              readOnly: !editMode,
             },
           }}
         />
@@ -248,6 +260,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
           <Button
             variant="outlined"
             fullWidth
+            disabled={loading}
             startIcon={<LockIcon />}
             onClick={() => setPasswordDialogOpen(true)}
           >
@@ -265,10 +278,13 @@ const UserProfile = ({ open, onClose, user, loading }) => {
         color="secondary" 
         size="small"
         startIcon={<CancelIcon />}
+        disabled={loading || uploading}
         sx={{ fontSize: '1rem', textTransform: 'none' }}
         onClick={() =>  {
-          setEditMode(false); 
-          setFormData({...formData, nombre: user.nombre});
+          setEditMode(false);
+          setSelectedFile(null);
+          setPreviewUrl(userProfile.photoURL)
+          setFormData({...formData, nombre: userProfile.nombre});
         }}
       >
         Cancelar
@@ -277,6 +293,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
         variant="contained" 
         size="small"
         startIcon={<SaveIcon />}
+        disabled={loading || uploading}
         sx={{ fontSize: '1rem', textTransform: 'none' }}
         onClick={handleUpdateProfile}
       >
@@ -289,6 +306,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
         variant="outlined" 
         color="error" 
         size="small"
+        disabled={loading}
         startIcon={<LogoutIcon />}
         sx={{ fontSize: '1rem', textTransform: 'none' }}
         onClick={() => handleLogout()}
@@ -298,6 +316,7 @@ const UserProfile = ({ open, onClose, user, loading }) => {
       <Button 
         variant="contained" 
         size="small"
+        disabled={loading}
         startIcon={<EditIcon />}
         sx={{ fontSize: '1rem', textTransform: 'none' }}
         onClick={() => setEditMode(true)}
@@ -391,14 +410,6 @@ const UserProfile = ({ open, onClose, user, loading }) => {
             onClick={handlePasswordChange}>Cambiar</Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
-      </Snackbar>
     </Dialog>
   );
 };

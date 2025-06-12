@@ -33,18 +33,17 @@ import MisNominas from './components/Nominas/MisNominas';
 import MisVacaciones from './components/Vacaciones/MisVacaciones';
 import MisHorasExtra from './components/HorasExtra/MisHorasExtra';
 
-import Loading from './components/Layout/Loading';
-import { useAuth } from './hooks/useAuth';
+import LoadingScreen from './components/Layout/LoadingScreen';
+import { useAuthStore } from './stores/authStore';
 
 // Componente de protección de rutas
 const ProtectedRoute = ({ children }) => {
-  const { currentUser, loading } = useAuth();
 
-  if (loading) {
-    return <Loading />;
-  }
+  const { isAuthenticated, loading } = useAuthStore();;
 
-  if (!currentUser) {
+  if (loading) return <LoadingScreen />;
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

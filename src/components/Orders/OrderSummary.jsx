@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { formatDate } from '../Helpers';
 import {
   Typography, Box, Divider, List, ListItem, ListItemText, ListItemButton,
@@ -11,40 +11,18 @@ import LocalCafeIcon from '@mui/icons-material/LocalCafe';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DownloadIcon from '@mui/icons-material/Download';
 import ShareIcon from '@mui/icons-material/Share';
-import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { useProductsStore } from '../../stores/productsStore';
+import { useUIStore } from '../../stores/uiStore';
 import html2canvas from 'html2canvas';
 
-const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
-  const [order, setOrder] = useState(initialOrder);
+const OrderSummary = ({order, canManageOrder}) => {
+  const { products } = useProductsStore();
+  const { showSuccess, showError, showInfo } = useUIStore();
   const [selectedUser, setSelectedUser] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
-
   
   // Ref para el contenido que queremos exportar como imagen
   const summaryRef = useRef(null);
- 
-  useEffect(() => {
-    if (!initialOrder || !initialOrder.id) return;
-    
-    // Configurar un listener en tiempo real para el documento del pedido
-    const orderRef = doc(db, 'PEDIDOS', initialOrder.id);
-    const unsubscribe = onSnapshot(orderRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setOrder({ id: docSnap.id, ...docSnap.data() });
-      }
-    }, (error) => {
-      console.error("Error al escuchar cambios del pedido:", error);
-    });
-    
-    // Limpiar el listener cuando el componente se desmonte
-    return () => unsubscribe();
-  }, [initialOrder]);
 
   const handleUserClick = (usuario) => {
     setSelectedUser(usuario);
@@ -57,17 +35,20 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
 
   // Calcular el resumen de productos agrupados por tipo y ordenados
   const productSummary = useMemo(() => {
-    if (!order || !order.usuarios) return [];
+    if ( !order.usuarios || !products.length) return [];
     
     // Primero vamos a extraer todos los productos de todos los participantes
     const allProducts = [];
     order.usuarios.forEach(usuario => {
       if (usuario.productos && usuario.productos.length > 0) {
-        usuario.productos.forEach(producto => {
-          allProducts.push({
-            ...producto,
-            orderedBy: usuario.nombre
-          });
+        usuario.productos.forEach(productoId => {
+const productoCompleto = products.find(p => p.id === productoId);
+          if (productoCompleto) {
+            allProducts.push({
+              ...productoCompleto,
+              orderedBy: usuario.nombre || usuario.id // ✅ Usar nombre directamente
+            });
+          }
         });
       }
     });
@@ -78,7 +59,7 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
     allProducts.forEach(producto => {
       const key = `${producto.tipo}-${producto.nombre}`;
       
-      if (!groupedProducts[key]) {
+            if (!groupedProducts[key]) {
         groupedProducts[key] = {
           id: producto.id,
           nombre: producto.nombre,
@@ -105,7 +86,7 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
     });
     
     return result;
-  }, [order]);
+  }, [order,products]);
   
   // Separamos los productos por tipo para el reporte de descarga
   const productsByType = useMemo(() => {
@@ -134,13 +115,25 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
     
     return result;
   }, [productSummary]);
+
+  const getSelectedUserProducts = useMemo(() => {
+    if (!selectedUser || !selectedUser.productos || !products.length) return [];
+    
+    return selectedUser.productos
+      .map(productoId => products.find(p => p.id === productoId))
+      .filter(Boolean)
+      .sort((a, b) => {
+      if (a.tipo === 'comida' && b.tipo !== 'comida') return -1;
+      if (a.tipo !== 'comida' && b.tipo === 'comida') return 1;
+      return a.nombre.localeCompare(b.nombre)});
+  }, [selectedUser, products]);
+  
   
   // Función para descargar el resumen como imagen
   const handleDownloadImage = async () => {
     if (!summaryRef.current) return;
     
     try {
-      setDownloading(true);
       
       // Configuración para una mejor calidad de imagen
       const options = {
@@ -149,9 +142,7 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
         logging: false,
         useCORS: true
       };
-      setSnackbarMessage('Generando imagen...');
-      setSnackbarSeverity('info');
-      setSnackbarOpen(true);
+       showInfo('Generando imagen...');
       const canvas = await html2canvas(summaryRef.current, options);
       
       // Convertir a URL de datos
@@ -164,16 +155,9 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setSnackbarMessage('¡Imagen descargada correctamente!');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showSuccess('¡Imagen descargada correctamente!');
     } catch (error) {
-      console.error('Error al generar la imagen:', error);
-      setSnackbarMessage('Error al generar la imagen');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
-    } finally {
-      setDownloading(false);
+       showError(`Error al generar la imagen: ${error}`);
     }
   };
   
@@ -184,15 +168,11 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
       
       // Verificamos si el navegador soporta la API Web Share
       if (!navigator.share) {
-        setSnackbarMessage('Tu navegador no soporta compartir');
-        setSnackbarSeverity('warning');
-        setSnackbarOpen(true);
+        showError('Tu navegador no soporta compartir');
         return;
       }
       
-      setSnackbarMessage('Preparando imagen para compartir...');
-      setSnackbarSeverity('info');
-      setSnackbarOpen(true);
+      showInfo('Preparando imagen para compartir...');
       
       const canvas = await html2canvas(summaryRef.current, { 
         scale: 2,
@@ -208,9 +188,10 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
       const blob = await blobPromise;
       
       // Crear un archivo a partir del blob
-      const file = new File([blob], `resumen-pedido-${order.nombre ||  'Pedido'}-${new Date().toLocaleDateString()}.png`, { 
-        type: 'image/png' 
-      });
+      const fechaSegura = new Date().toLocaleDateString('es-ES').replace(/[^a-zA-Z0-9-_]/g, '_') // YYYY-MM-DD
+      const nombrePedido = (order.nombre || 'Pedido').replace(/[^a-zA-Z0-9-_]/g, '_'); // Limpiar caracteres especiales
+      const nombreArchivo = `${nombrePedido}-${fechaSegura}.png`;
+      const file = new File([blob], nombreArchivo, { type: 'image/png' });
       
       // Usar la API Web Share para compartir
       await navigator.share({
@@ -219,17 +200,10 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
         files: [file]
       });
       
-      setSnackbarMessage('Compartido correctamente');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showSuccess('Compartido correctamente');
     } catch (error) {
-      console.error('Error al compartir:', error);
-      
-      // Si el usuario canceló la acción de compartir, no mostramos error
       if (error.name !== 'AbortError') {
-        setSnackbarMessage('Error al compartir la imagen');
-        setSnackbarSeverity('error');
-        setSnackbarOpen(true);
+      showError(`Error al compartir la imagen: ${error}`);
       }
     }
   };
@@ -244,8 +218,8 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
     <Box>
       {/* Contenido para visualizar en la app */}
       <Box sx={{ mb: 3 }}>
-        <Typography display="flex" justifyContent="center" variant="h6" gutterBottom>
-          Resumen total del pedido
+        <Typography display="flex" justifyContent="center" variant="h6" color="dorado.main" gutterBottom>
+          Resumen del pedido
         </Typography>
         
         <Box sx={{ display: 'flex', justifyContent: canManageOrder ? 'space-between' : 'center', alignItems: 'center', mb: 2 }}>
@@ -253,13 +227,13 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
             <Box sx={{ textAlign: 'center' }}>
               <LunchDiningIcon color='comida' sx={{ fontSize: 40 }} />
               <Typography variant="h5">{totals.COMIDA}</Typography>
-              <Typography variant="subtitle2" color="textSecondary">Comida</Typography>
+              <Typography variant="subtitle2" color="dorado.main">Comida</Typography>
             </Box>
             
             <Box sx={{ textAlign: 'center' }}>
               <LocalCafeIcon color="bebida" sx={{ fontSize: 40 }} />
               <Typography variant="h5">{totals.BEBIDA}</Typography>
-              <Typography variant="subtitle2" color="textSecondary">Bebida</Typography>
+              <Typography variant="subtitle2" color="dorado.main">Bebida</Typography>
             </Box>
           </Box>
           
@@ -290,12 +264,12 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
         </Box>
       </Box>
       
-            <Paper sx={{backgroundColor: '#f5f5f5',display:'flex', justifyContent:'space-between'}}>
+            <Paper sx={{backgroundColor: 'dorado.fondo',display:'flex', justifyContent:'space-between'}}>
             <Box>
-              <Typography><strong>Producto</strong></Typography>
+              <Typography ><strong>Producto</strong></Typography>
             </Box>
             <Box>
-              <Typography><strong>Cantidad</strong></Typography>
+              <Typography ><strong>Cantidad</strong></Typography>
             </Box>
             </Paper>
 
@@ -312,7 +286,7 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
                           }}
                         >
                           <Box sx={{ width: '85%', pl: 2 }}>
-                            <Typography variant='subtitle2'>{producto.nombre}</Typography>
+                            <Typography  variant='subtitle2'>{producto.nombre}</Typography>
                           </Box>
                           <Box sx={{ width: '15%', textAlign: 'center' }}>
                           <Typography variant='subtitle2'>{producto.cantidad}</Typography>
@@ -321,7 +295,7 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
                   ))
                 ) : (
                   <Box>
-                    <Typography >
+                    <Typography color="dorado.main">
                       No hay comida en este pedido
                     </Typography>
                   </Box>
@@ -349,7 +323,7 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
                   ))
                 ) : (
                   <Box>
-                    <Typography >
+                    <Typography color="dorado.main" >
                       No hay bebida en este pedido
                     </Typography>
                   </Box>
@@ -357,9 +331,9 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
             
             
 
-         <Paper sx={{mt: 4, backgroundColor: '#f5f5f5', display:'flex', justifyContent:'center'}}>
+         <Paper sx={{mt: 4, backgroundColor: 'dorado.fondo', display:'flex', justifyContent:'center'}}>
             <Box>
-              <Typography><strong>Participantes ({order?.usuarios?.length || 0})</strong></Typography>
+              <Typography ><strong>Participantes ({order?.usuarios?.length || 0})</strong></Typography>
             </Box>
             </Paper>
 
@@ -377,10 +351,10 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
                           }}
                         >
                           <Box sx={{ textAlign: 'center' }}>
-                            <Typography><strong>{usuario.nombre}</strong></Typography>
+                            <Typography fontSize="1.rem">{usuario.nombre}</Typography>
                           </Box>
                           <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant='subtitle2'>{`${usuario.productos?.length || 0} productos`}</Typography>
+                          <Typography fontSize="0.7rem">{`${usuario.productos?.length || 0} productos`}</Typography>
                           </Box>
                         </Box>         
                   ))}
@@ -401,8 +375,8 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
           </Typography>
         </DialogTitle>
         <DialogContent>
-          {selectedUser && selectedUser.productos && selectedUser.productos.length > 0 ? (        
-              selectedUser.productos.sort((a, b) => a.nombre.localeCompare(b.nombre)).map((producto, index) => (
+          {getSelectedUserProducts.length > 0 ? (        
+            getSelectedUserProducts.map((producto, index) => (
                         <Box 
                           key={index} 
                           sx={{ 
@@ -439,22 +413,7 @@ const OrderSummary = ({ order: initialOrder, canManageOrder}) => {
         </DialogActions>
       </Dialog>
       
-      {/* Notificaciones */}
-      <Snackbar 
-        open={snackbarOpen} 
-        autoHideDuration={4000} 
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={() => setSnackbarOpen(false)} 
-          severity={snackbarSeverity} 
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-
+   
       {/* Contenido oculto para exportar como imagen */}
       <Box 
         ref={summaryRef} 

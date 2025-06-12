@@ -1,7 +1,11 @@
 // src/components/Auth/Login.jsx
-import React, { useState } from 'react';
-import { replace, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
+import { useUIStore } from '../../stores/uiStore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../firebase/config';
 import {
   Box,
   Typography,
@@ -13,7 +17,8 @@ import {
   Container,
   InputAdornment,
   IconButton,
-  CssBaseline
+  CssBaseline,
+  Input
 } from '@mui/material';
 import FactoryIcon from '@mui/icons-material/Factory';
 import EmailIcon from '@mui/icons-material/Email';
@@ -29,7 +34,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const { login } = useAuth();
+
+  const { setUser, setUserRole, setUserProfile } = useAuthStore();
+  const { showSuccess, showError } = useUIStore();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -45,22 +52,53 @@ const Login = () => {
     setError(null);
 
     try {
-      await login(formData.email, formData.password);
-      navigate('/');
+      // Autenticar con Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
+
+      // Obtener datos del usuario desde Firestore
+      const userDoc = await getDoc(doc(db, 'USUARIOS', user.email));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        
+        // Actualizar stores
+      setUser(user);
+      setUserRole(userData.rol);
+      setUserProfile({
+        email: user.email,
+        nombre: userData.nombre,
+        rol: userData.rol,
+        photoURL: userData.photoURL || null,
+        favoritos: userData.favoritos || [],
+        vacaDias: userData.vacaDias,
+        vacaHoras: userData.vacaHoras
+      });
+        
+        showSuccess(`¡Bienvenido ${userData.nombre}!`);
+        navigate('/');
+      } else {
+        throw new Error(`Usuario ${user.email} no encontrado en la base de datos`);
+      }
     } catch (err) {
       console.error('Error al iniciar sesión:', err);
       
       // Mensajes de error más amigables
+      let errorMessage = 'Error al iniciar sesión';
+      
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('El email o la contraseña son incorrectos');
+        errorMessage = 'El email o la contraseña son incorrectos';
       } else if (err.code === 'auth/invalid-email') {
-        setError('El formato del email no es válido');
+        errorMessage = 'El formato del email no es válido';
       } else if (err.code === 'auth/too-many-requests') {
-        setError('Demasiados intentos fallidos. Por favor, inténtalo más tarde');
-      } else {
-        setError(`Error al iniciar sesión: ${err.message}`);
+        errorMessage = 'Demasiados intentos fallidos. Por favor, inténtalo más tarde';
+      } else if (err.message) {
+        errorMessage = err.message;
       }
       
+      setError(errorMessage);
+      showError(errorMessage);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -72,108 +110,89 @@ const Login = () => {
   return (
     <>
       <CssBaseline />
-      <Container maxWidth="sm">
+      <Container component="main" maxWidth="xs">
         <Box
           sx={{
-            minHeight: '100vh',
+            marginTop: 8,
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
-            py: 4,
+            alignItems: 'center',
           }}
         >
-          <Paper
-            elevation={4}
-            sx={{
-              p: 4,
-              borderRadius: 2,
-            }}
-          >
-            <Box 
-              display="flex" 
-              flexDirection="column" 
-              alignItems="center" 
-              mb={4}
-            >
-              <Box
-                sx={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  backgroundColor: 'primary.main',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  mb: 2
-                }}
-              >
-                <FactoryIcon sx={{ fontSize: 30, color: 'white' }} />
-              </Box>
-              <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+          <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
+            <Box textAlign="center" mb={3}>
+              <FactoryIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+              <Typography component="h1" variant="h4" gutterBottom>
                 Mecaformas 3D
               </Typography>
-              <Typography variant="body1" color="text.secondary" align="center">
+              <Typography variant="body2" color="text.secondary">
                 Inicia sesión para acceder a la aplicación
               </Typography>
             </Box>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
+              <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit}>
+            <Box component="form" onSubmit={handleSubmit}>
               <TextField
+                margin="normal"
+                required
                 fullWidth
+                id="email"
                 label="Email"
-                variant="outlined"
                 name="email"
-                type="email"
+                autoComplete="email"
+                autoFocus
                 value={formData.email}
                 onChange={handleChange}
-                required
-                autoFocus
-                margin="normal"
-                InputProps={{
-                  startAdornment: (
+                disabled={isSubmitting}
+                slotProps={{
+                  input:{
+                    startAdornment: (
                     <InputAdornment position="start">
-                      <EmailIcon color="action" />
+                      <EmailIcon />
                     </InputAdornment>
-                  ),
+                  )}
                 }}
                 sx={{ mb: 2 }}
               />
-
+              
               <TextField
+                margin="normal"
+                required
                 fullWidth
-                label="Contraseña"
-                variant="outlined"
                 name="password"
+                label="Contraseña"
                 type={showPassword ? 'text' : 'password'}
+                id="password"
+                autoComplete="current-password"
                 value={formData.password}
                 onChange={handleChange}
-                required
-                margin="normal"
-                  slotProps={{
-                    input:{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockIcon color="action" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={toggleShowPassword}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
+                disabled={isSubmitting}
+                slotProps={{
+                  input:{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockIcon />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={toggleShowPassword}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+
                   }
+
                 }}
                 sx={{ mb: 3 }}
               />
@@ -182,24 +201,17 @@ const Login = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                size="large"
                 disabled={isSubmitting}
-                sx={{
-                  mt: 2,
-                  py: 1.5,
-                  borderRadius: 2,
-                }}
+                sx={{ mt: 3, mb: 2, py: 1.5 }}
               >
                 {isSubmitting ? (
-                  <CircularProgress size={24} color="inherit" />
+                  <CircularProgress size={24} />
                 ) : (
                   'Iniciar sesión'
                 )}
               </Button>
-            </form>
 
-            <Box mt={3} textAlign="center">
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" textAlign="center">
                 No hay registro público. Contacta con el administrador para obtener credenciales.
               </Typography>
             </Box>

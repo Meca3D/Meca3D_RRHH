@@ -1,309 +1,271 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate,useLocation } from 'react-router-dom';
 import { formatDate } from '../Helpers';
-import { eliminarUsuarioDePedido } from '../../firebase/firestore';
 import {
   Container, IconButton, Typography, Box, CircularProgress, Tabs, Tab,
   Button, Card, CardContent, Divider, List, ListItem, ListItemText,
-  Dialog, DialogTitle, DialogContent, DialogActions, Fab,
+  Dialog, DialogTitle, DialogContent, DialogActions, Fab, AppBar, Toolbar,
   ListItemIcon,Paper
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import CheckIcon from '@mui/icons-material/Check';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import { Alert } from '@mui/material';
 import LunchDiningIcon from '@mui/icons-material/LunchDining';
+import LunchDiningOutlinedIcon from '@mui/icons-material/LunchDiningOutlined';
+import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
 import LocalCafeIcon from '@mui/icons-material/LocalCafe';
-import ReceiptLongIcon from '@mui/icons-material/Summarize';
+import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import ReceiptIcon from '@mui/icons-material/Receipt';
 import GradeIcon from '@mui/icons-material/Grade';
+import GradeOutlinedIcon from '@mui/icons-material/GradeOutlined';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ClearIcon from '@mui/icons-material/Clear';
-import { doc, getDoc} from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { useAuth } from '../../hooks/useAuth';
 import ProductList from '../Products/ProductList';
-import OrderSummary from './OrderSummary'
-import { unirseAPedido,actualizarProductosEnPedido } from '../../firebase/firestore';
+import OrderSummary from '../Orders/OrderSummary'
+import { useOrdersStore } from '../../stores/ordersStore';
+import { useProductsStore } from '../../stores/productsStore';
+import { useAuthStore } from '../../stores/authStore';
+
 
 const OrderDetail = () => {
   const { orderId } = useParams();
-  const { currentUser } = useAuth();
+  const location = useLocation();
+  const { user } = useAuthStore();
+  const { 
+    orders, 
+    fetchOrders, 
+    updateOrderUsers, 
+    removeUserFromOrder, 
+    loading 
+  } = useOrdersStore();
+  const { 
+    products, 
+    fetchProducts, 
+    loading: loadingProducts 
+  } = useProductsStore();
   const navigate = useNavigate();
-  
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(2);
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [summaryOpen, setSummaryOpen] = useState(false);
   const [confirmingSelection, setConfirmingSelection] = useState(false);
-  const [selectionMessage, setSelectionMessage] = useState('');
-  const [userRole, setUserRole] = useState('user');
-  const [isCreator, setIsCreator] = useState(false);
-  const [canManageOrder, setCanManageOrder] = useState(false);
-
-
-  // Cargar datos del pedido
-useEffect(() => {
-  if (!orderId) {
-    console.error('OrderId no está definido');
-    navigate('/desayunos/orders');
-    return;
-  }
-
-  if (!currentUser) {
-    navigate('/login');
-    return;
-  }
-
-  const fetchOrderData = async () => {
-    try {
-      if (!orderId || orderId.trim() === '') {
-        throw new Error('ID de pedido inválido');
-      }
-
-      const orderRef = doc(db, 'PEDIDOS', orderId);
-      const orderSnap = await getDoc(orderRef);
-      
-      if (orderSnap.exists()) {
-        const orderData = {
-          id: orderSnap.id,
-          ...orderSnap.data()
-        };
-        setOrder(orderData);
-
-        // ✅ Obtener rol del usuario
-        const userRef = doc(db, 'USUARIOS', currentUser.email);
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.exists() ? userSnap.data() : null;
-        const role = userData?.rol || 'user';
-        
-        setUserRole(role);
-        
-        // ✅ Verificar si es el creador
-        const isOrderCreator = orderData.creadoPor === currentUser.email;
-        setIsCreator(isOrderCreator);
-        
-        // ✅ Calcular permisos
-        const hasPermissions = role === 'admin' || isOrderCreator;
-        setCanManageOrder(hasPermissions);
-        
-        // Verificar si el usuario ya está participando
-        const userParticipant = orderData.usuarios?.find(
-          p => p.id === currentUser.email
-        );
-        
-        if (userParticipant) {
-          // ✅ Usuario ya está en el pedido
-          setSelectedProducts(userParticipant.productos || []);
-        } else {
-          // ✅ Usuario no está, unirlo automáticamente
-          await unirseAPedido(orderId, currentUser.email, []);
-          // Volver a cargar el pedido para ver la actualización
-          const updatedOrderSnap = await getDoc(orderRef);
-          const updatedOrderData = {
-            id: updatedOrderSnap.id,
-            ...updatedOrderSnap.data()
-          };
-          setOrder(updatedOrderData);
-          setSelectedProducts([]);
-        }
-      } else {
-        console.error('El pedido no existe');
-        navigate('/desayunos/orders');
-      }
-    } catch (error) {
-      console.error("Error al cargar el pedido:", error);
-      navigate('/desayunos/orders');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchOrderData();
-}, [orderId, currentUser, navigate]);
-
+  const [selectionMessage, setSelectionMessage] = useState(''); 
+  const [summaryOpen, setSummaryOpen] = useState(false);
   
 
-  // Manejar cambio de pestaña
+useEffect(() => {
+  // Solo cargar si no hay datos (fallback)
+  if (orders.length === 0 && !loading) {
+    fetchOrders();
+  }
+  if (products.length === 0 && !loadingProducts) {
+    fetchProducts();
+  }
+}, [orders.length, products.length, loading, loadingProducts]);
+
+    // ✅ Obtener pedido del estado de navegación si existe
+  const newOrder = location.state?.newOrder;
+  const storeOrder = orders.find(o => o.id === orderId);
+  const order = storeOrder || newOrder;
+ 
+
+  // Verificar autenticación
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
+
+  // Verificar si el pedido existe
+  useEffect(() => {
+    if (!loading && !loadingProducts && !order && orders.length > 0 && !newOrder) {
+      navigate('/dashboard');
+    }
+  }, [loading, loadingProducts, order, orders.length, navigate,newOrder]);
+
+  useEffect(() => {
+  // Actualizar productos seleccionados
+
+    if (order && user && products.length > 0) {
+      const userParticipant = order.usuarios?.find(p => p.id === user.email);
+    
+
+      if (userParticipant?.productos) {
+      const productosCompletos = userParticipant.productos
+        .map(productoId => {
+          const found = products.find(p => p.id === productoId);
+          return found;
+        })
+        .filter(Boolean);
+      
+      setSelectedProducts(productosCompletos);
+    } else {
+        setSelectedProducts([]);
+      }
+    }
+  }, [order, user, products]);
+
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
 
-  // Añadir o quitar producto de la selección
-
-const toggleProductSelection = (product) => {
-  setSelectedProducts(prevSelected => {
-    const safeArray = Array.isArray(prevSelected) ? prevSelected : [];
-    const isAlreadySelected = safeArray.some(p => p.id === product.id);
-    
-    if (isAlreadySelected) {
-      return safeArray.filter(p => p.id !== product.id);
-    } else {
-      return [...safeArray, product];
-    }
-  });
-};
-
-const confirmarSeleccion = async () => {
-  if (!orderId || !currentUser) return;
-  
-  setConfirmingSelection(true);
-  setSelectionMessage('');
-  
-  try {
-    const userParticipant = order.usuarios?.find(p => p.id === currentUser.email);
-    
-    if (selectedProducts.length === 0) {
-      // ✅ Sin productos - eliminar del pedido si estaba
-      if (userParticipant) {
-        await eliminarUsuarioDePedido(orderId, currentUser.email);
-        setSelectionMessage('Te has retirado del pedido correctamente');
+  const toggleProductSelection = (product) => {
+    setSelectedProducts(prevSelected => {
+      const safeArray = Array.isArray(prevSelected) ? prevSelected : [];
+      const isAlreadySelected = safeArray.some(p => p.id === product.id);
+      if (isAlreadySelected) {
+        return safeArray.filter(p => p.id !== product.id);
       } else {
-        setSelectionMessage('No tienes productos seleccionados');
+        return [...safeArray, product];
       }
-    } else {
-      // ✅ Con productos - unirse o actualizar
-      if (userParticipant) {
-        // Usuario ya está, actualizar productos
-        await actualizarProductosEnPedido(orderId, currentUser.email, selectedProducts);
+    });
+  };
+
+  const confirmarSeleccion = async () => {
+    if (!orderId || !user) return;
+    setConfirmingSelection(true);
+    setSelectionMessage('');
+    try {
+      const userParticipant = order.usuarios?.find(p => p.id === user.email);
+      if (selectedProducts.length === 0) {
+        if (userParticipant) {
+          await removeUserFromOrder(orderId, user.email);
+          setSelectionMessage('Te has retirado del pedido correctamente');
+        } else {
+          setSelectionMessage('No tienes productos seleccionados');
+        }
+      } else {
+        await updateOrderUsers(orderId, user.email, selectedProducts);
         setSelectionMessage(`Selección actualizada: ${selectedProducts.length} producto${selectedProducts.length !== 1 ? 's' : ''}`);
-      } else {
-        // Usuario no está, unirse al pedido
-        await unirseAPedido(orderId, currentUser.email, selectedProducts);
-        setSelectionMessage(`Te has unido al pedido con ${selectedProducts.length} producto${selectedProducts.length !== 1 ? 's' : ''}`);
       }
+      setTimeout(() => setSelectionMessage(''), 3000);
+      setTimeout(() => navigate('/desayunos/orders'),2000);
+    } catch (error) {
+      setSelectionMessage(`Error al confirmar la selección: ${error.message}`);
+    } finally {
+      setConfirmingSelection(false);
     }
-    
-    // ✅ Recargar pedido para mostrar cambios
-    const orderRef = doc(db, 'PEDIDOS', orderId);
-    const updatedOrderSnap = await getDoc(orderRef);
-    if (updatedOrderSnap.exists()) {
-      const updatedOrderData = {
-        id: updatedOrderSnap.id,
-        ...updatedOrderSnap.data()
-      };
-      setOrder(updatedOrderData);
-    }
-    
-    // Limpiar mensaje después de 3 segundos
-    setTimeout(() => setSelectionMessage(''), 3000);
-    setTimeout(() => navigate('/desayunos/orders'),2000);
-    
-  } catch (error) {
-    console.error('Error al confirmar selección:', error);
-    setSelectionMessage('Error al confirmar la selección');
-  } finally {
-    setConfirmingSelection(false);
-  }
-};
+  };
 
+  if (loading || loadingProducts) {
+    return (
+      <Box textAlign="center" p={4}>
+        <CircularProgress />
+        <Typography>Cargando datos...</Typography>
+      </Box>
+    );
+  }
+
+  if (!order) {
+    return (
+      <Box textAlign="center" p={4}>
+        <Typography>Pedido no encontrado</Typography>
+        <Button onClick={() => navigate('/desayunos/orders')}>
+          Volver a pedidos
+        </Button>
+      </Box>
+    );
+  }
+
+  
   // Abrir/cerrar diálogo de resumen
   const toggleSummary = () => {
     setSummaryOpen(!summaryOpen);
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
+
+
+<>
+
+      <AppBar  
+        sx={{ 
+          overflow:'hidden',
+          background: 'linear-gradient(135deg, #6D3B07 0%, #4A2505 50%, #2D1603 100%)',
+          boxShadow: '0 2px 10px rgba(109, 59, 7, 0.2)',
+          zIndex: 1100
+        }}
+      >
+        <Toolbar sx={{ justifyContent: 'space-between', px: 2 }}>
+          {/* Botón Volver */}
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={() => navigate('/desayunos/orders')}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.1)',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.2)',
+                transform: 'scale(1.05)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <ArrowBackIosNewIcon />
+          </IconButton>
+
+          {/* Título del pedido */}
+          <Box sx={{ my:0.5, textAlign: 'center', flex: 1, mx: 2 }}>
+            <Typography 
+              variant="h5" 
+              fontWeight="bold" 
+              sx={{ 
+                fontSize: { xs: '1.1rem', sm: '1.3rem' },
+                lineHeight: 1.2
+              }}
+            >
+              {order?.nombre}
+            </Typography>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                opacity: 0.9,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}
+            >
+              {formatDate(order?.fechaReserva)}
+            </Typography>
+          </Box>
+
+          {/* Botón Ver Resumen */}
+          <IconButton
+            edge="end"
+            color="inherit"
+            onClick={toggleSummary}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.08)',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.2)',
+                transform: 'scale(1.05)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <ReceiptIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
 <Container 
     maxWidth="md"
     sx={{ 
-    width: '100%',
-    maxWidth: '100%',
-    overflow: 'hidden',
-    px: 0, 
-    mt: 0, 
-    mb: 4,
-    boxSizing: 'border-box'
-  }}>
-    <Box sx={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      mb: 3,
-      position: 'relative',
       width: '100%',
-      minHeight: '56px' // Altura mínima para los Fab
-    }}>
-      {/* Fab Atrás - Posición fija desde la izquierda */}
-      <Fab 
-        sx={{
-          position: 'absolute',              
-          left: 0, // Cambiar de 4 a 0
-          top: '50%',
-          transform: 'translateY(-50%)'
-        }}
-        aria-label="atras" 
-        size='small'
-        color='secondary'       
-        onClick={() => navigate('/desayunos/orders')}
-      >
-        <ArrowBackIcon fontSize="large"/>         
-      </Fab>
-   
-      {/* Título - Centrado con margen para los Fab */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center',
-        px: 7, // Espacio para los Fab
-        textAlign: 'center',
-        width: '100%'
-      }}>
-        <Box sx={{display:'flex', flexDirection:'column'}}>
-        <Typography 
-          color='primary.dark' 
-          variant="h4"
-          component="h1" 
-          sx={{
-            fontSize: { xs: '1.75rem', sm: '2rem' },
-            lineHeight: 1.2,
-            width: '100%'
-          }}
-        >
-          {order?.nombre}
-        </Typography>
-        <Typography 
-          color='primary.dark' 
-          variant="h4"
-          component="h1" 
-          sx={{
-            fontSize: { xs: '1.25rem', sm: '1.5rem' },
-            lineHeight: 1.2,
-            width: '100%'
-          }}
-        >
-          {formatDate(order?.fechaReserva)}
-        </Typography>
-        </Box>
-      </Box>
+      maxWidth: '100%',
+      overflow: 'hidden',
+      px: 3, 
+      mt: 3, 
+      mb: 4,
+      boxSizing: 'border-box'
+  }}>
 
-        <Fab 
-          color='primary'
-          size='small'
-          sx={{
-            position: 'absolute',              
-            right: 0,
-            top: '50%',
-            transform: 'translateY(-50%)'
-          }}
-          aria-label="resumen" 
-          onClick={toggleSummary}
-        >
-          <ReceiptLongIcon fontSize="large" />
-        </Fab>
-    </Box>
     
-
-  <Card elevation={3} sx={{ mb: 3 }}>
+  <Card elevation={3} sx={{ mb: 3, bgcolor:'dorado.fondo' }}>
   <CardContent >
-    <Typography  textAlign="center" variant="h6" gutterBottom color="primary">
-      Mi Selección
+    <Box display="flex" sx={{mb:1, alignItems:"center", justifyContent:"space-between"}}>
+    <AssignmentTurnedInOutlinedIcon sx={{color:'dorado.main'}}/>
+    <Typography  textAlign="center" variant="h6" gutterBottom color="dorado.main">
+      <strong>Mi Selección</strong>
     </Typography>
+    <AssignmentTurnedInOutlinedIcon sx={{color:'dorado.main'}}/>
+    </Box>
     <Divider sx={{mb:2}}/>
     
     {selectedProducts.length > 0 ? (
@@ -329,7 +291,8 @@ const confirmarSeleccion = async () => {
                   ml:-3,
                   fontSize: '0.9rem',
                   fontWeight: '600',
-                  letterSpacing: 0,}
+                  letterSpacing: 0,
+}
                 }} primary={producto.nombre} />
             </ListItem>
           ))}
@@ -337,10 +300,10 @@ const confirmarSeleccion = async () => {
       </>
     ) : (
       <Box sx={{ textAlign: 'center', py: 2 }}>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" color="dorado.main">
           Aún no has seleccionado ningún producto
         </Typography>
-        <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+        <Typography variant="caption" color="dorado.main" sx={{ mt: 1, display: 'block' }}>
           Selecciona productos de las pestañas de abajo
         </Typography>
       </Box>
@@ -353,19 +316,23 @@ const confirmarSeleccion = async () => {
         variant="contained"
         onClick={confirmarSeleccion}
         disabled={confirmingSelection}
-        startIcon={confirmingSelection ? <CircularProgress size={15} /> : <CheckIcon size={15}/>}
         sx={{
+          height:'4rem',
+          transition: 'all 0.3s ease',
           py: 1,
           px: 4,
           borderRadius: 3,
           fontSize: '1rem',
           background: selectedProducts.length > 0 
-            ? 'linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%)'
+            ? 'linear-gradient(to bottom, #003399, #3366CC, #003399)'
             : 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)',
+          boxShadow: '0 4px 15px rgba(109, 59, 7, 0.3)',
           '&:hover': {
             background: selectedProducts.length > 0
-              ? 'linear-gradient(135deg, #1b5e20 0%, #4caf50 100%)'
+              ? 'linear-gradient(to right, #004080, #007BFF, #004080)'
               : 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)',
+            boxShadow: '0 6px 20px rgba(109, 59, 7, 0.4)',
+            transform: 'translateY(-2px)'
           }
         }}
       >
@@ -392,10 +359,27 @@ const confirmarSeleccion = async () => {
            
       <Box sx={{ width: '100%', mt:1}}>
         <Box sx={{ borderBottom: 2, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={handleTabChange} centered aria-label="categorías de productos">
-            <Tab label="Comida" icon={<LunchDiningIcon color="comida"/>} />
-            <Tab label="Bebida" icon={<LocalCafeIcon color="bebida"/>} />
-            <Tab label="Favoritos" icon={<GradeIcon color="favoritos"/>} />
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange} 
+            centered aria-label="categorías de productos"
+            sx={{
+              '& .MuiTabs-indicator': {
+                backgroundColor: 'dorado.main', // ✅ Color de la barra indicadora
+              },
+              '& .MuiTab-root': {
+                color: 'dorado.fondoFuerte', // Color del texto no seleccionado
+                '&.Mui-selected': {
+                  color: 'black', // ✅ Color del texto seleccionado
+                },
+              },
+            }}
+
+
+          >
+            <Tab label="Comida" icon={activeTab === 0 ? <LunchDiningIcon color="comida"/>:<LunchDiningOutlinedIcon color="comida"/>} />
+            <Tab label="Bebida" icon={activeTab === 1 ? <LocalCafeIcon color="bebida"/>:<LocalCafeOutlinedIcon color="bebida"/>} />
+            <Tab label="Favoritos" icon={activeTab === 2 ? <GradeIcon color="favoritos"/>:<GradeOutlinedIcon color="favoritos"/>} />
           </Tabs>
         </Box>
         
@@ -436,20 +420,21 @@ const confirmarSeleccion = async () => {
         <DialogTitle>
         <Typography 
           textAlign='center'
-          color='primary.dark' 
-          variant="h4"
+          color='dorado.main' 
+          variant="h5"
           component="div" 
           sx={{
-            fontSize: { xs: '1.75rem', sm: '2rem' },
+            fontSize: { xs: '1.5rem', sm: '1.8rem' },
             lineHeight: 1.2,
             width: '100%'
           }}
-        >
+        ><strong>
           {order?.nombre}
+          </strong>
         </Typography>
         <Typography 
           textAlign='center'
-          color='primary.dark' 
+          color='dorado.main' 
           variant="h4"
           component="div" 
           sx={{
@@ -462,7 +447,7 @@ const confirmarSeleccion = async () => {
         </Typography>
         </DialogTitle>
         <DialogContent dividers>
-          <OrderSummary order={order} canManageOrder={canManageOrder} />
+          <OrderSummary order={order} canManageOrder={user.email==order.creadoPor} />
         </DialogContent>
         <DialogActions>
           <Button 
@@ -477,6 +462,7 @@ const confirmarSeleccion = async () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </>
   );
 };
 

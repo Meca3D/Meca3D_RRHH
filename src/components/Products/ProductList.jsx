@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState} from 'react';
 import { 
   Grid, Card, CardContent, CardActionArea, Typography, IconButton, 
   TextField, InputAdornment, Box, CircularProgress, Chip
@@ -8,132 +8,47 @@ import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import LocalCafeIcon from '@mui/icons-material/LocalCafe';
-import { collection, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { useAuth } from '../../hooks/useAuth';
+import { useProductsStore } from '../../stores/productsStore';
+import { useAuthStore } from '../../stores/authStore';
 
 const ProductList = ({ category, toggleSelection, selectedProducts }) => {
-  const [allProducts, setAllProducts] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { products, loading } = useProductsStore();
+  const { userProfile, addFavorite, removeFavorite, isFavorite } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [favorites, setFavorites] = useState([]);
-  const { currentUser } = useAuth();
 
-  // Cargar productos y favoritos del usuario
-  useEffect(() => {
-    const fetchAllData = async () => {
-      if (!currentUser) return;
-      
-      try {
-        setLoading(true);
-        // Primero cargar los favoritos del usuario
-        const userRef = doc(db, 'USUARIOS', currentUser.email);
-        const userSnap = await getDoc(userRef);
-        
-        let userFavorites = [];
-        if (userSnap.exists()) {
-          userFavorites = userSnap.data().favoritos || [];
-          setFavorites(userFavorites);
-        }
-
-        // Cargar todos los productos
-        const productsQuery = collection(db, 'PRODUCTOS');
-        const querySnapshot = await getDocs(productsQuery);
-        
-        const productsData = [];
-        querySnapshot.forEach((doc) => {
-          productsData.push({
-            id: doc.id,
-            ...doc.data(),
-            isFavorite: userFavorites.includes(doc.id)
-          });
-        });
-
-        // Ordenar alfabéticamente por nombre
-        const productosOrdenados = productsData.sort((a, b) => 
-        a.nombre.localeCompare(b.nombre)
-      );
-        
-        setAllProducts(productosOrdenados);
-      } catch (error) {
-        console.error("Error al cargar productos:", error);
-      } finally {
-        setLoading(false);
+  const filteredProducts = products
+    .filter(product => {
+      if (category === 'favoritos') {
+        return userProfile?.favoritos?.includes(product.id);
       }
-    };
+      return product.tipo === category;
+    })
+    .filter(product =>
+      product.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-    fetchAllData();
-  }, [currentUser]);
+  const isProductSelected = (productId) =>
+    Array.isArray(selectedProducts) && selectedProducts.some(p => p.id === productId);
 
-// Filtrar productos según categoría y término de búsqueda
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      // Si hay término de búsqueda, mostrar coincidencias de todas las categorías
-      setProducts(allProducts.filter(product => 
-        product.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-      ));
-    } else if (category === 'favoritos') {
-      // Si estamos en la pestaña de favoritos, mostrar solo los favoritos
-      setProducts(allProducts.filter(product => favorites.includes(product.id)));
-    } else {
-      // Si no hay búsqueda, filtrar por categoría
-      setProducts(allProducts.filter(product => product.tipo === category));
-    }
-  }, [category, searchTerm, allProducts, favorites]);
-
-const isProductSelected = (productId) => {
-  // Verificar que selectedProducts sea un array antes de usar .some()
-  if (!Array.isArray(selectedProducts)) {
-    console.warn('selectedProducts no es un array:', selectedProducts);
-    return false;
-  }
-  return selectedProducts.some(p => p.id === productId);
-};
-
-  // Manejar cambio en favoritos
   const handleToggleFavorite = async (product) => {
-    if (!currentUser) return;
-    
-    try {
-      const userRef = doc(db, 'USUARIOS', currentUser.email);
-      const isFavorite = favorites.includes(product.id);
-      
-      if (isFavorite) {
-        // Quitar de favoritos
-        await updateDoc(userRef, {
-          favoritos: arrayRemove(product.id)
-        });
-        setFavorites(prev => prev.filter(id => id !== product.id));
-      } else {
-        // Añadir a favoritos
-        await updateDoc(userRef, {
-          favoritos: arrayUnion(product.id)
-        });
-        setFavorites(prev => [...prev, product.id]);
-      }
-      
-      // Actualizar la vista de productos
-      setAllProducts(prevProducts => 
-        prevProducts.map(p => 
-          p.id === product.id 
-            ? { ...p, isFavorite: !isFavorite }
-            : p
-        )
-      );
-    } catch (error) {
-      console.error("Error al actualizar favoritos:", error);
+    if (!userProfile) return;
+    if (isFavorite(product.id)) {
+      await removeFavorite(product.id);
+    } else {
+      await addFavorite(product.id);
     }
   };
 
-  // Renderizar el contenido
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+      <Box textAlign="center" p={3}>
         <CircularProgress />
+        <Typography>Cargando productos...</Typography>
       </Box>
     );
   }
+
 
   return (
     <Box>
@@ -147,6 +62,8 @@ const isProductSelected = (productId) => {
           onChange={(e) => setSearchTerm(e.target.value)}
 
           slotProps={{
+            color:"dorado.main",
+            bgcolor:"dorado.fondo",
             input:{
             startAdornment: (
               <InputAdornment position="start">
@@ -157,7 +74,7 @@ const isProductSelected = (productId) => {
         />
       </Box>
 
-      {products.length === 0 ? (
+      {filteredProducts.length === 0 ? (
         <Box sx={{ textAlign: 'center', p: 3 }}>
           <Typography variant="body1" color="textSecondary">
             {category === 'favoritos' 
@@ -169,8 +86,8 @@ const isProductSelected = (productId) => {
         </Box>
       ) : (
         <Grid container mb={2} spacing={2}>
-          {products.map((product) => (
-            <Grid  display="flex" justifyContent="center" alignItems="center"  size={{ xs: 12, sm: 6, md:4 }} key={product.id}>
+          {filteredProducts.map((product) => (
+            <Grid  display="flex" justifyContent="center" alignItems="center"  size={{  xs: 12, sm: 6, md:4 }} key={product.id}>
               <Card 
                  onClick={(e) => {
                    if (!e.target.closest('.favorite-star')) { // Ignora clics en la estrella
@@ -179,15 +96,17 @@ const isProductSelected = (productId) => {
                  }}
                 elevation={isProductSelected(product.id) ? 4 : 1}
                 sx={{
+                  bgcolor:'dorado.fondo',
                   height: '100%',
                   width: '100%',
-                  border: isProductSelected(product.id) ? '2px solid #3f51b5' : 'none',
-                  position: 'relative'
+                  border: isProductSelected(product.id) ? '3px solid #6D3B07' : '1px solid #6D3B074C',
+                  position: 'relative',
+                  
                 }}
               >
                 <CardContent> 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding:0}}>
-                    <Typography  fontFamily='Verdana' sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' }}}>
+                    <Typography  fontFamily='Verdana'  sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' }}}>
                       {product.nombre}
                     </Typography>
                     <IconButton 
@@ -199,18 +118,24 @@ const isProductSelected = (productId) => {
                       color="favoritos"
                       size="small"
                     >
-                      {favorites.includes(product.id) ? <StarIcon /> : <StarBorderIcon />}
+                      {isFavorite(product.id) ? <StarIcon /> : <StarBorderIcon />}
                     </IconButton>
                   </Box>
                   <Box sx={{ mt: 1, display: 'flex', justifyContent: 'left', alignItems: 'center' }}>
                     <Chip 
                       
-                      icon={product.tipo === 'comida' ? <LunchDiningIcon /> : <LocalCafeIcon />}
+                      icon={product.tipo === 'comida' ? <LunchDiningIcon  /> : <LocalCafeIcon />}
                       label={product.tipo}
-                      color={product.tipo === 'comida' ? 'comida' : 'bebida'}
                       size="small"
                       variant="outlined"
-                      sx={{ padding:0.4, border: isProductSelected(product.id) ? '2px solid #3f51b5' : '1px solid rgb(10, 10, 10)'}}
+                      
+                      sx={{ 
+                        padding:0.4, 
+                        border: isProductSelected(product.id) ? '2px solid #6D3B07' : '1px solid #6D3B074C',
+                        '& .MuiChip-icon': {
+                          color: product.tipo === 'comida' ? 'comida.main':'bebida.main'
+  }
+                      }}
                       
                     />
                   </Box>                 

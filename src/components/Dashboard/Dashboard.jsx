@@ -1,246 +1,317 @@
 // components/Dashboard/Dashboard.jsx
-import React from 'react';
-import { 
-  Grid, Card, CardContent, Typography, Box, 
-  CardActionArea, Container, Chip, Avatar
+import {
+  Grid, Card, CardContent, Typography, Box, Container, 
+  Avatar, CircularProgress, Paper, IconButton, Chip
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../stores/authStore';
+import { useOrdersStore } from '../../stores/ordersStore';
+import { useProductsStore } from '../../stores/productsStore';
+import { useGlobalData } from '../../hooks/useGlobalData';
 
 // Iconos
-import RestaurantIcon from '@mui/icons-material/Restaurant';
-import PaymentIcon from '@mui/icons-material/Payment';
-import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
+import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
+import EuroIcon from '@mui/icons-material/Euro';
+import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import NotificationsIcon from '@mui/icons-material/Notifications';
+import PeopleIcon from '@mui/icons-material/People';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import AddIcon from '@mui/icons-material/Add';
+import { formatearNombre } from '../Helpers';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { dataLoaded, loading, ordersCount } = useGlobalData();
+  const { orders } = useOrdersStore();
+  const { products } = useProductsStore();
+  const { user, userProfile } = useAuthStore();
 
-  const quickActions = [
+  if (loading) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <Box textAlign="center" p={4}>
+          <CircularProgress size={60} />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Cargando datos de la aplicación...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  // Estadísticas principales con colores MD3
+  const stats = [
     {
-      title: 'Desayunos del Sábado',
-      description: 'Ver y crear pedidos de desayuno',
-      icon: <RestaurantIcon sx={{ fontSize: 40 }} />,
-      path: '/desayunos/orders',
-      color: 'secondary',
-      stats: '3 pedidos activos'
+      title: 'Este Mes',
+      value: '150€',
+      subtitle: 'Extras',
+      icon: EuroIcon,
+      color: 'verde.main',
+      bgColor: 'verde.fondo',
+      action: true
     },
     {
-      title: 'Mi Última Nómina',
-      description: 'Consultar nómina del mes actual',
-      icon: <PaymentIcon sx={{ fontSize: 40 }} />,
-      path: '/nominas',
-      color: 'success',
-      stats: 'Enero 2025'
+      title: 'Solicitudes',
+      value: `${2}`,
+      subtitle: 'Pendientes',
+      icon: NotificationsOutlinedIcon,
+      color: 'azul.main', 
+      bgColor: 'azul.fondo',
+      action: true
     },
     {
-      title: 'Solicitar Vacaciones',
-      description: 'Gestionar mis días de vacaciones',
-      icon: <BeachAccessIcon sx={{ fontSize: 40 }} />,
-      path: '/vacaciones',
-      color: 'info',
-      stats: '15 días disponibles'
+      title: 'Vacaciones',
+      value: `${userProfile?.vacaDias || 20}d ${userProfile?.vacaHoras || 3}h`,
+      subtitle: 'Días disponibles',
+      icon: BeachAccessOutlinedIcon,
+      color: 'purpura.main', 
+      bgColor: 'purpura.fondo',
+      action: true
     },
     {
-      title: 'Registrar Horas Extra',
-      description: 'Anotar horas extras trabajadas',
-      icon: <AccessTimeIcon sx={{ fontSize: 40 }} />,
-      path: '/horas-extra',
-      color: 'warning',
-      stats: '2h esta semana'
+      title: 'Horas Extras',
+      value: `10h`,
+      subtitle: 'Este mes',
+      icon: AccessTimeIcon,
+      color: 'naranja.main', 
+      bgColor: 'naranja.fondo',
+      action: true
     }
   ];
 
-  return (
-    <Container 
-      maxWidth="xl" 
+  // Acciones rápidas con colores MD3
+  const quickActions = [
+    {
+      label: 'Registrar Horas Extra',
+      icon: AddIcon,
+      color: 'naranja.main',
+      bgColor: 'naranja.fondo',
+      onClick: () => navigate('/horas-extra')
+    },
+    {
+      label: 'Solicitar Vacaciones',
+      icon: BeachAccessOutlinedIcon,
+      color: 'purpura.main',
+      bgColor: 'purpura.fondo',
+      onClick: () => navigate('/vacaciones')
+    },
+    {
+      label: 'Registrar Permiso',
+      icon: AssignmentOutlinedIcon,
+      color: 'rojo.main',
+      bgColor: 'rojo.fondo',
+      onClick: () => navigate('/permisos')
+    },
+    {
+      label: 'Pedido Desayuno',
+      icon: LocalCafeOutlinedIcon,
+      color: 'dorado.main',
+      bgColor: 'dorado.fondo',
+      onClick: () => navigate('/desayunos/orders')
+    }
+  ];
+
+  // Componente StatCard con estilo MD3
+  const StatCard = ({ title, value, subtitle, icon: Icon, color, bgColor, action }) => (
+    <Card 
+      elevation={0}
+      onClick={action}
       sx={{ 
-        py: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',    // ← Centrado horizontal
-        justifyContent: 'center', // ← Centrado vertical
-        textAlign: 'center'      // ← Centrado del texto
+        height: '100%',
+        border: '1px solid',
+        borderColor: 'rgba(0,0,0,0.08)',
+        borderRadius: 3,
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+          transform: 'translateY(-2px)'
+        }
       }}
     >
-      {/* Header de bienvenida - CENTRADO */}
-      <Box sx={{ 
-        mb: 4, 
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%'
-      }}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          mb: 2,
-          flexDirection: { xs: 'column', sm: 'row' } // Responsive
-        }}>
-          <Avatar 
-            src={currentUser?.photoURL}
-            sx={{ width: 64, height: 64, mr: { xs: 0, sm: 2 }, mb: { xs: 1, sm: 0 } }}
+      <CardContent sx={{ p: 3 }}>
+        <Box display="flex" alignItems="flex-start" justifyContent="space-between" mb={2}>
+          <Box 
+            sx={{ 
+              p: 1,
+              m: -2, 
+              borderRadius: 2, 
+              bgcolor: bgColor,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            {(currentUser?.displayName?.[0] || currentUser?.email?.[0] || 'U').toUpperCase()}
+            <Icon sx={{ color: color, fontSize: 30 }} />
+          </Box>
+
+        </Box>
+        <Box sx={{display:'flex', flexDirection:'column', justifyItems:'center', justifyContent:'center', alignItems:'center', alignContent:'center'}}>
+        <Typography  textAlign="center" variant="h4" fontWeight="bold" color="text.primary" gutterBottom>
+          {value}
+        </Typography>
+        <Typography  textAlign="center" variant="body2" fontWeight="600" color="text.primary" gutterBottom>
+          {title}
+        </Typography >
+        {subtitle && (
+          <Typography  textAlign="center" variant="caption" color="text.secondary">
+            {subtitle}
+          </Typography>
+        )}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+
+  // Componente QuickAction con estilo MD3
+  const QuickAction = ({ label, icon: Icon, color, bgColor, onClick }) => (
+    <Card
+      elevation={0}
+      onClick={onClick}
+      sx={{ 
+        cursor: 'pointer',
+        bgcolor:bgColor,
+        border: '1px solid',
+        borderRadius: 3,
+        minHeight: 100,
+        borderColor: 'rgba(0,0,0,0.08)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+          transform: 'translateY(-2px)',
+          borderColor: color
+        }
+      }}
+    >
+      <CardContent 
+        sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          p: 2,
+          textAlign: 'center'
+        }}
+      >
+
+          <Icon sx={{ mb:1, color: color, fontSize: 28 }} />
+        
+        <Typography 
+          variant="body2" 
+          fontWeight="600" 
+          sx={{ color:color, lineHeight: 1.2 }}
+        >
+          {label}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {/* Header con gradiente MD3 */}
+      <Paper 
+        elevation={0} 
+        sx={{  
+          mb: 4, 
+          background: 'linear-gradient(135deg,   #3b82f6 0%, #1e40af 100%)',
+          color: 'white',
+          borderRadius: 4,
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid',
+          borderColor: 'rgba(0,0,0,0.08)',
+          transition: 'all 0.3s ease',
+            '&:hover': {
+            boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+            transform: 'translateY(-2px)'
+        }}}
+      >
+        {/* Decoración de fondo */}
+        <Box 
+          sx={{
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 150,
+            height: 150,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.15)',
+            zIndex: 0
+          }}
+        />
+        <Box 
+          sx={{
+            position: 'absolute',
+            bottom: -30,
+            left: -30,
+            width: 100,
+            height: 100,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.1)',
+            zIndex: 0
+          }}
+        />
+        
+        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}>
+          <Avatar 
+            src={userProfile?.photoURL} 
+            sx={{ 
+              ml:1,
+              width: 80, 
+              height: 80, 
+              border: '4px solid rgba(255,255,255,0.2)',
+              fontSize: '2rem'
+            }}
+          >
+            {(!userProfile?.photoURL && userProfile?.nombre) ? 
+              userProfile.nombre.charAt(0).toUpperCase() : 
+              (user?.email?.[0] || 'U').toUpperCase()
+            }
           </Avatar>
-          <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-            <Typography variant="h4" component="h1" color="primary" fontWeight="bold">
-              ¡Hola, {currentUser?.displayName?.split(' ')[0] || 'Usuario'}!
+          <Box flex={1}>
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+              {formatearNombre(userProfile?.nombre)}
             </Typography>
-            <Typography variant="h6" color="textSecondary">
-              Bienvenido a tu espacio de trabajo
+            <Typography fontSize="1rem" sx={{ opacity: 0.9, mb: 1 }}>
+              {userProfile?.puesto||'Operario'} • Nv {userProfile?.nivel||'7'} 
             </Typography>
           </Box>
         </Box>
-      </Box>
+      </Paper>
 
-      {/* Notificación - CENTRADA */}
-      <Box sx={{ 
-        mb: 4, 
-        width: '100%', 
-        maxWidth: 800,
-        display: 'flex',
-        justifyContent: 'center'
-      }}>
-        <Card sx={{ 
-          bgcolor: 'primary.light', 
-          color: 'white', 
-          width: '100%',
-          maxWidth: 600
-        }}>
-          <CardContent sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center'
-          }}>
-            <NotificationsIcon sx={{ mr: 2, fontSize: 32 }} />
-            <Box>
-              <Typography variant="h6" fontWeight="bold">
-                Recordatorio
-              </Typography>
-              <Typography variant="body2">
-                No olvides registrar tus horas extra de esta semana
-              </Typography>
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
+      {/* Grid de estadísticas MD3 */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        {stats.map((stat, index) => (
+          <Grid size={{ xs:6, md:3 }} key={index}>
+            <StatCard {...stat} />
+          </Grid>
+        ))}
+      </Grid>
 
-      {/* Título Accesos Rápidos - CENTRADO */}
-      <Box sx={{ 
-        width: '100%', 
-        textAlign: 'center', 
-        mb: 3,
-        display: 'flex',
-        justifyContent: 'center'
-      }}>
-        <Typography variant="h5" color="primary" fontWeight="bold">
-          Accesos Rápidos
+      {/* Acciones rápidas */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          borderRadius: 4,
+          border: '1px solid',
+          borderColor: 'rgba(0,0,0,0.08)'
+        }}
+      >
+        <Typography textAlign="center" variant="h6" fontWeight="bold" color="text.primary" mb={3}>
+          Acciones Rápidas
         </Typography>
-      </Box>
-
-      {/* Grid de Cards - CENTRADO */}
-      <Box sx={{ 
-        width: '100%', 
-        maxWidth: 1200,
-        display: 'flex',
-        justifyContent: 'center'
-      }}>
-        <Grid 
-          container 
-          spacing={3}
-          justifyContent="center"  // ← Centrado de las cards
-          alignItems="stretch"     // ← Altura uniforme
-        >
+        <Grid container spacing={2}>
           {quickActions.map((action, index) => (
-            <Grid size={{ xs:12, sm:6, lg:3 }}  key={index}>
-              <Card 
-                elevation={4}
-                sx={{ 
-                  height: '100%',
-                  transition: 'all 0.3s ease-in-out',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 8,
-                    '& .action-icon': {
-                      transform: 'scale(1.1)',
-                    }
-                  },
-                  borderRadius: 3,
-                  overflow: 'hidden'
-                }}
-              >
-                <CardActionArea 
-                  onClick={() => navigate(action.path)}
-                  sx={{ height: '100%', p: 0 }}
-                >
-                  <Box
-                    sx={{
-                      background: `linear-gradient(135deg, ${
-                        action.color === 'secondary' ? '#9c27b0' :
-                        action.color === 'success' ? '#2e7d32' :
-                        action.color === 'info' ? '#0288d1' :
-                        action.color === 'warning' ? '#ed6c02' : '#1976d2'
-                      } 0%, ${
-                        action.color === 'secondary' ? '#ba68c8' :
-                        action.color === 'success' ? '#66bb6a' :
-                        action.color === 'info' ? '#29b6f6' :
-                        action.color === 'warning' ? '#ff9800' : '#42a5f5'
-                      } 100%)`,
-                      color: 'white',
-                      p: 2,
-                      textAlign: 'center'
-                    }}
-                  >
-                    <Box 
-                      className="action-icon"
-                      sx={{ 
-                        transition: 'transform 0.3s ease-in-out',
-                        mb: 1 
-                      }}
-                    >
-                      {action.icon}
-                    </Box>
-                    <Chip 
-                      label={action.stats} 
-                      size="small" 
-                      sx={{ 
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        fontWeight: 'bold'
-                      }} 
-                    />
-                  </Box>
-                  
-                  <CardContent sx={{ p: 2, textAlign: 'center' }}>
-                    <Typography 
-                      variant="h6" 
-                      component="h3" 
-                      gutterBottom 
-                      color="primary" 
-                      fontWeight="bold"
-                    >
-                      {action.title}
-                    </Typography>
-                    
-                    <Typography 
-                      variant="body2" 
-                      color="textSecondary"
-                    >
-                      {action.description}
-                    </Typography>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
+            <Grid  size={{ xs:6, md:3 }} key={index}>
+              <QuickAction {...action} />
             </Grid>
           ))}
         </Grid>
-      </Box>
+      </Paper>
     </Container>
   );
 };
