@@ -306,12 +306,13 @@ const OrderList = () => {
                     <Box display="flex" justifyContent="center">
                       <Box sx={{ 
                         display: 'flex', 
+                        justifyContent:"center",
                         flexWrap: 'wrap', 
                         gap: 0.5,
                         minHeight: 32
                       }}>
                         {order.usuarios && order.usuarios.length > 0 ? (
-                          order.usuarios.slice(0, 3).map((usuario, index) => (
+                          order.usuarios.map((usuario, index) => (
                             <Chip 
                               key={index}
                               label={formatearNombre(usuario.nombre)}
@@ -333,20 +334,6 @@ const OrderList = () => {
                           <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                             Sin participantes aún
                           </Typography>
-                        )}
-                        {order.usuarios && order.usuarios.length > 3 && (
-                          <Chip 
-                            label={`+${order.usuarios.length - 3}`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ 
-                              fontSize: '0.7rem',
-                              height: '24px',
-                              borderColor: 'dorado.main',
-                              color: 'dorado.main',
-                              bgcolor: 'dorado.fondo'
-                            }}
-                          />
                         )}
                       </Box>
                     </Box>

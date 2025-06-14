@@ -14,6 +14,7 @@ import ShareIcon from '@mui/icons-material/Share';
 import { useProductsStore } from '../../stores/productsStore';
 import { useUIStore } from '../../stores/uiStore';
 import html2canvas from 'html2canvas';
+import axios from 'axios';
 
 const OrderSummary = ({order, canManageOrder}) => {
   const { products } = useProductsStore();
@@ -161,16 +162,43 @@ const productoCompleto = products.find(p => p.id === productoId);
     }
   };
   
+  // Función para subir imagen a ImgBB (igual que en UserProfile)
+const uploadImageToImgBB = async (file) => {
+  try {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Formato de archivo no soportado. Usa JPG, PNG o GIF.');
+    }
+
+    if (file.size > 32 * 1024 * 1024) {
+      throw new Error('El archivo es demasiado grande. Máximo 32MB.');
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await axios.post(
+      `https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`,
+      formData
+    );
+
+    if (response.data && response.data.success) {
+      return response.data.data.url;
+    } else {
+      throw new Error('Error en la respuesta de ImgBB');
+    }
+  } catch (error) {
+    console.error('Error al subir imagen a ImgBB:', error);
+    if (error.response?.status === 400) {
+      throw new Error('Formato de imagen no válido o archivo corrupto');
+    }
+    throw error;
+  }
+};
    // Función para compartir la imagen
   const handleShareImage = async () => {
     try {
       if (!summaryRef.current) return;
-      
-      // Verificamos si el navegador soporta la API Web Share
-      if (!navigator.share) {
-        showError('Tu navegador no soporta compartir');
-        return;
-      }
       
       showInfo('Preparando imagen para compartir...');
       
@@ -192,13 +220,22 @@ const productoCompleto = products.find(p => p.id === productoId);
       const nombrePedido = (order.nombre || 'Pedido').replace(/[^a-zA-Z0-9-_]/g, '_'); // Limpiar caracteres especiales
       const nombreArchivo = `${nombrePedido}-${fechaSegura}.png`;
       const file = new File([blob], nombreArchivo, { type: 'image/png' });
+
+      const imageUrl = await uploadImageToImgBB(file);
       
       // Usar la API Web Share para compartir
-      await navigator.share({
+      if (navigator.share) {
+        await navigator.share({
         title: `Resumen pedido ${order.nombre || 'colectivo'}`,
         text: `Resumen del pedido colectivo con ${order.usuarios?.length || 0} participantes`,
-        files: [file]
+        url: imageUrl
       });
+      }  else {
+      // Fallback: copiar URL al portapapeles
+      await navigator.clipboard.writeText(imageUrl);
+      showSuccess('URL de la imagen copiada al portapapeles. Puedes pegarla en WhatsApp.');
+      return;
+    }
       
       showSuccess('Compartido correctamente');
     } catch (error) {
