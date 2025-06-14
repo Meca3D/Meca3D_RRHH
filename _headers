@@ -1,0 +1,26 @@
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+  ETag: W/"version-1.0.0"
+
+/components/Auth/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/stores/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/main.*.js
+  Cache-Control: no-cache, max-age=0
+
+/main.*.css
+  Cache-Control: no-cache, max-age=0
+
+
+/static/*
+  Cache-Control: public, max-age=86400
