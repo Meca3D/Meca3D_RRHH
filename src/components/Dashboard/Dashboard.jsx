@@ -1,4 +1,5 @@
 // components/Dashboard/Dashboard.jsx
+import { useEffect } from 'react';
 import {
   Grid, Card, CardContent, Typography, Box, Container, 
   Avatar, CircularProgress, Paper, IconButton, Chip
@@ -7,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useOrdersStore } from '../../stores/ordersStore';
 import { useProductsStore } from '../../stores/productsStore';
+import { useNominaStore } from '../../stores/nominaStore';
 import { useGlobalData } from '../../hooks/useGlobalData';
 
 // Iconos
@@ -23,10 +25,11 @@ import { formatearNombre } from '../Helpers';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { dataLoaded, loading, ordersCount } = useGlobalData();
+  const { dataLoaded, loading, ordersCount, userSalaryInfo  } = useGlobalData();
   const { orders } = useOrdersStore();
   const { products } = useProductsStore();
   const { user, userProfile } = useAuthStore();
+
 
   if (loading) {
     return (
@@ -45,21 +48,21 @@ const Dashboard = () => {
   const stats = [
     {
       title: 'Este Mes',
-      value: '150€',
-      subtitle: 'Extras',
+      value: userSalaryInfo?.salarioBaseMasTrienios  || '0€',
+      subtitle: 'Sueldo Base',
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
-      action: true
+      action: () => navigate('/nominas')
     },
     {
-      title: 'Solicitudes',
-      value: `${2}`,
-      subtitle: 'Pendientes',
+      title: 'Conf. Nomina',
+      value: userProfile?.tipoNomina ? 'OK' : 'Pendiente',
+      subtitle: userProfile?.tipoNomina === 'automatica' ? `Nivel ${userProfile.nivelSalarial}` : 'Manual',
       icon: NotificationsOutlinedIcon,
-      color: 'azul.main', 
-      bgColor: 'azul.fondo',
-      action: true
+      color: userProfile?.tipoNomina ? 'azul.main' : 'rojo.main',
+      bgColor: userProfile?.tipoNomina ? 'azul.fondo' : 'rojo.fondo',
+      action:  () => navigate('/nominas')
     },
     {
       title: 'Vacaciones',
@@ -68,7 +71,7 @@ const Dashboard = () => {
       icon: BeachAccessOutlinedIcon,
       color: 'purpura.main', 
       bgColor: 'purpura.fondo',
-      action: true
+      action: ()=>null
     },
     {
       title: 'Horas Extras',
@@ -77,18 +80,26 @@ const Dashboard = () => {
       icon: AccessTimeIcon,
       color: 'naranja.main', 
       bgColor: 'naranja.fondo',
-      action: true
+      action: ()=> null
     }
   ];
 
   // Acciones rápidas con colores MD3
   const quickActions = [
+        {
+      label: 'Configurar Nómina',
+      icon: AddIcon,
+      color: user?.tipoNomina ? 'azul.main' : 'rojo.main',
+      bgColor: user?.tipoNomina ? 'azul.fondo' : 'rojo.fondo',
+      onClick: () => navigate('/nominas')
+    },
     {
       label: 'Registrar Horas Extra',
-      icon: AddIcon,
+      icon: AccessTimeIcon,
       color: 'naranja.main',
       bgColor: 'naranja.fondo',
-      onClick: () => navigate('/horas-extra')
+      onClick: () => navigate('/nominas'),
+      disabled: !user?.tipoNomina
     },
     {
       label: 'Solicitar Vacaciones',

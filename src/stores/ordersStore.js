@@ -10,17 +10,16 @@ export const useOrdersStore = create((set, get) => {
   orders: [],
   loading: false,
   error: null,
-  initialized: false, // ✅ Flag para saber si ya se cargó
+  initialized: false, 
 
   fetchOrders: () => {
     const state = get();
       
-      // ✅ AÑADIR: Evitar múltiples listeners
     if (state.initialized || unsubscribe) {
         return () => {};
       }
     set({loading: true, initialized: true, error: null });
-    const unsub = onSnapshot(
+    unsubscribe = onSnapshot(
       collection(db, 'PEDIDOS'),
       (snapshot) => {
         const orders = snapshot.docs.map(doc => ({
@@ -42,7 +41,13 @@ export const useOrdersStore = create((set, get) => {
           });
         }
     );
-    return unsub;
+    return () => {
+        if (unsubscribe) {
+          unsubscribe();
+          unsubscribe = null;
+          set({ initialized: false });
+                 }
+      };
   },
 
       isDataLoaded: () => {

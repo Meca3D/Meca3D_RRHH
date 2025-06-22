@@ -10,6 +10,7 @@ import OrderList from './components/Orders/OrderList';
 import CreateOrder from './components/Orders/CreateOrder';
 import OrderDetail from './components/Orders/OrderDetail';
 
+
 // Componentes de administración
 import AdminRoute from './components/AdminRoute';
 import AdminDashboard from './components/Admin/AdminDashBoard';
@@ -29,7 +30,7 @@ import EliminarEmpleados from './components/Admin/Empleados/EliminarEmpleados';
 
 
 // Componentes futuros
-import MisNominas from './components/Nominas/MisNominas';
+import Nominas from './components/Nominas/Nominas';
 import MisVacaciones from './components/Vacaciones/MisVacaciones';
 import MisHorasExtra from './components/HorasExtra/MisHorasExtra';
 
@@ -72,7 +73,7 @@ const AppRoutes = () => {
         <Route path="desayunos/orders/:orderId" element={<OrderDetail />} />
 
         {/* Rutas de RRHH */}
-        <Route path="nominas" element={<MisNominas />} />
+        <Route path="nominas" element={<Nominas />} />
         <Route path="vacaciones" element={<MisVacaciones />} />
         <Route path="horas-extra" element={<MisHorasExtra />} />
 

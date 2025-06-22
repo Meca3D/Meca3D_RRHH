@@ -29,7 +29,6 @@ import {
       // Si el usuario no existe en la base de datos, lo creamos
       await setDoc(userRef, {
         nombre: user.displayName || user.email.split('@')[0], // Usa el nombre de usuario del email si no hay displayName
-        email: user.email,
         favoritos: []
       });
     }

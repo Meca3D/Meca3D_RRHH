@@ -21,12 +21,23 @@ export const useFirebaseAuth = () => {
               email: user.email,
               nombre: userData.nombre,
               rol: userData.rol,
+              fechaIngreso: userData.fechaIngreso,
               photoURL: userData.photoURL || null,
               favoritos: userData.favoritos || [],
               puesto: userData.puesto,
               nivel: userData.nivel,
               vacaDias: userData.vacaDias,
-              vacaHoras: userData.vacaHoras
+              vacaHoras: userData.vacaHoras,
+              tipoNomina: userData.tipoNomina,
+              nivelSalarial: userData.nivelSalarial,
+              trieniosAutomaticos: userData.trieniosAutomaticos,
+              trieniosManual: userData.trieniosManual,
+              sueldoBaseManual: userData.sueldoBaseManual,
+              valorTrienioManual: userData.valorTrienioManual,
+              tarifasHorasExtra: userData.tarifasHorasExtra,
+              sueldoBaseFinal: userData.sueldoBaseFinal,
+              trieniosFinal: userData.trieniosFinal,
+              valorTrienioFinal: userData.valorTrienioFinal
             });
           } else {
             console.error(`No se encontró el usuario ${user.email} en la colección USUARIOS`);

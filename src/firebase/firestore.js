@@ -405,3 +405,67 @@ export const eliminarUsuarioDePedido = async (pedidoId, usuarioEmail) => {
     throw error;
   }
 };
+// ---- HORAS EXTRA ----
+
+/**
+ * Obtener horas extra por período (consulta simple sin índice compuesto)
+ * Busca por fecha y filtra por empleado en el cliente
+ */
+export const getHorasExtraPorPeriodoSimple = async (empleadoEmail, fechaInicio, fechaFin) => {
+  try {
+    // ✅ CONSULTA SIMPLE: Solo por fecha (no requiere índice compuesto)
+    const horasExtraRef = collection(db, 'HORAS_EXTRA');
+    const q = query(
+      horasExtraRef,
+      where('fecha', '>=', fechaInicio),
+      where('fecha', '<=', fechaFin),
+      orderBy('fecha', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    // ✅ FILTRAR en el cliente por empleado
+    const todasLasHoras = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    // ✅ Filtrar solo las horas del empleado específico
+    const horasDelEmpleado = todasLasHoras.filter(
+      hora => hora.empleadoEmail === empleadoEmail
+    );
+    
+    return horasDelEmpleado;
+    
+  } catch (error) {
+    console.error('Error al obtener horas extra:', error);
+    
+    // ✅ FALLBACK: Si falla la consulta por fecha, buscar todas y filtrar
+    try {
+      console.log('Intentando fallback: buscar todas las horas extra...');
+      const todasRef = collection(db, 'HORAS_EXTRA');
+      const allSnapshot = await getDocs(todasRef);
+      
+      const todasLasHoras = allSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Filtrar por empleado y período en el cliente
+      const horasFiltradas = todasLasHoras.filter(hora => {
+        return hora.empleadoEmail === empleadoEmail &&
+               hora.fecha >= fechaInicio &&
+               hora.fecha <= fechaFin;
+      });
+      
+      // Ordenar por fecha descendente
+      horasFiltradas.sort((a, b) => b.fecha.localeCompare(a.fecha));
+      
+      return horasFiltradas;
+      
+    } catch (fallbackError) {
+      console.error('Error en fallback:', fallbackError);
+      return [];
+    }
+  }
+};

@@ -14,7 +14,6 @@ import ShareIcon from '@mui/icons-material/Share';
 import { useProductsStore } from '../../stores/productsStore';
 import { useUIStore } from '../../stores/uiStore';
 import html2canvas from 'html2canvas';
-import axios from 'axios';
 
 const OrderSummary = ({order, canManageOrder}) => {
   const { products } = useProductsStore();

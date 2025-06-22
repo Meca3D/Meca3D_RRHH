@@ -312,7 +312,7 @@ const OrderList = () => {
                         minHeight: 32
                       }}>
                         {order.usuarios && order.usuarios.length > 0 ? (
-                          order.usuarios.map((usuario, index) => (
+                          order.usuarios.sort((a, b) => a.nombre.localeCompare(b.nombre)).map((usuario, index) => (
                             <Chip 
                               key={index}
                               label={formatearNombre(usuario.nombre)}

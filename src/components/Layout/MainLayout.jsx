@@ -13,7 +13,7 @@ import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import RestaurantIcon from '@mui/icons-material/Restaurant';
+import PaymentIcon from '@mui/icons-material/Payment';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -41,11 +41,12 @@ const MainLayout = () => {
       icon: AccessTimeIcon, 
       color: 'naranja',
     },
-    { 
-      name: 'Mis Nóminas', 
-      path: '/nominas', 
-      icon: EuroIcon, 
-      color: 'verde',
+    {
+      name: 'Nóminas',
+      path: '/nominas',
+      icon: PaymentIcon,
+      roles: ['user', 'admin', 'owner'],
+      color: 'verde' 
     },
     { 
       name: 'Vacaciones', 
@@ -111,7 +112,7 @@ const MainLayout = () => {
           
           return (
             <ListItemButton
-              key={item.name}
+              key={item.name||item.path}
               component={Link}
               to={item.path}
               selected={isSelected}
@@ -215,6 +216,7 @@ const MainLayout = () => {
             <Divider sx={{ my: 2 }} />
 
             <ListItemButton
+              key="admin"
               component={Link}
               to="/admin"
               onClick={handleDrawerClose}
