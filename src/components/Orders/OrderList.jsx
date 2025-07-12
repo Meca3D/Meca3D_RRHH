@@ -27,11 +27,11 @@ const OrderList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
 
-  useEffect(() => {
-    if (orders.length === 0 && !loading) {
-      fetchOrders();
-    }
-  }, [orders.length, loading]);
+useEffect(() => {
+  if (!loading) {
+    fetchOrders();
+  }
+}, []);
 
   const handleDeleteClick = (event, order) => {
     event.stopPropagation();
@@ -74,7 +74,7 @@ const OrderList = () => {
     <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
       {/* Header corporativo para pedidos */}
       <Paper 
-        elevation={0} 
+        elevation={5} 
         sx={{ 
           mb: 4, 
           background: 'linear-gradient(135deg, #6D3B07 0%, #4A2505 50%, #2D1603 100%)', // Dorado para desayunos
@@ -132,17 +132,8 @@ const OrderList = () => {
         </Box>
       </Paper>
 
-      {/* Botón de nuevo pedido con estilo corporativo */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 3, 
-          mb: 4,
-          borderRadius: 4,
-          border: '1px solid rgba(0,0,0,0.1)'
-        }}
-      >
-        <Button 
+      {/* Botón de nuevo pedido */}
+        <Button          
           variant="contained" 
           size="large"
           startIcon={<AddCircleOutlineIcon />}
@@ -152,6 +143,7 @@ const OrderList = () => {
           sx={{
             py: 2,
             borderRadius: 3,
+            mb:4,
             background: 'linear-gradient(to bottom, #003399, #3366CC, #003399)',
             fontSize: '1.2rem',
             fontWeight: 600,
@@ -167,7 +159,7 @@ const OrderList = () => {
         >
           Crear Nuevo Pedido
         </Button>
-      </Paper>
+      
 
       {/* Lista de pedidos */}
       {orders.length === 0 ? (
@@ -186,7 +178,7 @@ const OrderList = () => {
             No hay pedidos activos
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            ¡Crea un nuevo pedido para empezar a organizar desayunos colectivos!
+            ¡Crea un nuevo pedido para empezar a organizar el desayuno!
           </Typography>
         </Paper>
       ) : (
@@ -209,7 +201,7 @@ const OrderList = () => {
                 }}
               >
                 {/* Botón de eliminar con estilo corporativo */}
-                {order.creadoPor === user?.email && (
+                {(order.creadoPor === user?.email || userProfile.rol==="admin") && (
                   <IconButton
                     size="small"
                     sx={{ 

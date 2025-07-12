@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../../firebase/config';
+import { auth} from '../../firebase/config';
 import {
   Box,
   Typography,
@@ -34,8 +33,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-
-  const { setUser, setUserRole, setUserProfile } = useAuthStore();
+  const { loading: authLoading } = useAuthStore();
   const { showSuccess, showError } = useUIStore();
   const navigate = useNavigate();
 
@@ -53,37 +51,11 @@ const Login = () => {
 
     try {
       // Autenticar con Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      const user = userCredential.user;
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      showSuccess(`¡Bienvenido de nuevo!`);
+      navigate('/');
 
-      // Obtener datos del usuario desde Firestore
-      const userDoc = await getDoc(doc(db, 'USUARIOS', user.email));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        
-        // Actualizar stores
-      setUser(user);
-      setUserRole(userData.rol);
-      setUserProfile({
-        email: user.email,
-        nombre: userData.nombre,
-        rol: userData.rol,
-        photoURL: userData.photoURL || null,
-        favoritos: userData.favoritos || [],
-        vacaDias: userData.vacaDias,
-        vacaHoras: userData.vacaHoras
-      });
-        
-        showSuccess(`¡Bienvenido ${userData.nombre}!`);
-        navigate('/');
-      } else {
-        throw new Error(`Usuario ${user.email} no encontrado en la base de datos`);
-      }
     } catch (err) {
-      console.error('Error al iniciar sesión:', err);
-      
-      // Mensajes de error más amigables
       let errorMessage = 'Error al iniciar sesión';
       
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
@@ -148,7 +120,7 @@ const Login = () => {
                 autoFocus
                 value={formData.email}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                disabled={isSubmitting||authLoading}
                 slotProps={{
                   input:{
                     startAdornment: (
@@ -171,7 +143,7 @@ const Login = () => {
                 autoComplete="current-password"
                 value={formData.password}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                disabled={isSubmitting||authLoading}
                 slotProps={{
                   input:{
                     startAdornment: (
@@ -201,7 +173,7 @@ const Login = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                disabled={isSubmitting}
+                disabled={isSubmitting||authLoading}
                 sx={{ mt: 3, mb: 2, py: 1.5 }}
               >
                 {isSubmitting ? (

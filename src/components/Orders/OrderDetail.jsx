@@ -25,12 +25,13 @@ import OrderSummary from '../Orders/OrderSummary'
 import { useOrdersStore } from '../../stores/ordersStore';
 import { useProductsStore } from '../../stores/productsStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useUIStore } from '../../stores/uiStore';
 
 
 const OrderDetail = () => {
   const { orderId } = useParams();
   const location = useLocation();
-  const { user } = useAuthStore();
+  const { user,userProfile } = useAuthStore();
   const { 
     orders, 
     fetchOrders, 
@@ -257,7 +258,7 @@ useEffect(() => {
   }}>
 
     
-  <Card elevation={3} sx={{ mb: 3, bgcolor:'dorado.fondo' }}>
+  <Card elevation={5} sx={{ mb: 3, bgcolor:'dorado.fondo', border:'2px solid', borderColor:'dorado.main' }}>
   <CardContent >
     <Box display="flex" sx={{mb:1, alignItems:"center", justifyContent:"space-between"}}>
     <AssignmentTurnedInOutlinedIcon sx={{color:'dorado.main'}}/>
@@ -266,7 +267,7 @@ useEffect(() => {
     </Typography>
     <AssignmentTurnedInOutlinedIcon sx={{color:'dorado.main'}}/>
     </Box>
-    <Divider sx={{mb:2}}/>
+    <Divider sx={{mb:2, bgcolor:'dorado.main'}}/>
     
     {selectedProducts.length > 0 ? (
       <>
@@ -447,7 +448,7 @@ useEffect(() => {
         </Typography>
         </DialogTitle>
         <DialogContent dividers>
-          <OrderSummary order={order} canManageOrder={user.email==order.creadoPor} />
+          <OrderSummary order={order} canManageOrder={user.email==order.creadoPor||userProfile.rol=='admin'} />
         </DialogContent>
         <DialogActions>
           <Button 

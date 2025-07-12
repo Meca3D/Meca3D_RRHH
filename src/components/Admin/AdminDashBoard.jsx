@@ -17,11 +17,18 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import { useAdminStats } from '../../hooks/useAdminStats';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useAuthStore();
   const { dataLoaded, loading, ordersCount } = useGlobalData();
+    const {
+    empleadosCount,
+    nominasTotalMes,
+    solicitudesPendientes,
+    loading: adminLoading
+  } = useAdminStats();
 
     if (loading) {
       return (
@@ -47,7 +54,7 @@ const AdminDashboard = () => {
       action: () => navigate('/admin/empleados')
     },
     {
-      title: 'Nóminas',
+      title: '€ Horas Extras',
       value: '34,800€',
       subtitle: 'Este mes',
       icon: PaymentIcon,

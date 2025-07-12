@@ -1,31 +1,48 @@
-// components/Admin/CrearEmpleado.jsx
+// components/Admin/CrearEmpleado.jsx - CORREGIDO
 import React, { useState } from 'react';
-import { 
-  Box, TextField, Button, Typography, Alert, 
-  FormControl, InputLabel, Select, MenuItem, Card, CardContent,
-  Fab,  InputAdornment, IconButton
-} from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
+import {
+  Container, Box, TextField, Button, Typography, Alert,
+  FormControl, InputLabel, Select, MenuItem, Card, CardContent,
+  InputAdornment, IconButton, AppBar, Toolbar, Grid
+} from '@mui/material';
+import {
+  ArrowBackIosNew as ArrowBackIosNewIcon,
+  Visibility,
+  VisibilityOff,
+  PersonAdd as PersonAddIcon,
+} from '@mui/icons-material';
 
 const CrearEmpleado = () => {
   const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
-    telefono:'',
-    photoURL:'',
-    vacaDias:'',
-    vacaHoras:'',
-    rol: 'user'
+    photoURL: '',
+    vacaDias: '',
+    vacaHoras: '',
+    rol: 'user',
+    fechaIngreso: new Date().toISOString().split('T')[0],
+    nivel: '',
+    puesto: ''
   });
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const opcionesPuesto = [
+    'Fresador',
+    'Tornero', 
+    'Operario CNC',
+    'Administrativo',
+    'Diseñador',
+    'Montador',
+    'Ayudante de Taller'
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,7 +51,6 @@ const CrearEmpleado = () => {
     setMessage('');
 
     try {
-       console.log('📤 Enviando datos:', formData);
       const response = await fetch('/api/create-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,23 +58,31 @@ const CrearEmpleado = () => {
       });
 
       const result = await response.json();
-       console.log('📥 Respuesta recibida:', response.status, response.statusText);
-      
+
       if (response.ok) {
         setMessage(result.message);
-        setFormData({ nombre: '', email: '', password: '', telefono:'', vacaDias:'',vacaHoras:'', rol: 'user' });
-      setTimeout(() => {
-        navigate('/admin/empleados/lista');
-      }, 2000); // Redirigir después de 2 segundos
-      
-    } else {
-      setError(result.error);
-    }
-  } catch (error) {
-    console.log(error)
-    setError('Error de conexión');
-  } finally {
-    setLoading(false);
+        setFormData({ 
+          nombre: '', 
+          email: '', 
+          password: '', 
+          photoURL: '',
+          vacaDias: '',
+          vacaHoras: '', 
+          rol: 'user',
+          fechaIngreso: new Date().toISOString().split('T')[0],
+          nivel: '',
+          puesto: ''
+        });
+        setTimeout(() => {
+          navigate('/admin/empleados/lista');
+        }, 2000);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError(`Error de conexión: ${error}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,142 +90,413 @@ const CrearEmpleado = () => {
     setShowPassword(prev => !prev);
   };
 
-const handleChange = (field) => (e) => {
-  setFormData(prev => ({
-    ...prev,
-    [field]: e.target.value
-  }));
-};
+  const handleChange = (field) => (e) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
+  };
 
   return (
-    <Box sx={{ p: 0, position: 'relative', maxWidth:'1000'}}>
-      <Fab 
-        sx={{ position: 'absolute', top: 1, left: 1, zIndex: 1 }}
-        size="small"
-        color="secondary"
-        onClick={() => navigate('/admin/empleados')}
+    <>
+
+      <AppBar  
+        sx={{ 
+          overflow:'hidden',
+          background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 50%, #1E40AF 100%)',
+          boxShadow: '0 2px 10px rgba(59, 130, 246, 0.2)',
+          zIndex: 1100
+        }}
       >
-        <ArrowBackIcon />
-      </Fab>
+        <Toolbar sx={{ justifyContent: 'space-between', px: 2 }}>
+          {/* Botón Volver */}
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={() => navigate('/admin/empleados')}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.1)',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.2)',
+                transform: 'scale(1.05)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <ArrowBackIosNewIcon />
+          </IconButton>
 
-      <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
-        <Typography variant="h4" gutterBottom textAlign="center" color="primary">
-          Crear Nuevo Empleado
-        </Typography>
+          {/* Título */}
+          <Box sx={{ my:0.5, textAlign: 'center', flex: 1, mx: 2 }}>
+            <Typography 
+              variant="h5" 
+              fontWeight="bold" 
+              sx={{ 
+                fontSize: { xs: '1.1rem', sm: '1.3rem' },
+                lineHeight: 1.2
+              }}
+            >
+              Crear Nuevo Empleado
+            </Typography>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                opacity: 0.9,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}
+            >
+              Registro de empleado
+            </Typography>
+          </Box>
 
-        <Card elevation={3}>
+          {/* Icono decorativo */}
+          <IconButton
+            edge="end"
+            color="inherit"
+            sx={{
+              cursor: 'default'
+            }}
+          >
+            <PersonAddIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+
+      {/* Contenido principal */}
+      <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+        <Card elevation={0} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
           <CardContent sx={{ p: 4 }}>
-            {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {message && (
+              <Alert severity="success" sx={{ mb: 3 }}>
+                {message}
+              </Alert>
+            )}
+            
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
 
-            <form onSubmit={handleSubmit}>
-              <TextField
-                fullWidth
-                label="Nombre Completo"
-                value={formData.nombre}
-                onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                required
-                sx={{ mb: 3 }}
-              />
+            <Box component="form" onSubmit={handleSubmit}>
+              <Grid container spacing={3}>
+                {/* Nombre */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Nombre completo"
+                    value={formData.nombre}
+                    onChange={handleChange('nombre')}
+                    required
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': {
+                        color: 'azul.main'
+                      }
+                    }}
+                  />
+                </Grid>
 
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                required
-                sx={{ mb: 3 }}
-              />
+                {/* Email */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange('email')}
+                    required
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': {
+                        color: 'azul.main'
+                      }
+                    }}
+                  />
+                </Grid>
 
-              <TextField
-                fullWidth
-                label="Contraseña temporal"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={handleChange('password')}
-                required
-                autoComplete='Contraseña'
-                margin="normal"
-                  slotProps={{
-                    input:{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        size='small'
-                        onClick={toggleShowPassword}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                  }
-                }}
-                sx={{ mb: 3 }}
-              />
-              <TextField
-                fullWidth
-                label="Teléfono"
-                type="number"
-                value={formData.telefono}
-                onChange={(e) => setFormData({...formData, telefono: e.target.value})}
-                sx={{ mb: 2 }}
-                
-              />
-              <Typography variant="body1" textAlign="center" color="primary">
-                 Vacaciones
-              </Typography>
-              <Box sx={{ mt:1, display:'flex', justifyContent:'space-between', mb: 3 }}>
-                <TextField
-                  fullWidth
-                  label="Días"
-                  type="number"
-                  value={formData.vacaDias}
-                  onChange={(e) => setFormData({...formData, vacaDias: e.target.value})}
-                  required                
-                />
-                <TextField
-                  fullWidth
-                  label="Horas"
-                  type="number"
-                  value={formData.vacaHoras}
-                  onChange={(e) => setFormData({...formData, vacaHoras: e.target.value})}
-                  required
-  
-                />
-              </Box>
+                {/* Contraseña */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Contraseña"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={handleChange('password')}
+                    required
+                    fullWidth
+                    slotProps={{
+                      input:{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={toggleShowPassword} edge="end">
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                      }
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': {
+                        color: 'azul.main'
+                      }
+                    }}
+                  />
+                </Grid>
 
-              <FormControl fullWidth sx={{ mb: 4 }}>
-                <InputLabel>Rol</InputLabel>
-                <Select
-                  label="Rol"
-                  value={formData.rol}
-                  onChange={(e) => setFormData({...formData, rol: e.target.value})}
-                >
-                  <MenuItem value="user">Empleado</MenuItem>
-                  <MenuItem value="admin">Administrador</MenuItem>
-                  <MenuItem value="cook">Cocinero</MenuItem>
-                </Select>
-              </FormControl>
+                {/* Fecha de Ingreso */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    type="date"
+                    label="Fecha de Ingreso"
+                    value={formData.fechaIngreso}
+                    onChange={handleChange('fechaIngreso')}
+                    required
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': {
+                        color: 'azul.main'
+                      }
+                    }}
+                  />
+                </Grid>
 
+                {/* Nivel */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    type="number"
+                    label="Nivel Salarial (1-21)"
+                    value={formData.nivel}
+                    onChange={handleChange('nivel')}
+                    slotProps={{ 
+                      htmlInput:{
+                        min: 1, max: 21
+                      }
+                     }}
+                    fullWidth
+                    helperText="Nivel salarial asignado"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': {
+                        color: 'azul.main'
+                      }
+                    }}
+                  />
+                </Grid>
+
+                {/* Puesto */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ '&.Mui-focused': { color: 'azul.main' } }}>
+                      Puesto
+                    </InputLabel>
+                    <Select
+                      value={formData.puesto}
+                      onChange={handleChange('puesto')}
+                      label="Puesto"
+                      sx={{
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        }
+                      }}
+                    >
+                      {opcionesPuesto.map((puesto) => (
+                        <MenuItem key={puesto} value={puesto}>
+                          {puesto}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* Días de vacaciones */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      textAlign:'center',
+                      mb: 1, 
+                      color: 'azul.main', 
+                      fontWeight: 600,
+                      fontSize: '1.1rem'
+                    }}
+                  >
+                    Vacaciones
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {/* Días de vacaciones */}
+                    <Grid size={{ xs: 6 }}>
+                      <TextField
+                        label="Días"
+                        type="number"
+                        value={formData.vacaDias}
+                        onChange={handleChange('vacaDias')}
+                        required
+                        fullWidth
+                        slotProps={{ 
+                          htmlInput:{
+                            min: 0 
+                         }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'azul.main'
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'azul.main'
+                            }
+                          },
+                          '& .MuiInputLabel-root.Mui-focused': {
+                            color: 'azul.main'
+                          }
+                        }}
+                      />
+                    </Grid>
+
+                    {/* Horas de vacaciones */}
+                    <Grid size={{ xs: 6 }}>
+                      <TextField
+                        label="Horas"
+                        type="number"
+                        value={formData.vacaHoras}
+                        onChange={handleChange('vacaHoras')}
+                        required
+                        fullWidth
+                        slotrops={{
+                          htmlInput:{
+                             min: 0, max:7
+                          }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'azul.main'
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'azul.main'
+                            }
+                          },
+                          '& .MuiInputLabel-root.Mui-focused': {
+                            color: 'azul.main'
+                          }
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                  </Grid>
+
+                {/* Rol */}
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ '&.Mui-focused': { color: 'azul.main' } }}>
+                      Rol
+                    </InputLabel>
+                    <Select
+                      value={formData.rol}
+                      onChange={handleChange('rol')}
+                      label="Rol"
+                      sx={{
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'azul.main'
+                        }
+                      }}
+                    >
+                      <MenuItem value="user">Empleado</MenuItem>
+                      <MenuItem value="admin">Administrador</MenuItem>
+                      <MenuItem value="cocinero">Cocinero</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+
+              {/* Botón de crear */}
               <Button
                 type="submit"
                 variant="contained"
-                fullWidth
                 disabled={loading}
-                size="large"
-                sx={{ py: 1.5, fontSize: '1.1rem' }}
+                fullWidth
+                sx={{
+                  mt: 4,
+                  py: 2,
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%)',
+                    boxShadow: '0 6px 20px rgba(59, 130, 246, 0.4)',
+                    transform: 'translateY(-2px)'
+                  },
+                  '&:disabled': {
+                    background: 'linear-gradient(135deg, #BDBDBD 0%, #9E9E9E 100%)',
+                  },
+                  transition: 'all 0.3s ease'
+                }}
               >
                 {loading ? 'Creando Empleado...' : 'Crear Empleado'}
               </Button>
-            </form>
+              {message && (
+              <Alert severity="success" sx={{ mb: 3 }}>
+                {message}
+              </Alert>
+            )}
+            
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
+            </Box>
           </CardContent>
         </Card>
-      </Box>
-    </Box>
+      </Container>
+    </>
   );
 };
 

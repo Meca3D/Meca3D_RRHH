@@ -87,14 +87,20 @@ const ProductList = ({ category, toggleSelection, selectedProducts }) => {
       ) : (
         <Grid container mb={2} spacing={2}>
           {filteredProducts.map((product) => (
-            <Grid  display="flex" justifyContent="center" alignItems="center"  size={{  xs: 12, sm: 6, md:4 }} key={product.id}>
+            <Grid  
+              display="flex" 
+              justifyContent="center" 
+              alignItems="center"  
+              size={{  xs: 12, sm: 6, md:4 }} 
+              key={product.id}
+              >
               <Card 
                  onClick={(e) => {
                    if (!e.target.closest('.favorite-star')) { // Ignora clics en la estrella
                      toggleSelection(product);
                    }
                  }}
-                elevation={isProductSelected(product.id) ? 4 : 1}
+                elevation={isProductSelected(product.id) ? 5 : 0}
                 sx={{
                   bgcolor:'dorado.fondo',
                   height: '100%',

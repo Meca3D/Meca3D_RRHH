@@ -2,19 +2,33 @@
 import { useEffect } from 'react';
 import { useOrdersStore } from '../stores/ordersStore';
 import { useProductsStore } from '../stores/productsStore';
-import { useNominaStore } from '../stores/nominaStore'; // ✅ Corregido import
+import { useNominaStore } from '../stores/nominaStore';
 import { useAuthStore } from '../stores/authStore';
+import { useHorasExtraStore } from '../stores/horasExtraStore';
+import { convertirHorasDecimalesAHorasYMinutos} from '../utils/nominaUtils';
+import { capitalizeFirstLetter } from '../components/Helpers';
 
 export const useGlobalData = () => {
   const { orders, fetchOrders, loading: ordersLoading } = useOrdersStore();
   const { products, fetchProducts, loading: productsLoading } = useProductsStore();
   const { isAuthenticated, user, userProfile } = useAuthStore();
+  const { 
+    calcularTotalHorasExtra,
+    calcularTotalHorasDecimales,
+    fetchHorasExtra,
+    horasExtra,
+  } = useHorasExtraStore();
   const {
+    loadConfiguracionUsuario,
+    configuracionNomina,
     nivelesSalariales,
-    loadNivelesSalariales, // ✅ Ahora es reactivo
+    loadNivelesSalariales, 
     loading: nominaLoading,
     currentYear
   } = useNominaStore();
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -27,56 +41,74 @@ export const useGlobalData = () => {
       fetchProducts();
     }
     if (!nivelesSalariales?.niveles && !nominaLoading) {
-      loadNivelesSalariales(); // ✅ Ahora usa onSnapshot
+      loadNivelesSalariales(); 
+      
     }
+    if (user?.email) {
+      fetchHorasExtra(user.email, firstDay, lastDay);
+    }
+    if (user?.email) {
+      fetchHorasExtra(user.email, firstDay, lastDay);
+      loadConfiguracionUsuario(user.email);
+    }
+
   }, [isAuthenticated, orders.length, products.length, ordersLoading, productsLoading, nivelesSalariales?.niveles, nominaLoading, user?.email]);
+    
+   const hasUserNominaConfig = !!(userProfile && configuracionNomina && userProfile.tarifasHorasExtra);
+
 
   return {
     dataLoaded: orders.length > 0 && products.length > 0,
-    loading: ordersLoading || productsLoading,
+    loading: ordersLoading || productsLoading || nominaLoading,
     ordersCount: orders.length,
     productsCount: products.length,
     nominaDataLoaded: !!nivelesSalariales?.niveles,
     currentSalaryYear: currentYear,
-    hasUserNominaConfig: !!(userProfile?.tipoNomina && (userProfile?.sueldoBaseFinal > 0 || userProfile?.nivelSalarial)),
-    
+    hasUserNominaConfig,
+    horasExtraEsteMes: horasExtra,
     // ✅ Mantener todos los datos calculados útiles para el Dashboard
-    userSalaryInfo: userProfile ? {
-      sueldoBase: userProfile.sueldoBaseFinal || 0,
-      trienios: userProfile.trieniosFinal || 0,
-      valorTrienio: userProfile.valorTrienioFinal || 0,
-      totalTrienios: (userProfile.trieniosFinal || 0) * (userProfile.valorTrienioFinal || 0),
-      tipoNomina: userProfile.tipoNomina || null,
-      nivelSalarial: userProfile.nivelSalarial || null,
+    userSalaryInfo:  hasUserNominaConfig ? {
+      otrosComplementosTotal: configuracionNomina ? 
+    ((configuracionNomina.otroComplemento1?.importe || 0) + 
+     (configuracionNomina.otroComplemento2?.importe || 0)) : 0,
+      totalImporteHorasMesActual: +calcularTotalHorasExtra(horasExtra),
+      totalTiempoMesActual: convertirHorasDecimalesAHorasYMinutos(calcularTotalHorasDecimales(horasExtra)),
+      mesNomina: capitalizeFirstLetter(new Date(lastDay).toLocaleString('default', { month: 'long' })),  
+      sueldoBase: configuracionNomina.sueldoBase|| 0,
+      trienios: configuracionNomina.tieneTrienios ? configuracionNomina.trienios : 0,
+      valorTrienio: configuracionNomina.tieneTrienios ? configuracionNomina.valorTrienio : 0,
+      totalTrienios: configuracionNomina.tieneTrienios ? 
+        configuracionNomina.trienios * configuracionNomina.valorTrienio : 0,
+      nivelSalarial: configuracionNomina.nivelSalarial || null,
       nivelPreasignado: userProfile.nivel || null,
       tieneNivelPreasignado: !!(userProfile.nivel),
-      isConfigured: !!(userProfile.tipoNomina && (userProfile.sueldoBaseFinal > 0 || userProfile.nivelSalarial)),
-      configStatus: userProfile.tipoNomina ? 'configured' : 'pending',
-      tarifasHorasExtra: userProfile.tarifasHorasExtra ||
+      isConfigured: true,
+      tarifasHorasExtra: configuracionNomina.tarifasHorasExtra ||
         nivelesSalariales?.tarifasHorasExtraBase || {
-          normal: 15.50,
-          nocturna: 18.75,
-          festiva: 20.25,
-          festivaNocturna: 23.80
+          normal: 15,
+          nocturna: 20,
+          festiva: 24.75,
+          festivaNocturna: 30
         },
-      salarioBaseDisplay: userProfile.sueldoBaseFinal ? `${Math.round(userProfile.sueldoBaseFinal)}€` : '0€',
-      trieniosDisplay: userProfile.trieniosFinal ? `${userProfile.trieniosFinal}` : '0',
-      totalTrieniosDisplay: userProfile.trieniosFinal && userProfile.valorTrienioFinal ?
-        `+${Math.round((userProfile.trieniosFinal || 0) * (userProfile.valorTrienioFinal || 0))}€` :
-        'Sin trienios',
+      salarioBase: configuracionNomina.sueldoBase ? `${Math.round(configuracionNomina.sueldoBase)}€` : '0€',
       fechaIngreso: userProfile.fechaIngreso || null,
       añosServicio: userProfile.fechaIngreso ?
         Math.floor((new Date() - new Date(userProfile.fechaIngreso)) / (1000 * 60 * 60 * 24 * 365.25)) : 0,
-      needsConfiguration: !userProfile.tipoNomina,
-      hasTrienios: (userProfile.trieniosFinal || 0) > 0,
-      isAutomaticMode: userProfile.tipoNomina === 'automatica',
-      isManualMode: userProfile.tipoNomina === 'manual',
-      salarioBaseMasTrienios: (userProfile.sueldoBaseFinal || 0) + ((userProfile.trieniosFinal || 0) * (userProfile.valorTrienioFinal || 0)),
-      configDescription: userProfile.tipoNomina === 'automatica' ?
-        `Nivel ${userProfile.nivelSalarial} - Automático` :
-        userProfile.tipoNomina === 'manual' ?
-        'Configuración Manual' :
-        'Sin configurar'
-    } : null
+      tieneTrienios: (configuracionNomina.tieneTrienios || false),
+      tieneotrosComplementos: (configuracionNomina.tieneotrosComplementos || false),
+      salarioCompletoEstimado: 
+        (configuracionNomina.sueldoBase || 0) +
+        ((configuracionNomina.trienios || 0) * (configuracionNomina.valorTrienio || 0)) +
+        ((configuracionNomina?.otroComplemento1?.importe || 0) + (configuracionNomina?.otroComplemento2?.importe || 0)) +
+        calcularTotalHorasExtra(horasExtra),
+    } : { totalImporteHorasMesActual: +calcularTotalHorasExtra(horasExtra),
+      totalTiempoMesActual: convertirHorasDecimalesAHorasYMinutos(calcularTotalHorasDecimales(horasExtra)),
+      sueldoBase: 0,
+      trienios: 0,
+      valorTrienio: 0,
+      totalTrienios: 0,
+      isConfigured: false,
+      needsConfiguration: true,
+    }
   };
 };

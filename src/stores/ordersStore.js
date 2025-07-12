@@ -19,6 +19,7 @@ export const useOrdersStore = create((set, get) => {
         return () => {};
       }
     set({loading: true, initialized: true, error: null });
+
     unsubscribe = onSnapshot(
       collection(db, 'PEDIDOS'),
       (snapshot) => {
@@ -33,14 +34,25 @@ export const useOrdersStore = create((set, get) => {
             error: null 
           });
       },
-      (error) => {set({ error: error.message, loading: false })
-                set({ 
-            error: error.message, 
-            loading: false, 
-            initialized: false 
-          });
-        }
-    );
+      (error) => {
+        console.error("❌ Error en listener orders:", error);
+        if (error.code === "permission-denied") {
+                  set({ 
+                    orders: [], 
+                    loading: false, 
+                    error: "Sin permisos para acceder a pedidos",
+                    initialized: false
+                  });
+                } else {
+                  set({ 
+                    error: error.message, 
+                    loading: false,
+                    initialized: false
+                  });
+                }
+              }
+            );
+
     return () => {
         if (unsubscribe) {
           unsubscribe();
@@ -72,6 +84,7 @@ export const useOrdersStore = create((set, get) => {
     try {
       await deleteDoc(doc(db, 'PEDIDOS', orderId));
     } catch (error) {
+      console.error("❌ Error eliminando order:", error);
       set({ error: error.message, loading: false });
       throw error;
     }

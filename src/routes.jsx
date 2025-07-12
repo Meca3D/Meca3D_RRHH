@@ -4,35 +4,36 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/Layout/MainLayout';
 import Login from './components/Auth/Login';
 
-// Componentes principales
+
 import Dashboard from './components/Dashboard/Dashboard';
 import OrderList from './components/Orders/OrderList';
 import CreateOrder from './components/Orders/CreateOrder';
 import OrderDetail from './components/Orders/OrderDetail';
 
-
-// Componentes de administración
 import AdminRoute from './components/AdminRoute';
 import AdminDashboard from './components/Admin/AdminDashBoard';
 
-// Componentes de Desayunos Admin
 import GestionDesayunos from './components/Admin/Desayunos/GestionDesayunos';
 import CrearProducto from './components/Admin/Desayunos/CrearProducto';
 import ModificarProducto from './components/Admin/Desayunos/ModificarProducto';
 import EliminarProducto from './components/Admin/Desayunos/EliminarProducto';
 
-// Componentes de Empleados Admin
 import GestionEmpleados from './components/Admin/Empleados/GestionEmpleados';
 import CrearEmpleado from './components/Admin/Empleados/CrearEmpleados';
 import ListaEmpleados from './components/Admin/Empleados/ListaEmpleados';
 import EditarEmpleados from './components/Admin/Empleados/EditarEmpleados';
 import EliminarEmpleados from './components/Admin/Empleados/EliminarEmpleados';
 
-
-// Componentes futuros
 import Nominas from './components/Nominas/Nominas';
+import ConfigurarDatosSalariales from './components/Nominas/ConfigurarDatosSalariales';
+import GenerarNomina from './components/Nominas/GenerarNomina';
+import GestionarNominas from './components/Nominas/GestionarNominas';
 import MisVacaciones from './components/Vacaciones/MisVacaciones';
-import MisHorasExtra from './components/HorasExtra/MisHorasExtra';
+import HorasExtras from './components/HorasExtras/HorasExtras';
+import RegistrarHorasExtras from './components/HorasExtras/RegistrarHorasExtras';
+import GestionarHorasExtras from './components/HorasExtras/GestionarHorasExtras';
+import EstadisticasHorasExtras from './components/HorasExtras/EstadisticasHorasExtras';
+import ConfiguracionHorasExtras from './components/HorasExtras/ConfiguracionHorasExtras';
 
 import LoadingScreen from './components/Layout/LoadingScreen';
 import { useAuthStore } from './stores/authStore';
@@ -73,9 +74,18 @@ const AppRoutes = () => {
         <Route path="desayunos/orders/:orderId" element={<OrderDetail />} />
 
         {/* Rutas de RRHH */}
-        <Route path="nominas" element={<Nominas />} />
+        <Route path="/nominas" element={<Nominas />} />
+        <Route path="/nominas/configurar" element={<ConfigurarDatosSalariales />} />
+        <Route path="/nominas/generar" element={<GenerarNomina />} />
+        <Route path="/nominas/generar/:nominaId" element={<GenerarNomina />} />
+        <Route path="/nominas/gestionar" element={<GestionarNominas />} />
         <Route path="vacaciones" element={<MisVacaciones />} />
-        <Route path="horas-extra" element={<MisHorasExtra />} />
+        <Route path="/horas-extras" element={<HorasExtras />} />
+        <Route path="/horas-extras/registrar" element={<RegistrarHorasExtras />} />
+        <Route path="/horas-extras/gestionar" element={<GestionarHorasExtras />} />
+        <Route path="/horas-extras/estadisticas" element={<EstadisticasHorasExtras />} />
+        <Route path="/horas-extras/configuracion" element={<ConfiguracionHorasExtras />} /> 
+
 
         {/* Rutas de Administración */}
         <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

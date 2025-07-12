@@ -4,14 +4,17 @@ import {
   Typography, Box, Divider, List, ListItem, ListItemText, ListItemButton,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Chip, Card, CardContent, Button, Dialog, DialogTitle, 
-  DialogContent, DialogActions, CircularProgress,Fab, Snackbar, Alert
+  DialogContent, DialogActions, CircularProgress,Fab, Snackbar, Alert,
+  IconButton
 } from '@mui/material';
 import LunchDiningIcon from '@mui/icons-material/LunchDining';
 import LocalCafeIcon from '@mui/icons-material/LocalCafe';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DownloadIcon from '@mui/icons-material/Download';
+import ClearIcon from '@mui/icons-material/Clear';
 import ShareIcon from '@mui/icons-material/Share';
 import { useProductsStore } from '../../stores/productsStore';
+import { useOrdersStore } from '../../stores/ordersStore';
 import { useUIStore } from '../../stores/uiStore';
 import html2canvas from 'html2canvas';
 
@@ -20,6 +23,7 @@ const OrderSummary = ({order, canManageOrder}) => {
   const { showSuccess, showError, showInfo } = useUIStore();
   const [selectedUser, setSelectedUser] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const {  removeUserFromOrder} = useOrdersStore();
   
   // Ref para el contenido que queremos exportar como imagen
   const summaryRef = useRef(null);
@@ -162,6 +166,15 @@ const productoCompleto = products.find(p => p.id === productoId);
   };
 
 
+    const handleDeleteUser = async (e,usuario) => {
+    try {
+          await removeUserFromOrder(order.id, usuario.id);
+          showSuccess(`${usuario.nombre} eliminado del pedido`)
+    } catch (error) {
+      showError(`Error al eliminar a ${usuario.nombre}: ${error.message}`);
+    }
+  };
+
   if (!order) {
     return <Typography>Cargando resumen...</Typography>;
   }
@@ -282,25 +295,49 @@ const productoCompleto = products.find(p => p.id === productoId);
             </Paper>
 
             {order?.usuarios?.sort((a, b) => a.nombre.localeCompare(b.nombre)).map((usuario, index) => (
-                       <Box 
-                          key={index}
-                          onClick={() => handleUserClick(usuario)}
-                          sx={{
-                            display: 'flex',
-                            flexDirection:'column',
-                            justifyItems:'center',
-                            py: 1,
-                            borderBottom: '1px solid rgba(224, 224, 224, 1)',
-                            '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' }
-                          }}
-                        >
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Typography fontSize="1.rem">{usuario.nombre}</Typography>
-                          </Box>
-                          <Box sx={{ textAlign: 'center' }}>
-                          <Typography fontSize="0.7rem">{`${usuario.productos?.length || 0} productos`}</Typography>
-                          </Box>
-                        </Box>         
+                <Box 
+                  key={index}
+                  onClick={() => handleUserClick(usuario)}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    py: 1,
+                    borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' }
+                  }}
+                >
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    flex: 1 
+                  }}>
+                    <Typography fontSize="1.rem">{usuario.nombre}</Typography>
+                    <Typography fontSize="0.7rem">{`${usuario.productos?.length || 0} productos`}</Typography>
+                  </Box>
+
+                  {canManageOrder && (
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        bgcolor: 'rojo.fondoFuerte',
+                        border:'2px solid',
+                        color: 'rojo.main',
+                        '&:hover': {
+                          bgcolor: 'rojo.main',
+                          color: 'white',
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                      onClick={(e) => handleDeleteUser(e, usuario)}
+                    >
+                      <ClearIcon fontSize="1rem" sx={{fontWeight:'bold'}} />
+                    </IconButton>
+                  )}
+                </Box>    
                   ))}
 
 

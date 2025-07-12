@@ -4,7 +4,7 @@ import { Outlet } from 'react-router-dom';
 import { 
   AppBar, Toolbar, Typography, IconButton, Box, 
   Avatar, Drawer, List, ListItemButton, ListItemIcon, 
-  ListItemText, Divider,
+  ListItemText, Divider, Container
 } from '@mui/material';
 import EuroIcon from '@mui/icons-material/Euro';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -20,6 +20,7 @@ import { useAuthStore } from '../../stores/authStore';
 import UserProfile from '../UI/UserProfile';
 
 
+
 const MainLayout = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const {user, userProfile, isAuthenticated, canManageUsers} = useAuthStore();
@@ -27,7 +28,6 @@ const MainLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const drawerWidth = 280; // Aumentar un poco el ancho
 
-  // Menú principal modernizado
   const menuItems = [
     { 
       name: 'Resumen', 
@@ -37,7 +37,7 @@ const MainLayout = () => {
     },
     { 
       name: 'Horas Extra', 
-      path: '/horas-extra', 
+      path: '/horas-extras', 
       icon: AccessTimeIcon, 
       color: 'naranja',
     },
@@ -84,7 +84,7 @@ const MainLayout = () => {
     if (location.pathname.startsWith('/nominas')) return 'Mis Nóminas';
     if (location.pathname.startsWith('/vacaciones')) return 'Mis Vacaciones';
     if (location.pathname.startsWith('/permisos')) return 'Mis Permisos/Bajas';
-    if (location.pathname.startsWith('/horas-extra')) return 'Mis Horas Extra';
+    if (location.pathname.startsWith('/horas-extras')) return 'Mis Horas Extra';
     return 'Mecaformas 3D';
   };
 

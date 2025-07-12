@@ -20,7 +20,7 @@ import { useUIStore } from '../../stores/uiStore';
 const CreateOrder = () => {
   const [orderName, setOrderName] = useState('');
   const [fechaReserva, setFechaReserva] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
-  const { user, userProfile } = useAuthStore();
+  const { user } = useAuthStore();
   const { createOrder, loading } = useOrdersStore();
   const { showSuccess, showError } = useUIStore();
   const navigate = useNavigate();

@@ -1,5 +1,4 @@
-// components/Dashboard/Dashboard.jsx
-import { useEffect } from 'react';
+
 import {
   Grid, Card, CardContent, Typography, Box, Container, 
   Avatar, CircularProgress, Paper, IconButton, Chip
@@ -8,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useOrdersStore } from '../../stores/ordersStore';
 import { useProductsStore } from '../../stores/productsStore';
-import { useNominaStore } from '../../stores/nominaStore';
 import { useGlobalData } from '../../hooks/useGlobalData';
 
 // Iconos
@@ -22,14 +20,15 @@ import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddIcon from '@mui/icons-material/Add';
 import { formatearNombre } from '../Helpers';
+import { formatCurrency } from '../../utils/nominaUtils';
+import { capitalizeFirstLetter } from '../Helpers';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { dataLoaded, loading, ordersCount, userSalaryInfo  } = useGlobalData();
+  const { horasExtraEsteMes, dataLoaded, loading, ordersCount, userSalaryInfo  } = useGlobalData();
   const { orders } = useOrdersStore();
   const { products } = useProductsStore();
   const { user, userProfile } = useAuthStore();
-
 
   if (loading) {
     return (
@@ -47,27 +46,29 @@ const Dashboard = () => {
   // Estadísticas principales con colores MD3
   const stats = [
     {
-      title: 'Este Mes',
-      value: userSalaryInfo?.salarioBaseMasTrienios  || '0€',
-      subtitle: 'Sueldo Base',
+      title: 'Nómina',
+      value: userSalaryInfo
+        ? formatCurrency(userSalaryInfo.salarioCompletoEstimado)
+        : '0€',
+      subtitle: `estimado ${userSalaryInfo.mesNomina || 'este mes'}`,
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
       action: () => navigate('/nominas')
     },
     {
-      title: 'Conf. Nomina',
-      value: userProfile?.tipoNomina ? 'OK' : 'Pendiente',
-      subtitle: userProfile?.tipoNomina === 'automatica' ? `Nivel ${userProfile.nivelSalarial}` : 'Manual',
-      icon: NotificationsOutlinedIcon,
-      color: userProfile?.tipoNomina ? 'azul.main' : 'rojo.main',
-      bgColor: userProfile?.tipoNomina ? 'azul.fondo' : 'rojo.fondo',
-      action:  () => navigate('/nominas')
+      title: 'Horas Extras',
+      value: formatCurrency(userSalaryInfo.totalImporteHorasMesActual),
+      subtitle: `estimado ${userSalaryInfo.mesNomina || 'este mes'}`,
+      icon: EuroIcon,
+      color: 'verde.main',
+      bgColor: 'verde.fondo',
+      action:  () => navigate('/horas-extras')
     },
     {
       title: 'Vacaciones',
       value: `${userProfile?.vacaDias || 20}d ${userProfile?.vacaHoras || 3}h`,
-      subtitle: 'Días disponibles',
+      subtitle: 'Disponibles',
       icon: BeachAccessOutlinedIcon,
       color: 'purpura.main', 
       bgColor: 'purpura.fondo',
@@ -75,30 +76,30 @@ const Dashboard = () => {
     },
     {
       title: 'Horas Extras',
-      value: `10h`,
-      subtitle: 'Este mes',
+      value: userSalaryInfo?.totalTiempoMesActual,
+      subtitle: `estimado ${userSalaryInfo.mesNomina || 'este mes'}`,
       icon: AccessTimeIcon,
       color: 'naranja.main', 
       bgColor: 'naranja.fondo',
-      action: ()=> null
+      action: ()=> navigate('/horas-extras')
     }
   ];
 
   // Acciones rápidas con colores MD3
   const quickActions = [
         {
-      label: 'Configurar Nómina',
+      label: 'Generar Nómina',
       icon: AddIcon,
-      color: user?.tipoNomina ? 'azul.main' : 'rojo.main',
-      bgColor: user?.tipoNomina ? 'azul.fondo' : 'rojo.fondo',
-      onClick: () => navigate('/nominas')
+      color:  'azul.main',
+      bgColor: 'azul.fondo',
+      onClick: () => navigate('/nominas/generar'),
     },
     {
       label: 'Registrar Horas Extra',
       icon: AccessTimeIcon,
       color: 'naranja.main',
       bgColor: 'naranja.fondo',
-      onClick: () => navigate('/nominas'),
+      onClick: () => navigate('/horas-extras/registrar'),
       disabled: !user?.tipoNomina
     },
     {
@@ -127,7 +128,7 @@ const Dashboard = () => {
   // Componente StatCard con estilo MD3
   const StatCard = ({ title, value, subtitle, icon: Icon, color, bgColor, action }) => (
     <Card 
-      elevation={0}
+      elevation={5}
       onClick={action}
       sx={{ 
         height: '100%',
@@ -142,7 +143,7 @@ const Dashboard = () => {
       }}
     >
       <CardContent sx={{ p: 3 }}>
-        <Box display="flex" alignItems="flex-start" justifyContent="space-between" mb={2}>
+        <Box display="flex" alignItems="flex-start" justifyContent="center" mb={2}>
           <Box 
             sx={{ 
               p: 1,
@@ -158,15 +159,15 @@ const Dashboard = () => {
           </Box>
 
         </Box>
-        <Box sx={{display:'flex', flexDirection:'column', justifyItems:'center', justifyContent:'center', alignItems:'center', alignContent:'center'}}>
-        <Typography  textAlign="center" variant="h4" fontWeight="bold" color="text.primary" gutterBottom>
+        <Box sx={{ mb:-1, display:'flex', flexDirection:'column', justifyItems:'center', justifyContent:'center', alignItems:'center', alignContent:'center'}}>
+        <Typography  sx={{mt:1, fontSize:'1.5rem'}} textAlign="center" variant="h4" fontWeight="bold" color="text.primary" gutterBottom>
           {value}
         </Typography>
-        <Typography  textAlign="center" variant="body2" fontWeight="600" color="text.primary" gutterBottom>
+        <Typography  textAlign="center" variant="body1" fontWeight="600" color="text.primary">
           {title}
         </Typography >
         {subtitle && (
-          <Typography  textAlign="center" variant="caption" color="text.secondary">
+          <Typography  textAlign="center" variant="body2" color="gray.600">
             {subtitle}
           </Typography>
         )}
@@ -224,11 +225,11 @@ const Dashboard = () => {
     <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
       {/* Header con gradiente MD3 */}
       <Paper 
-        elevation={0} 
+        elevation={5} 
         sx={{  
           mb: 4, 
-          background: 'linear-gradient(135deg,   #3b82f6 0%, #1e40af 100%)',
-          color: 'white',
+          p: 1,
+          bgcolor:'azul.fondo',
           borderRadius: 4,
           position: 'relative',
           overflow: 'hidden',
@@ -244,12 +245,12 @@ const Dashboard = () => {
         <Box 
           sx={{
             position: 'absolute',
-            top: -50,
-            right: -50,
+            top: -70,
+            right: -70,
             width: 150,
             height: 150,
             borderRadius: '50%',
-            bgcolor: 'rgba(255,255,255,0.15)',
+            bgcolor: 'azul.fondo',
             zIndex: 0
           }}
         />

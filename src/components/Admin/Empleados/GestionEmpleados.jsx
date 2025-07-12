@@ -1,176 +1,138 @@
-
-// components/Admin/Empleados/GestionEmpleados.jsx
+// components/Admin/Empleados/GestionEmpleados.jsx - ESTILO IDÉNTICO A HORAS EXTRAS
 import React from 'react';
-import { 
-  Grid, Card, CardContent, Typography, Box, 
-  CardActionArea, Container, Fab
-} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import EditIcon from '@mui/icons-material/Edit';
-import SecurityIcon from '@mui/icons-material/Security';
-import PeopleIcon from '@mui/icons-material/People';
-import DeleteIcon from '@mui/icons-material/Delete';
+import {
+  Container, Typography, Box, Grid, Card, CardContent, 
+  Avatar, Paper, Chip, Divider
+} from '@mui/material';
+import {
+  PersonAdd as PersonAddIcon,
+  EditOutlined as EditIcon,
+  PollOutlined as StatsIcon,
+  People as PeopleIcon,
+  DeleteForeverOutlined as DeleteForeverOutlinedIcon,
+} from '@mui/icons-material';
 
 const GestionEmpleados = () => {
   const navigate = useNavigate();
 
-  const empleadosOptions = [
+
+  const quickActions = [
     {
-      title: 'Lista de Empleados',
-      description: 'Ver todos los empleados registrados',
-      icon: <PeopleIcon sx={{ fontSize: 40 }} />,
-      path: '/admin/empleados/lista',
-      color: 'primary'
-    },
-    {
+      id: 'crear',
       title: 'Crear Empleado',
-      description: 'Registrar nuevo empleado en el sistema',
-      icon: <PersonAddIcon sx={{ fontSize: 40 }} />,
-      path: '/admin/empleados/crear',
-      color: 'success'
+      subtitle: '',
+      icon: PersonAddIcon,
+      color: 'verde.main',
+      bgColor: 'verde.fondo',
+      route: '/admin/empleados/crear'
     },
     {
-      title: 'Editar Empleados',
-      description: 'Modificar datos de empleados existentes',
-      icon: <EditIcon sx={{ fontSize: 40 }} />,
-      path: '/admin/empleados/editar',
-      color: 'info'
+      id: 'editar', 
+      title: 'Editar Empleado',
+      subtitle: '',
+      icon: EditIcon,
+      color: 'azul.main',
+      bgColor: 'azul.fondo', 
+      route: '/admin/empleados/editar'
     },
     {
-      title: 'Gestión de Roles',
-      description: 'Asignar y modificar roles de usuario',
-      icon: <SecurityIcon sx={{ fontSize: 40 }} />,
-      path: '/admin/empleados/roles',
-      color: 'warning'
+      id: 'borrar',
+      title: 'Eliminar Empleado',
+      subtitle: '',
+      icon: DeleteForeverOutlinedIcon,
+      color: 'rojo.main',
+      bgColor: 'rojo.fondo',
+      route: '/admin/empleados/eliminar'
     },
-    {
-      title: 'Eliminar Empleados',
-      description: 'Dar de baja empleados del sistema',
-      icon: <DeleteIcon sx={{ fontSize: 40 }} />,
-      path: '/admin/empleados/eliminar',
-      color: 'error'
-    }
+
   ];
 
   return (
-    <Container 
-      maxWidth="xl" 
-      sx={{ 
-        py: 4,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        textAlign: 'center',
-        position: 'relative'
-      }}
-    >
-      {/* Botón de regreso */}
-      <Fab 
-        sx={{
-          position: 'absolute',
-          top: 16,
-          left: 16,
-          zIndex: 1
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {/* Header corporativo igual que HorasExtras */}
+      <Paper 
+        elevation={5} 
+        sx={{ 
+          p: 2, 
+          mb: 4, 
+          bgcolor: 'azul.fondo', // Azul en lugar de naranja
+          borderRadius: 4,
+          position: 'relative',
+          overflow: 'hidden'
         }}
-        size="small"
-        color="secondary"
-        onClick={() => navigate('/admin')}
       >
-        <ArrowBackIcon />
-      </Fab>
+        {/* Decoración de fondo idéntica */}
+        <Box 
+          sx={{
+            position: 'absolute',
+            top: -50,
+            right: -55,
+            width: 150,
+            height: 150,
+            borderRadius: '50%',
+            bgcolor: 'azul.fondoFuerte',
+            zIndex: 0
+          }}
+        />
+        
+        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}>
+            <PeopleIcon sx={{ color:'azul.main', fontSize: '4rem' }} />
+          <Box flex={1}>
+            <Typography color="azul.main" variant="h4" fontWeight="bold" gutterBottom>
+              Gestión de Empleados
+            </Typography>
+           <Typography textAlign="center" color="naranja.main"><strong>{}</strong>
+           </Typography>
+                         
+            </Box>
+          </Box>
+      </Paper>
 
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h3" component="h1" gutterBottom color="primary" fontWeight="bold">
-          Gestión de Empleados
-        </Typography>
-        <Typography variant="h6" color="textSecondary">
-          Administra perfiles, roles y datos de empleados
-        </Typography>
-      </Box>
-
-      <Grid 
-        container 
-        spacing={3}
-        justifyContent="center"
-        sx={{ maxWidth: 1200 }}
-      >
-        {empleadosOptions.map((option, index) => (
-          <Grid size={{ xs:12, sm:6, md:4 }}  key={index}>
-            <Card 
-              elevation={6}
-              sx={{ 
-                height: '100%',
-                transition: 'all 0.3s ease-in-out',
-                '&:hover': {
-                  transform: 'translateY(-8px)',
-                  boxShadow: 12,
-                  '& .option-icon': {
-                    transform: 'scale(1.1)',
-                  }
-                },
-                borderRadius: 3,
-                overflow: 'hidden'
-              }}
-            >
-              <CardActionArea 
-                onClick={() => navigate(option.path)}
-                sx={{ height: '100%', p: 0 }}
+     <Grid container spacing={3}>
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <Grid size={{xs:6 ,md:3}}  key={action.id}>
+              <Card 
+                elevation={5}
+      sx={{ 
+        cursor: 'pointer',
+        bgcolor: action.bgColor,
+        border: '1px solid',
+        borderRadius: 3,
+        minHeight: 100,
+        borderColor: 'rgba(0,0,0,0.08)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+          transform: 'translateY(-2px)',
+          borderColor: action.color
+        }
+      }}
+                onClick={() => navigate(action.route)}
               >
-                <Box
-                  sx={{
-                    background: `linear-gradient(135deg, ${
-                      option.color === 'primary' ? '#1976d2' :
-                      option.color === 'success' ? '#2e7d32' :
-                      option.color === 'info' ? '#0288d1' :
-                      option.color === 'warning' ? '#ed6c02' :
-                      option.color === 'error' ? '#d32f2f' : '#1976d2'
-                    } 0%, ${
-                      option.color === 'primary' ? '#42a5f5' :
-                      option.color === 'success' ? '#66bb6a' :
-                      option.color === 'info' ? '#29b6f6' :
-                      option.color === 'warning' ? '#ff9800' :
-                      option.color === 'error' ? '#f44336' : '#42a5f5'
-                    } 100%)`,
-                    color: 'white',
-                    p: 3,
-                    textAlign: 'center'
-                  }}
-                >
-                  <Box 
-                    className="option-icon"
+                <CardContent 
                     sx={{ 
-                      transition: 'transform 0.3s ease-in-out',
-                      mb: 1 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      p: 2,
+                      textAlign: 'center'
                     }}
                   >
-                    {option.icon}
-                  </Box>
-                </Box>
-                
-                <CardContent sx={{ p: 3 }}>
-                  <Typography 
-                    variant="h6" 
-                    component="h2" 
-                    gutterBottom 
-                    color="primary" 
-                    fontWeight="bold"
-                  >
-                    {option.title}
-                  </Typography>
-                  
-                  <Typography 
-                    variant="body2" 
-                    color="textSecondary"
-                  >
-                    {option.description}
+                    <Icon sx={{  mb:2, fontSize: '30', color: action.color }} />
+
+                  <Typography variant="body1" fontWeight="600" sx={{ color:action.color, lineHeight: 1.2 }}>
+                    {action.title}
                   </Typography>
                 </CardContent>
-              </CardActionArea>
-            </Card>
-          </Grid>
-        ))}
+              </Card>
+            </Grid>
+          );
+        })}
       </Grid>
     </Container>
   );

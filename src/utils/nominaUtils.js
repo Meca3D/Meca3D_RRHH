@@ -17,10 +17,10 @@ export const formatDateForInput = (date) => {
 };
 
 export const tiposHorasExtra = [
-  { value: 'normal', label: 'Normal', color: '#3B82F6' },
-  { value: 'nocturna', label: 'Nocturna', color: '#6366F1' },
-  { value: 'festiva', label: 'Festiva', color: '#F59E0B' },
-  { value: 'festivaNocturna', label: 'Festiva Nocturna', color: '#EF4444' }
+  { value: 'normal', label: 'Normal', color: '#00FF00', short: 'N' },
+  { value: 'festiva', label: 'Festiva', color: '#0000FF', short: 'F' },
+  { value: 'nocturna', label: 'Nocturna', color: '#7B1FA2', short: 'Noc' },
+  { value: 'festivaNocturna', label: 'Festiva Nocturna', color: '#FF0000',short: 'F.Noc' }
 ];
 
 export const sugerenciasFechas = [
@@ -138,14 +138,23 @@ export const formatearTiempo = (horas, minutos) => {
   const h = parseInt(horas) || 0;
   const m = parseInt(minutos) || 0;
   
-  if (h === 0 && m === 0) return '0min';
-  if (h === 0) return `${m}min`;
+  if (h === 0 && m === 0) return '0h';
+  if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
-  return `${h}h ${m}min`;
+  return `${h}h ${m}m`;
 };
 
 export const convertirHorasMinutosADecimal = (horas, minutos) => {
   const horasNum = parseInt(horas) || 0;
   const minutosNum = parseInt(minutos) || 0;
   return horasNum + (minutosNum / 60);
+};
+
+export const convertirHorasDecimalesAHorasYMinutos = (horasDecimales) => {
+  const horas = Math.floor(horasDecimales);
+  const minutos = Math.round((horasDecimales - horas) * 60);
+  if (horas ===0 && minutos === 0) return '0h';
+  if (minutos === 0) return `${horas}h`;
+  if (horas ===0) return `${minutos}m`;
+  return `${horas}h ${minutos}m`;
 };

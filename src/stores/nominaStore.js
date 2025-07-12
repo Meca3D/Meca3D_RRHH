@@ -1,6 +1,6 @@
 // stores/nominaStore.js
 import { create } from 'zustand';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { convertirHorasMinutosADecimal } from '../utils/nominaUtils'
 import { useAuthStore } from './authStore';
@@ -8,6 +8,8 @@ import { useAuthStore } from './authStore';
 export const useNominaStore = create((set, get) => {
   let unsubscribeNiveles = null;
   let unsubscribeHorasExtra = null;
+  let unsubscribeConfiguracion = null;
+  let unsubscribeNominas = null
 
   return {
     // Estado principal
@@ -17,6 +19,9 @@ export const useNominaStore = create((set, get) => {
     error: null,
     initialized: false,
     currentYear: new Date().getFullYear(),
+    configuracionNomina: null,
+    nominasGuardadas: [],
+    loadingConfiguracion: false,
 
     loadNivelesSalariales: (año = null) => {
       const state = get();
@@ -36,8 +41,36 @@ export const useNominaStore = create((set, get) => {
               error: null 
             });
           } else {
-            // Crear niveles por defecto si no existen
-            get().createNivelesSalarialesDefault(targetYear);
+ set({ 
+              nivelesSalariales: {
+        niveles: {
+          1: { sueldoBase: 1100, valorTrienio: 25 },
+          2: { sueldoBase: 1150, valorTrienio: 25 },
+          3: { sueldoBase: 1200, valorTrienio: 25 },
+          4: { sueldoBase: 1250, valorTrienio: 25 },
+          5: { sueldoBase: 1300, valorTrienio: 25 },
+          6: { sueldoBase: 1350, valorTrienio: 25 },
+          7: { sueldoBase: 1400, valorTrienio: 25 },
+          8: { sueldoBase: 1450, valorTrienio: 25 },
+          9: { sueldoBase: 1500, valorTrienio: 25 },
+          10: { sueldoBase: 1550, valorTrienio: 25 },
+          11: { sueldoBase: 1600, valorTrienio: 25 },
+          12: { sueldoBase: 1650, valorTrienio: 25 },
+          13: { sueldoBase: 1700, valorTrienio: 25 },
+          14: { sueldoBase: 1817.2, valorTrienio: 25 },
+          15: { sueldoBase: 1900, valorTrienio: 25 },
+          16: { sueldoBase: 1900, valorTrienio: 25 },
+          17: { sueldoBase: 1900, valorTrienio: 25 },
+          18: { sueldoBase: 1900, valorTrienio: 25 },
+          19: { sueldoBase: 1900, valorTrienio: 25 },
+          20: { sueldoBase: 1900, valorTrienio: 25 },
+          21: { sueldoBase: 1900, valorTrienio: 25 },
+          año: targetYear.toString()
+        },
+          loading: false,
+          error: null 
+      }
+   })
           }
         },
         (error) => {
@@ -97,49 +130,6 @@ export const useNominaStore = create((set, get) => {
       };
     },
 
-
-    addHorasExtra: async (horasExtraData) => {
-      try {
-      const horasDecimales = convertirHorasMinutosADecimal(
-          horasExtraData.horas, 
-          horasExtraData.minutos
-        );
-
-        const docRef = await addDoc(collection(db, 'HORAS_EXTRA'), {
-          ...horasExtraData,
-          horasDecimales, // ✅ Campo calculado para cálculos
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        return docRef.id;
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
-      }
-    },
-
-    deleteHorasExtra: async (id) => {
-      try {
-        await deleteDoc(doc(db, 'HORAS_EXTRA', id));
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
-      }
-    },
-
-    updateHorasExtra: async (id, data) => {
-      try {
-        const docRef = doc(db, 'HORAS_EXTRA', id);
-        await updateDoc(docRef, {
-          ...data,
-          updatedAt: new Date()
-        });
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
-      }
-    },
-
     calcularDatosNomina: (usuario, nivelesSalariales = null) => {
       const niveles = nivelesSalariales || get().nivelesSalariales;
       
@@ -175,6 +165,42 @@ export const useNominaStore = create((set, get) => {
           trienios,
           valorTrienio
         };
+      }
+    },
+
+    updateConfiguracionNomina: async (userEmail, configuracion) => {
+      try {
+        set({ loadingConfiguracion: true });
+        await updateDoc(doc(db, 'USUARIOS', userEmail), {
+          configuracionNomina: {
+            ...configuracion,
+            updatedAt: new Date().toISOString()
+          }
+        });
+        // onSnapshot se encarga del resto
+      } catch (error) {
+        set({ error: error.message, loadingConfiguracion: false });
+        throw error;
+      }
+    },
+
+    // ✅ NUEVO: Cleanup all listeners
+    cleanup: () => {
+      if (unsubscribeNiveles) {
+        unsubscribeNiveles();
+        unsubscribeNiveles = null;
+      }
+      if (unsubscribeHorasExtra) {
+        unsubscribeHorasExtra();
+        unsubscribeHorasExtra = null;
+      }
+      if (unsubscribeConfiguracion) {
+        unsubscribeConfiguracion();
+        unsubscribeConfiguracion = null;
+      }
+      if (unsubscribeNominas) {
+        unsubscribeNominas();
+        unsubscribeNominas = null;
       }
     },
 
@@ -243,58 +269,186 @@ export const useNominaStore = create((set, get) => {
       const horasDecimales = convertirHorasMinutosADecimal(horas, minutos);
       return horasDecimales * (parseFloat(tarifa) || 0);
     },
+  loadConfiguracionUsuario: (userEmail) => {
+      if (unsubscribeConfiguracion) {
+        return () => {};
+      }
 
+      set({ loadingConfiguracion: true });
 
-    calcularNominaCompleta: (usuario, horasExtra = []) => {
-      const datos = get().calcularDatosNomina(usuario);
-      const totalHorasExtra = get().calcularTotalHorasExtra(horasExtra);
-      const totalTrienios = datos.trienios * datos.valorTrienio;
+      unsubscribeConfiguracion = onSnapshot(
+        doc(db, 'USUARIOS', userEmail),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            set({ 
+              configuracionNomina: userData.configuracionNomina || null,
+              loadingConfiguracion: false
+            });
+          } else {
+            set({ 
+              configuracionNomina: null,
+              loadingConfiguracion: false
+            });
+          }
+        },
+        (error) => {
+          console.error('Error en listener configuración:', error);
+          set({ error: error.message, loadingConfiguracion: false });
+        }
+      );
 
-      return {
-        sueldoBase: datos.sueldoBase,
-        trienios: datos.trienios,
-        valorTrienio: datos.valorTrienio,
-        totalTrienios,
-        totalHorasExtra,
-        totalNomina: datos.sueldoBase + totalTrienios + totalHorasExtra
+      return () => {
+        if (unsubscribeConfiguracion) {
+          unsubscribeConfiguracion();
+          unsubscribeConfiguracion = null;
+        }
       };
     },
 
-    createNivelesSalarialesDefault: async (año) => {
-      const nivelesDefault = {
-        niveles: {
-          1: { sueldoBase: 1100, valorTrienio: 25 },
-          2: { sueldoBase: 1150, valorTrienio: 25 },
-          3: { sueldoBase: 1200, valorTrienio: 25 },
-          4: { sueldoBase: 1250, valorTrienio: 25 },
-          5: { sueldoBase: 1300, valorTrienio: 25 },
-          6: { sueldoBase: 1350, valorTrienio: 25 },
-          7: { sueldoBase: 1400, valorTrienio: 25 },
-          8: { sueldoBase: 1450, valorTrienio: 25 },
-          9: { sueldoBase: 1500, valorTrienio: 25 },
-          10: { sueldoBase: 1550, valorTrienio: 25 },
-          11: { sueldoBase: 1600, valorTrienio: 25 },
-          12: { sueldoBase: 1650, valorTrienio: 25 },
-          13: { sueldoBase: 1700, valorTrienio: 25 },
-          14: { sueldoBase: 1817.2, valorTrienio: 25 },
-          15: { sueldoBase: 1900, valorTrienio: 25 },
-          16: { sueldoBase: 1900, valorTrienio: 25 },
-          17: { sueldoBase: 1900, valorTrienio: 25 },
-          18: { sueldoBase: 1900, valorTrienio: 25 },
-          19: { sueldoBase: 1900, valorTrienio: 25 },
-          20: { sueldoBase: 1900, valorTrienio: 25 },
-          21: { sueldoBase: 1900, valorTrienio: 25 }
+    // ✅ NUEVO: Listener para nóminas guardadas del usuario
+    loadNominasUsuario: (userEmail) => {
+      if (unsubscribeNominas) {
+        return () => {};
+      }
+
+      unsubscribeNominas = onSnapshot(
+        query(collection(db, 'NOMINAS'), where('empleadoEmail', '==', userEmail)),
+        (snapshot) => {
+          const nominas = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          set({ 
+            nominasGuardadas: nominas.sort((a, b) => {
+              if (a.año === b.año) {
+                return b.mes - a.mes;
+              }
+              return b.año - a.año;
+            })
+          });
         },
-        tarifasHorasExtraBase: {
-          normal: 15,
-          nocturna: 19.75,
-          festiva: 24.75,
-          festivaNocturna: 29.75
+        (error) => {
+          console.error('Error en listener nóminas:', error);
+          set({ error: error.message });
+        }
+      );
+
+      return () => {
+        if (unsubscribeNominas) {
+          unsubscribeNominas();
+          unsubscribeNominas = null;
         }
       };
+    },
 
-      await setDoc(doc(db, 'NIVELES_SALARIALES', año.toString()), nivelesDefault);
-      set({ nivelesSalariales: nivelesDefault });
+    calcularNominaCompleta: (configuracion, horasExtra = [], extra,deduccion) => {
+      if (!configuracion) {
+        return {
+          sueldoBase: 0,
+          trienios: 0,
+          valorTrienio: 0,
+          totalTrienios: 0,
+          otrosComplementos: [],
+          extra,
+          deduccion,
+          totalOtrosComplementos: 0,
+          totalHorasExtra: 0,
+          totalNomina: 0
+        };
+      }
+
+      const totalHorasExtra = get().calcularTotalHorasExtra(horasExtra);
+      const totalTrienios = (configuracion.trienios || 0) * (configuracion.valorTrienio || 0);
+
+      const otrosComplementos = [];
+      let totalOtrosComplementos = 0;
+      
+      if (configuracion.tieneOtrosComplementos) {
+        if (configuracion.otroComplemento1?.concepto && configuracion.otroComplemento1?.importe) {
+          otrosComplementos.push(configuracion.otroComplemento1);
+          totalOtrosComplementos += configuracion.otroComplemento1.importe;
+        }
+        if (configuracion.otroComplemento2?.concepto && configuracion.otroComplemento2?.importe) {
+          otrosComplementos.push(configuracion.otroComplemento2);
+          totalOtrosComplementos += configuracion.otroComplemento2.importe;
+        }
+      }
+
+      const totalNomina = (configuracion.sueldoBase || 0) + totalTrienios + totalOtrosComplementos + totalHorasExtra + extra - deduccion;
+
+      return {
+        sueldoBase: configuracion.sueldoBase || 0,
+        trienios: configuracion.trienios || 0,
+        valorTrienio: configuracion.valorTrienio || 0,
+        totalTrienios,
+        extra,
+        deduccion,
+        otrosComplementos,
+        totalOtrosComplementos,
+        totalHorasExtra,
+        totalNomina
+      };
+    },
+
+    // ✅ NUEVO: Guardar nómina en BD
+    guardarNomina: async (nominaData) => {
+      try {
+        const docRef = await addDoc(collection(db, 'NOMINAS'), {
+          ...nominaData,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        return docRef.id;
+      } catch (error) {
+        set({ error: error.message });
+        throw error;
+      }
+    },
+
+      borrarNomina: async (nominaId) => {
+    try {
+      await deleteDoc(doc(db, 'NOMINAS', nominaId));
+      return true;
+    } catch (error) {
+      set({ error: error.message });
+      return false;
     }
+  },
+
+    actualizarNomina: async (nominaId, datosActualizados) => {
+    try {
+      await updateDoc(doc(db, 'NOMINAS', nominaId), {
+        ...datosActualizados,
+        updatedAt: new Date().toISOString()
+      });
+      return true;
+    } catch (error) {
+      set({ error: error.message });
+      return false;
+    }
+  },
+
+    getNominaById: async (nominaId) => {
+      set({ loading: true, error: null });
+      try {
+        const docSnap = await getDoc(doc(db, 'NOMINAS', nominaId));
+        if (docSnap.exists()) {
+          set({ loading: false });
+          return { id: docSnap.id, ...docSnap.data() };
+        } else {
+          set({ loading: false });
+          return null;
+        }
+      } catch (error) {
+        console.error("Error al obtener nómina por ID:", error);
+        set({ error: error.message, loading: false });
+        return null;
+      }
+    },
+
+
+
   };
 });

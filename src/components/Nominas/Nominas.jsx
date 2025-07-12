@@ -1,198 +1,197 @@
 // components/Nominas/Nominas.jsx
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Container, Typography, Box, Tabs, Tab, Paper, Alert, Collapse,
-  IconButton, useTheme, useMediaQuery
+  Container, Typography, Box, Grid, Card, CardContent, 
+  Paper, Chip
 } from '@mui/material';
 import {
-  Settings as SettingsIcon, AccessTime as TimeIcon, Calculate as CalculateIcon,
-  Add as AddIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon
+  SettingsOutlined as SettingsIcon,
+  HistoryOutlined as HistoryIcon,
+  ReceiptOutlined as ReceiptIcon,
+  CardGiftcardOutlined as GiftIcon,
+  AssessmentOutlined as AssessmentIcon,
+  WysiwygOutlined as WysiwygOutlinedIcon,
+  EditOutlined as EditIcon,
 } from '@mui/icons-material';
-import { useAuthStore } from '../../stores/authStore';
-import { useNominaStore } from '../../stores/nominaStore';
-import { useUIStore } from '../../stores/uiStore';
-import ConfiguradorNomina from './ConfiguradorNomina';
-import SelectorPeriodo from './SelectorPeriodo';
-import HorasExtraList from './HorasExtraList';
-import CalculadoraNomina from './CalculadoraNomina';
+import { useGlobalData } from '../../hooks/useGlobalData';
+import { formatCurrency } from '../../utils/nominaUtils';
 
 const Nominas = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, setUserProfile, userProfile } = useAuthStore();
-  const { nivelesSalariales, saveUserNominaConfig } = useNominaStore(); 
-  const { showSuccess, showError } = useUIStore();
+  const navigate = useNavigate();
+  const { userSalaryInfo } = useGlobalData();
 
-  // Estados para la interfaz (mantener el diseño exacto)
-  const [tabValue, setTabValue] = useState(0);
-  const [periodoSeleccionado, setPeriodoSeleccionado] = useState(null);
-  const [configExpanded, setConfigExpanded] = useState(false);
-
-  // Función para guardar configuración de nómina
- const handleSaveConfiguracion = async (configuracionData) => {
-    try {
-      // ✅ Una sola llamada a la store (como createOrder, deleteOrder)
-      const configCompleta = await saveUserNominaConfig(user.email, configuracionData);
-      
-      // ✅ Actualizar authStore
-      setUserProfile({
-        ...userProfile,
-        ...configCompleta
-      });
-      
-      setConfigExpanded(false);
-      showSuccess('Configuración guardada correctamente');
-    } catch (error) {
-      showError('Error al guardar configuración: ' + error.message);
-      throw error;
-    }
-  };
-
-
-  // Función para manejar cambio de período
-  const handlePeriodoChange = (fechaInicio, fechaFin) => {
-    setPeriodoSeleccionado({ fechaInicio, fechaFin });
-    setTabValue(1); // Cambiar a la pestaña de horas extra
-  };
-
-  // Verificar si el usuario tiene configuración de nómina
-  const hasNominaConfig = userProfile?.tipoNomina &&
-    (userProfile.sueldoBaseFinal > 0 || userProfile.nivelSalarial);
-
-  const tabsConfig = [
+  // ✅ 5 opciones del menú principal
+  const quickActions = [
     {
-      label: 'Configuración',
-      icon: <SettingsIcon />,
-      value: 0
+      id: 'generar',
+      title: 'Generar Nómina',
+      subtitle: 'Del mes actual',
+      description: 'Calcular y guardar',
+      label:"Automático",
+      icon: ReceiptIcon,
+      color: 'naranja.main',
+      bgColor: 'naranja.fondo',
+      route: '/nominas/generar'
     },
     {
-      label: 'Horas Extra',
-      icon: <TimeIcon />,
-      value: 1,
-      disabled: !hasNominaConfig
+      id: 'gestionar',
+      title: 'Gestionar Nóminas',
+      subtitle: 'Histórico pasadas',
+      description: 'Editar y Borrar nóminas',
+      label:"Histórico",
+      icon: EditIcon,
+      color: 'azul.main',
+      bgColor: 'azul.fondo',
+      gradient: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+      route: '/nominas/gestionar'
     },
     {
-      label: 'Calculadora',
-      icon: <CalculateIcon />,
-      value: 2,
-      disabled: !periodoSeleccionado
-    }
+      id: 'paga-extra',
+      title: 'Pagas Extra',
+      subtitle: 'Verano o Navidad',
+      description: 'Generar paga extra',
+      label:"Verano y Navidad",
+      icon: GiftIcon,
+      color: 'rojo.main',
+      bgColor: 'rojo.fondo',
+      gradient: 'linear-gradient(135deg, #7B1FA2 0%, #6A1B9A 100%)',
+      route: '/nominas/paga-extra'
+    },
+    {
+      id: 'resumen',
+      title: 'Estadísticas',
+      subtitle: 'Analytics y totales',
+      description: 'Estadísticas del año',
+      label: 'Totales',
+      icon: AssessmentIcon,
+      color: 'verde.main',
+      bgColor: 'verde.fondo',
+      gradient: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
+      route: '/nominas/resumen'
+    },
+    {
+      id: 'configurar',
+      title: 'Configurar Datos',
+      subtitle: 'Salariales del año',
+      description: 'Sueldo base y complementos',
+      label:userSalaryInfo?.isConfigured ? "Configurado" : "Configurar",
+      icon: SettingsIcon,
+      color: 'purpura.main',
+      bgColor: 'purpura.fondo',
+      gradient: 'linear-gradient(135deg, #FB8C00 0%, #F57C00 100%)',
+      route: '/nominas/configurar'
+    },
   ];
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 3, mb: 3 }}>
-      {/* Header */}
-      <Box textAlign="center" mb={4}>
-        <Typography textAlign="center" variant="h4" gutterBottom>
-          Gestión de Nóminas
-        </Typography>
-        <Typography textAlign="center" variant="body1" color="text.secondary">
-          Configura tu nómina y calcula tus ingresos
-        </Typography>
-      </Box>
-
-      {/* Alerta si no hay configuración */}
-      {!hasNominaConfig && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Configuración requerida:</strong> Completa tu configuración de nómina
-            para poder registrar horas extra y calcular tus ingresos.
-          </Typography>
-        </Alert>
-      )}
-
-      {/* Navegación por pestañas (Desktop) */}
-      {!isMobile && (
-        <Paper elevation={0} sx={{ mb: 3, borderRadius: 4 }}>
-          <Tabs
-            value={tabValue}
-            onChange={(e, newValue) => setTabValue(newValue)}
-            variant="fullWidth"
-            sx={{
-              '& .MuiTab-root': {
-                minHeight: 64,
-                overflow: 'hidden',
-                textTransform: 'none',
-                fontSize: '1rem'
-              }
-            }}
-          >
-            {tabsConfig.map((tab) => (
-              <Tab
-                key={tab.value}
-                icon={tab.icon}
-                label={tab.label}
-                disabled={tab.disabled}
-              />
-            ))}
-          </Tabs>
-        </Paper>
-      )}
-
-      {/* Contenido según pestaña activa */}
-      
-      {/* Pestaña 0: Configuración */}
-      {(!isMobile && tabValue === 0) || (isMobile && true) && (
-        <Paper elevation={0} sx={{ mb: 3, borderRadius: 4 }}>
-          {isMobile ? (
-            // Versión móvil - Configuración colapsable
-            <>
-              <Box
-                onClick={() => setConfigExpanded(!configExpanded)}
-                sx={{
-                  p: 2,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <Typography variant="h6" fontWeight="bold">
-                  Configuración de Nómina
-                </Typography>
-                {configExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </Box>
-              <Collapse in={configExpanded}>
-                <ConfiguradorNomina
-                  onSave={handleSaveConfiguracion}
-                  nivelesSalariales={nivelesSalariales}
-                />
-              </Collapse>
-            </>
-          ) : (
-            // Versión desktop
-            <ConfiguradorNomina
-              onSave={handleSaveConfiguracion}
-              nivelesSalariales={nivelesSalariales}
-            />
-          )}
-        </Paper>
-      )}
-
-      {/* Selector de Período (siempre visible si hay configuración) */}
-      {hasNominaConfig && (
-        <SelectorPeriodo
-          onPeriodoChange={handlePeriodoChange}
-          periodoActual={periodoSeleccionado}
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {/* Header corporativo con gradiente dorado */}
+      <Paper 
+        elevation={5} 
+        sx={{ 
+          border:'1px solid verde.main',
+          p: 2, 
+          mb: 4, 
+          borderRadius: 4,
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Decoración de fondo */}
+        <Box 
+          sx={{
+            position: 'absolute',
+            top: -50,
+            right: -60,
+            width: 150,
+            height: 150,
+            borderRadius: '50%',
+            bgcolor: 'verde.fondo',
+            zIndex: 0
+          }}
         />
-      )}
-
-      {/* Pestaña 1: Horas Extra */}
-      {((!isMobile && tabValue === 1) || isMobile) && hasNominaConfig && (
-        <Box>
-          {/* Lista de horas extra */}
-          <HorasExtraList
-            periodo={periodoSeleccionado}
-          />
+        
+        <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
+            <WysiwygOutlinedIcon sx={{ fontSize: '4rem', color:'verde.main'}} />
+          <Box flex={1}>
+            <Typography sx={{color:'verde.main', ml:-4}} textAlign="center" variant="h4" fontWeight="bold" gutterBottom>
+              Gestión de Nóminas
+            </Typography>
+            <Box display="flex" gap={1} flexWrap="wrap">
+              {userSalaryInfo ? (
+                <>
+                  <Box display="flex" flexDirection="column" flexWrap="wrap" sx={{ml:4}}>
+                  <Typography  color="verde.main" variant="h6" fontSize=" 1rem" textAlign="center" fontWeight="bold" >
+                    Estimado {userSalaryInfo.mesNomina || 'Mes Actual'}   
+                  </Typography>
+                  <Typography textAlign="center" color="verde.main"><strong>{formatCurrency(userSalaryInfo.salarioCompletoEstimado)}</strong></Typography>
+                  </Box>
+                </>
+              ) : (
+                <Chip 
+                  label="Configurar datos"
+                  sx={{ 
+                    bgcolor: 'rojo.fondo', 
+                    color: 'rojo.main',
+                    fontWeight: 700
+                  }} 
+                />
+              )}
+            </Box>
+          </Box>
         </Box>
-      )}
+      </Paper>
+      <Grid container spacing={3}>
+      {quickActions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <Grid size={{xs:6 ,sm:3}}  key={action.id}>
+              <Card 
+                elevation={5}
+                onClick={() => navigate(action.route)}
+                sx={{ 
+                  height: '100%',
+                  border: '1px solid',
+                  borderColor: 'rgba(0,0,0,0.08)',
+                  borderRadius: 3,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+                    transform: 'translateY(-2px)'
+                  },
+                }}
+                   >
+                          <CardContent sx={{ p: 3 }}>
+                            <Box display="flex" justifyContent="center" alignItems="flex-start"  mb={2}>
+                              <Box 
+                                sx={{ 
+                                  p: 1,
+                                  m: -2, 
+                                  borderRadius: 2, 
+                                  bgcolor: action.bgColor,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <Icon sx={{ color: action.color, fontSize: 30 }} />
+                              </Box>
 
-      {/* Pestaña 2: Calculadora */}
-      {((!isMobile && tabValue === 2) || isMobile) && periodoSeleccionado && (
-        <CalculadoraNomina periodo={periodoSeleccionado} />
-      )}
-    </Container>
-  );
-};
+                            </Box>
+                             <Box sx={{mt:3, display:'flex', flexDirection:'column', justifyItems:'center', justifyContent:'center', alignItems:'center', alignContent:'center'}}>
+       
+                            <Typography textAlign="center" variant="body1" fontSize="1.1rem" fontWeight="600" sx={{ mb:-1, color:action.color, lineHeight: 1.2 }}>
+                              {action.title}
+                            </Typography>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                  </Grid>
+              </Container>
+            );
+          };
 
 export default Nominas;

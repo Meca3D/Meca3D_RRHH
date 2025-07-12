@@ -89,7 +89,19 @@ export default async (request, context) => {
       );
     }
 
-    const { email, password, nombre, rol = 'user', telefono, vacaDias, vacaHoras } = requestData;
+const { 
+      email, 
+      password, 
+      nombre, 
+      rol = 'user', 
+      // ❌ ELIMINADO: telefono,
+      vacaDias, 
+      vacaHoras,
+      // ✅ NUEVOS campos añadidos:
+      fechaIngreso,
+      nivel,
+      puesto
+    } = requestData;
 
     // Validar datos requeridos
     if (!email || !password || !nombre) {
@@ -121,9 +133,12 @@ export default async (request, context) => {
     await admin.firestore().collection('USUARIOS').doc(email).set({
       nombre: nombre,
       rol: rol,
-      telefono: telefono || '',
       vacaDias: Number(vacaDias) || 0,
-      vacaHoras: Number(vacaHoras) || 0
+      vacaHoras: Number(vacaHoras) || 0,
+      fechaIngreso: fechaIngreso || '', // String en formato YYYY-MM-DD
+      nivel: Number(nivel) || null, // Número 1-21
+      puesto: puesto || '', // String del select
+      favoritos: [],
     });
 
     console.log(`✅ Documento creado en Firestore para: ${email}`);
