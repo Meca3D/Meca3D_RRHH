@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, AppBar, Toolbar, FormControlLabel, Switch,
   IconButton, Button, Grid, TextField, Divider, Alert, CircularProgress, Paper
@@ -30,24 +30,17 @@ import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
 import 'dayjs/locale/es'
 import es from 'dayjs/locale/es';
 import { capitalizeFirstLetter } from '../Helpers';
-import { obtenerNumeroMes } from '../Helpers';
 
 const GenerarNomina = () => {
   const navigate = useNavigate();
-  const { id: nominaId } = useParams()
   const { user} = useAuthStore();
   const {
     loadConfiguracionUsuario,
     configuracionNomina,
     calcularNominaCompleta,
     guardarNomina,
-    loadingConfiguracion,
-    actualizarNomina,
-    getNominaById
+    loadingConfiguracion
   } = useNominaStore();
-
-  
-
   const {
     horasExtra,
     fetchHorasExtra,
@@ -56,87 +49,31 @@ const GenerarNomina = () => {
     calcularTotalHorasExtra
   } = useHorasExtraStore();
 
+  const [selectedDate, setSelectedDate] = useState(dayjs());
   const handleChangeMonthAndYear = (newValue) => {
     setSelectedDate(newValue);}
 
   const { showSuccess, showError } = useUIStore();
+  const [tieneDeduccion, setTieneDeduccion] = useState(false);
+  const [ deduccionCantidad, setDeduccionCantidad ] = useState(0)
+  const [ deduccionConcepto, setDeduccionConcepto ] = useState('');
+  const [ tieneExtra, setTieneExtra] = useState(false);
+  const [ extraCantidad, setExtraCantidad ] = useState(0)
+  const [ extraConcepto, setExtraConcepto ] = useState('');
   const [mesNomina, setMesNomina] = useState('');
   const [añoNomina, setAñoNomina] = useState('');
-    // State for form fields
-  const [selectedDate, setSelectedDate] = useState(dayjs());
-  const [fechaInicio, setFechaInicio] = useState(null);
-  const [fechaFin, setFechaFin] = useState(null);
-  const [tieneDeduccion, setTieneDeduccion] = useState(false);
-  const [deduccionConcepto, setDeduccionConcepto] = useState('');
-  const [deduccionCantidad, setDeduccionCantidad] = useState('');
-  const [tieneExtra, setTieneExtra] = useState(false);
-  const [extraConcepto, setExtraConcepto] = useState('');
-  const [extraCantidad, setExtraCantidad] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [tipoNomina, setTipoNomina] = useState('mensual'); // 'mensual' or 'extra'
 
-  const [nominaCalculada, setNominaCalculada] = useState(null);
-  const [isEditing, setIsEditing] = useState(false); // New state to track edit mode
+  // 1. Selección de periodo
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
 
   // 2. Horas extra filtradas
   const [horasExtraPeriodo, setHorasExtraPeriodo] = useState([]);
   const [calculando, setCalculando] = useState(false);
+
+  // 3. Cálculo de nómina
   const [calculo, setCalculo] = useState(null);
-
-useEffect(() => {
-    if (nominaId && user?.email) {
-      setIsEditing(true);
-      const loadNominaData = async () => {
-        const nomina = await getNominaById(nominaId);
-        if (nomina) {
-          // Set form states with fetched data
-          setSelectedDate(dayjs().month(obtenerNumeroMes(nomina.mes) - 1).year(nomina.año));
-          setFechaInicio(dayjs(nomina.periodoHorasExtra?.fechaInicio));
-          setFechaFin(dayjs(nomina.periodoHorasExtra?.fechaFin));
-          setTipoNomina(nomina.tipo || 'mensual');
-
-          if (nomina.deduccion && nomina.deduccion.cantidad > 0) {
-            setTieneDeduccion(true);
-            setDeduccionConcepto(nomina.deduccion.concepto || '');
-            setDeduccionCantidad(nomina.deduccion.cantidad);
-          } else {
-            setTieneDeduccion(false);
-            setDeduccionConcepto('');
-            setDeduccionCantidad('');
-          }
-
-          if (nomina.extra && nomina.extra.cantidad > 0) {
-            setTieneExtra(true);
-            setExtraConcepto(nomina.extra.concepto || '');
-            setExtraCantidad(nomina.extra.cantidad);
-          } else {
-            setTieneExtra(false);
-            setExtraConcepto('');
-            setExtraCantidad('');
-          }
-          // Fetch horas extra for the specific period of the loaded nomina
-          fetchHorasExtra(user.email, nomina.periodoHorasExtra?.fechaInicio, nomina.periodoHorasExtra?.fechaFin);
-          
-        } else {
-          showError('Nómina no encontrada para editar.');
-          navigate('/nominas/gestionar'); // Redirect if not found
-        }
-      };
-      loadNominaData();
-    } else {
-      setIsEditing(false); // Not editing, ensure this is false for new nominations
-      // Reset relevant states when not editing
-      setDeduccionConcepto('');
-      setDeduccionCantidad('');
-      setExtraConcepto('');
-      setExtraCantidad('');
-      setTipoNomina('mensual');
-      // If not editing, ensure horasExtra are cleared or re-fetched based on current dates if needed
-      // For a new nomina, horasExtraPeriodo should ideally be based on selectedDate or user input, not previous state
-      fetchHorasExtra(user?.email); // Fetch all for initial view of new nomina
-    }
-  }, [nominaId, user?.email, getNominaById, fetchHorasExtra, navigate, showError]);
-
+  const [saving, setSaving] = useState(false);
 
 
     useEffect(() => {
