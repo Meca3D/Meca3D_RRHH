@@ -165,7 +165,7 @@ const ConfiguracionHorasExtras = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Gestionar precios de Horas Extra
+              Gestionar tipos de Hora Extra
             </Typography>
           </Box>
 
@@ -184,24 +184,16 @@ const ConfiguracionHorasExtras = () => {
 
       {/* Contenido principal */}
       <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
-
         {/* Formulario de tarifas */}
         <Card elevation={0} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
           <CardContent sx={{ p: 4 }}>
-            <Box sx={{display:'flex', justifyContent:'center'}}>
-            <Typography variant="h6" gutterBottom>
-              <EuroIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Tipo de Hora Extra
-            </Typography>
-            </Box>
-
             <Grid container spacing={3}>
               {tiposHorasExtra.map((tipo) => {
                 const tipoInfo = getTipoInfo(tipo.value);
                 return (
                   <Grid key={tipo.value} size={{ xs: 12, md: 6 }}>
                     <Card 
-                      elevation={0} 
+                      elevation={5} 
                       sx={{ 
                         p: 3, 
                         border: '2px solid',

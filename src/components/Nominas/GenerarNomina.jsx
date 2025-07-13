@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, AppBar, Toolbar, FormControlLabel, Switch,
   IconButton, Button, Grid, TextField, Divider, Alert, CircularProgress, Paper
@@ -30,93 +30,147 @@ import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
 import 'dayjs/locale/es'
 import es from 'dayjs/locale/es';
 import { capitalizeFirstLetter } from '../Helpers';
+import { obtenerNumeroMes } from '../Helpers';
+
 
 const GenerarNomina = () => {
   const navigate = useNavigate();
+  const { id: nominaId } = useParams()
   const { user} = useAuthStore();
   const {
     loadConfiguracionUsuario,
     configuracionNomina,
     calcularNominaCompleta,
     guardarNomina,
-    loadingConfiguracion
+    loadingConfiguracion,
+    actualizarNomina,
+    getNominaById
   } = useNominaStore();
+
+  
+
   const {
     horasExtra,
     fetchHorasExtra,
     loading: loadingHorasExtra,
     calcularTotalHorasDecimales,
-    calcularTotalHorasExtra
+    calcularTotalHorasExtra,
+    getEstadisticasPeriodo
   } = useHorasExtraStore();
 
-  const [selectedDate, setSelectedDate] = useState(dayjs());
-  const handleChangeMonthAndYear = (newValue) => {
-    setSelectedDate(newValue);}
-
   const { showSuccess, showError } = useUIStore();
-  const [tieneDeduccion, setTieneDeduccion] = useState(false);
-  const [ deduccionCantidad, setDeduccionCantidad ] = useState(0)
-  const [ deduccionConcepto, setDeduccionConcepto ] = useState('');
-  const [ tieneExtra, setTieneExtra] = useState(false);
-  const [ extraCantidad, setExtraCantidad ] = useState(0)
-  const [ extraConcepto, setExtraConcepto ] = useState('');
   const [mesNomina, setMesNomina] = useState('');
   const [añoNomina, setAñoNomina] = useState('');
-
-  // 1. Selección de periodo
+    // State for form fields
+  const [selectedDate, setSelectedDate] = useState(dayjs());
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-
-  // 2. Horas extra filtradas
-  const [horasExtraPeriodo, setHorasExtraPeriodo] = useState([]);
-  const [calculando, setCalculando] = useState(false);
-
-  // 3. Cálculo de nómina
-  const [calculo, setCalculo] = useState(null);
+  const [tieneDeduccion, setTieneDeduccion] = useState(false);
+  const [deduccionConcepto, setDeduccionConcepto] = useState('');
+  const [deduccionCantidad, setDeduccionCantidad] = useState('');
+  const [tieneExtra, setTieneExtra] = useState(false);
+  const [extraConcepto, setExtraConcepto] = useState('');
+  const [extraCantidad, setExtraCantidad] = useState('');
   const [saving, setSaving] = useState(false);
+  const [tipoNomina, setTipoNomina] = useState('mensual'); // 'mensual' or 'extra'
 
+  const [nominaCalculada, setNominaCalculada] = useState(null);
+  const [isEditing, setIsEditing] = useState(false); // New state to track edit mode
+  const [horasExtraPeriodo,setHorasExtraPeriodo]= useState([])
 
-    useEffect(() => {
-      loadConfiguracionUsuario(user?.email);
+  useEffect(() => {
+    if (user?.email) {
+      const unsubscribe = loadConfiguracionUsuario(user.email);
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    }
+  }, [user?.email, loadConfiguracionUsuario]);
+
+  useEffect(() => {
+       if (nominaId && user?.email && !loadingConfiguracion && configuracionNomina) {
+      setIsEditing(true);
+      const loadNominaData = async () => {
+        const nomina = await getNominaById(nominaId);
+         if (nomina) {
+          // Set form states with fetched data
+          setSelectedDate(dayjs().month(obtenerNumeroMes(nomina.mes)-1).year(nomina.año));
+          setFechaInicio(nomina.periodoHorasExtra?.fechaInicio);
+          setFechaFin(nomina.periodoHorasExtra?.fechaFin);
+          setTipoNomina(nomina.tipo || 'mensual');
+          setAñoNomina(nomina.año)
+          setMesNomina(nomina.mes)
+
+          if (nomina.deduccion && nomina.deduccion.cantidad > 0) {
+            setTieneDeduccion(true);
+            setDeduccionConcepto(nomina.deduccion.concepto || '');
+            setDeduccionCantidad(nomina.deduccion.cantidad);
+          } else {
+            setTieneDeduccion(false);
+            setDeduccionConcepto('');
+            setDeduccionCantidad('');
+          }
+
+          if (nomina.extra && nomina.extra.cantidad > 0) {
+            setTieneExtra(true);
+            setExtraConcepto(nomina.extra.concepto || '');
+            setExtraCantidad(nomina.extra.cantidad);
+          } else {
+            setTieneExtra(false);
+            setExtraConcepto('');
+            setExtraCantidad('');
+          }
+          // Fetch horas extra for the specific period of the loaded nomina
+          fetchHorasExtra(user.email, nomina.periodoHorasExtra?.fechaInicio, nomina.periodoHorasExtra?.fechaFin);
+          
+        } else {
+          showError('Nómina no encontrada para editar.');
+          navigate('/nominas/gestionar'); // Redirect if not found
+        }
+      };
+      loadNominaData();
+    } else {
+      setIsEditing(false); 
+      setDeduccionConcepto('');
+      setDeduccionCantidad('');
+      setExtraConcepto('');
+      setExtraCantidad('');
+      setTipoNomina('mensual');
       setFechaInicio(dayjs(selectedDate).startOf('month').subtract(9,'days').format('YYYY-MM-DD'));
       setFechaFin(dayjs(selectedDate).endOf('month').subtract(7,'days').format('YYYY-MM-DD'));
-    }, []);
+  }
+  }, [nominaId, user?.email, getNominaById, navigate, showError,loadingConfiguracion,loadConfiguracionUsuario]);
 
     useEffect(() => {
+      if (!isEditing) {
       setFechaInicio(dayjs(selectedDate).startOf('month').subtract(9,'days').format('YYYY-MM-DD'));
       setFechaFin(dayjs(selectedDate).endOf('month').subtract(7,'days').format('YYYY-MM-DD'));
       setMesNomina(dayjs(selectedDate).locale(es).format('MMMM'))
-      setAñoNomina(dayjs(selectedDate).format('YYYY'))
+      setAñoNomina(dayjs(selectedDate).format('YYYY'))}
     }, [selectedDate]); 
 
-useEffect(() => {
-  if (user?.email && fechaInicio && fechaFin) {
-    fetchHorasExtra(user.email, fechaInicio, fechaFin);
-  }
-}, [user?.email, fechaInicio, fechaFin, fetchHorasExtra]);
-
-useEffect(() => {
-  setHorasExtraPeriodo(horasExtra);
-}, [horasExtra]);
-
-useEffect(() => {
-        if (configuracionNomina && fechaInicio && fechaFin) {
-        setCalculo((calcularNominaCompleta(configuracionNomina, horasExtraPeriodo, tieneExtra? Number(extraCantidad):0, tieneDeduccion?Number(deduccionCantidad):0)));
-      } else {
-        setCalculo(null);
+    useEffect(() => {
+      if (user?.email && fechaInicio && fechaFin) {
+        fetchHorasExtra(user.email, fechaInicio, fechaFin);
       }
-    }, [configuracionNomina, horasExtraPeriodo, fechaInicio, fechaFin, calcularNominaCompleta,tieneExtra,tieneDeduccion,deduccionCantidad,extraCantidad]);
-  
+    }, [user?.email, fechaInicio, fechaFin, fetchHorasExtra]);
 
-  // Guardar nómina
-  const handleGuardarNomina = async () => {
-    if (!fechaInicio || !fechaFin || !calculo) {
-      showError('Debes seleccionar un periodo y calcular la nómina');
-      return;
-    }
-    setSaving(true);
-    try {
-      const nominaData = {
+    useEffect(() => {
+      setHorasExtraPeriodo(horasExtra);
+    }, [horasExtra]);
+
+// Recalculate nomina when dependencies change
+  useEffect(() => {
+    if (configuracionNomina && fechaInicio && fechaFin && !loadingHorasExtra) {
+      
+      const calculo = calcularNominaCompleta(
+        configuracionNomina,
+        horasExtraPeriodo,
+        tieneExtra? Number(extraCantidad):0, 
+        tieneDeduccion?Number(deduccionCantidad):0
+      );
+
+      setNominaCalculada({
         empleadoEmail: user.email,
         año: añoNomina,
         mes: capitalizeFirstLetter(mesNomina),
@@ -140,28 +194,111 @@ useEffect(() => {
         },
           
         total: calculo.totalNomina
-      };
+     
+      });
+    } else {
+      setNominaCalculada(null);
+    }
+  }, [configuracionNomina, fechaInicio, fechaFin, horasExtraPeriodo, loadingHorasExtra, tieneDeduccion, deduccionCantidad, tieneExtra, extraCantidad, tipoNomina, selectedDate, calcularNominaCompleta, calcularTotalHorasExtra, getEstadisticasPeriodo]);
 
-      await guardarNomina(nominaData);
-      showSuccess('Nómina guardada correctamente');
-      navigate('/nominas');
+  const handleGuardarNomina = async () => {
+    if (!nominaCalculada) {
+      showError('No hay una nómina calculada para guardar.');
+      return;
+    }
+    if (!user?.email) {
+      showError('Usuario no autenticado.');
+      return;
+    }
+
+    setSaving(true);
+
+    const nominaToSave = {
+      ...nominaCalculada,
+      empleadoEmail: user.email,
+    };
+
+    try {
+      let success = false;
+      if (isEditing && nominaId) {
+        success = await actualizarNomina(nominaId, nominaToSave);
+        if (success) {
+          showSuccess('Nómina actualizada correctamente.');
+        } else {
+          showError('Error al actualizar la nómina.');
+        }
+      } else {
+        const newNominaId = await guardarNomina(nominaToSave);
+        if (newNominaId) {
+          showSuccess('Nómina guardada correctamente.');
+        } else {
+          showError('Error al guardar la nómina.');
+        }
+      }
+      navigate('/nominas'); // Redirect after save/update
     } catch (error) {
-      showError(`Error al guardar la nómina; ${error}`);
+      showError(`Error: ${error.message}`);
     } finally {
       setSaving(false);
     }
   };
 
+  const handleFechaChange = (date) => {
+    setSelectedDate(date);
+  };
+
+
+  const handleTieneDeduccionChange = (event) => {
+    setTieneDeduccion(event.target.checked);
+    if (!event.target.checked) {
+      setDeduccionConcepto('');
+      setDeduccionCantidad('');
+    }
+  };
+
+  const handleTieneExtraChange = (event) => {
+    setTieneExtra(event.target.checked);
+    if (!event.target.checked) {
+      setExtraConcepto('');
+      setExtraCantidad('');
+    }
+  };
+
   const totalHorasDecimales = calcularTotalHorasDecimales(horasExtra);
-  const totalImporte = calcularTotalHorasExtra(horasExtra);
+  const totalImporteHorasExtra = calcularTotalHorasExtra(horasExtra);
   const horasTotales = Math.floor(totalHorasDecimales);
   const minutosTotales = Math.round((totalHorasDecimales % 1) * 60);
 
 
-    const getTipoInfo = (tipo) => {
+  const getTipoInfo = (tipo) => {
       return tiposHorasExtra.find(t => t.value === tipo) || { label: tipo, color: '#666' };
     };
 
+  if (loadingConfiguracion) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 64px)' }}>
+        <CircularProgress sx={{ mb: 2 }} />
+        <Typography variant="h6" color="text.secondary">Cargando configuración de nómina...</Typography>
+      </Container>
+    );
+  }
+
+  if (!configuracionNomina) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 8 }}>
+        <Alert severity="warning">
+          No se encontró configuración de nómina para tu usuario. Por favor, configura tus datos de nómina.
+        </Alert>
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+          <Button variant="contained" onClick={() => navigate('/nominas/configurar')} startIcon={<ReceiptIcon />}>
+            Ir a Configuración de Nómina
+          </Button>
+        </Box>
+      </Container>
+    );
+
+    
+  }
 
   return (
     <>
@@ -169,7 +306,9 @@ useEffect(() => {
       <AppBar  
         sx={{ 
           overflow:'hidden',
-          background: 'linear-gradient(135deg, #FB8C00 0%, #F57C00 50%, #EF6C00 100%)',
+          background: isEditing ?
+            'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)':
+            'linear-gradient(135deg, #FB8C00 0%, #F57C00 50%, #EF6C00 100%)',
           boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)',
           zIndex: 1100
         }}
@@ -178,7 +317,9 @@ useEffect(() => {
           <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate('/nominas')}
+            onClick={() => isEditing?
+              navigate('/nominas/gestionar'):
+              navigate('/nominas')}
             sx={{
               bgcolor: 'rgba(255,255,255,0.1)',
               '&:hover': {
@@ -197,13 +338,14 @@ useEffect(() => {
               fontWeight="bold" 
               sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' }, lineHeight: 1.2 }}
             >
-              Generar Nómina
+              {isEditing ? "Editar Nómina" : "Generar Nómina"}
             </Typography>
             <Typography 
               variant="caption" 
               sx={{ opacity: 0.9, fontSize: { xs: '0.9rem', sm: '1rem' } }}
             >
-              Selecciona Mes y Año de la Nómina
+              {isEditing ? "Modifica los datos" : "Selecciona Mes y Año de la Nómina"}
+              
             </Typography>
           </Box>
 
@@ -224,7 +366,7 @@ useEffect(() => {
         <Card elevation={5} sx={{ mb: 3, borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
           <CardContent sx={{ p: 2,  }}>
         <Box sx={{display:'flex', justifyContent:'center', mb:1,  overflow:'hidden'}}>
-        <Typography fontWeight="bold" textAlign="center" variant="h5" color="naranja.main" gutterBottom >
+        <Typography fontWeight="bold" textAlign="center" variant="h5" color={isEditing?"azul.main":"naranja.main"} gutterBottom >
           Mes y Año de la nómina
         </Typography>
         </Box>
@@ -235,7 +377,7 @@ useEffect(() => {
             minDate={dayjs('2010-01-01')}
             maxDate={dayjs().add(2, 'year')}
             value={selectedDate}
-            onChange={handleChangeMonthAndYear}
+            onChange={handleFechaChange}
             inputFormat="MM/YYYY"
             slotProps={{
               textField: {
@@ -248,7 +390,6 @@ useEffect(() => {
               }
             }}
             sx={{
-              // Mejor experiencia en móvil
               '& .MuiInputBase-root': { fontSize: '1.2rem', bgcolor: 'white' },
             }}
            
@@ -258,7 +399,7 @@ useEffect(() => {
 
             {/* --- Paso 1: SelectorPeriodo --- */}
                         <Box sx={{display:'flex', flexDirection:"column", justifyContent:'center',mt:3, mb:2}}>
-                        <Typography fontWeight="bold" textAlign="center" variant="h5" color="naranja.main"  >
+                        <Typography fontWeight="bold" textAlign="center" variant="h5" color={isEditing?"azul.main":"naranja.main"}  >
                           Período de horas extras
                         </Typography>
                         <Typography  textAlign="center" variant="body1" gutterBottom>
@@ -271,21 +412,19 @@ useEffect(() => {
                               type="date"
                               label="Fecha de inicio"
                               value={fechaInicio}
-                              onChange={(e) => setFechaInicio(e.target.value)}
+                              onChange={(e)=>setFechaInicio(e.target.value)}
                               fullWidth
                               sx={{
                                 '& .MuiOutlinedInput-root': {
                                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing ? "azul.main":"naranja.main"
                                   },
                                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main',
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   }
                                 },
                                 '& .MuiInputLabel-root.Mui-focused': {
-                                  color: 'naranja.main',
-                    
-                                  
+                                  color: isEditing?"azul.main":"naranja.main",   
                                 }
                               }}
                             />
@@ -295,19 +434,19 @@ useEffect(() => {
                               type="date"
                               label="Fecha de fin"
                               value={fechaFin}
-                              onChange={(e) => setFechaFin(e.target.value)}
+                              onChange={(e)=>setFechaFin(e.target.value)}
                               fullWidth
                               sx={{
                                 '& .MuiOutlinedInput-root': {
                                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   },
                                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   }
                                 },
                                 '& .MuiInputLabel-root.Mui-focused': {
-                                  color: 'naranja.main'
+                                  color: isEditing?"azul.main":"naranja.main"
                                 }
                               }}
                             />
@@ -319,7 +458,7 @@ useEffect(() => {
                             <Typography>Cargando registros...</Typography>
                           </Box>
                         ) : horasExtra.length === 0 ? (
-                          <Alert sx={{mb:-1}} severity="info">
+                          <Alert sx={{mb:-1,mt:2}} severity="info">
                             {!fechaInicio || !fechaFin  ? 
                               'Selecciona un período para ver los registros' :
                               'No hay horas extra en este período'
@@ -327,11 +466,11 @@ useEffect(() => {
                           </Alert>
                         ) : (
                           <Box mt={3}>
-                            <Typography variant="h6" textAlign="center" color='naranja.main' fontWeight="bold" gutterBottom>
+                            <Typography variant="h6" textAlign="center" color={isEditing?"azul.main":"naranja.main"} fontWeight="bold" gutterBottom>
                               Horas Extras del Mes
                             </Typography>
                             {/* Header de tabla */}
-                            <Box display="flex" p={1} fontWeight="bold" bgcolor="naranja.fondo" borderRadius={2}>
+                            <Box display="flex" p={1} fontWeight="bold" bgcolor={isEditing?"azul.fondo":"naranja.fondo"} borderRadius={2}>
                               <Typography sx={{ flex: 'none', width: '30%', textAlign: 'center', fontWeight:'bold' }}>Fecha</Typography>
                               <Typography sx={{ flex: `none`, width: '20%', textAlign: 'center', fontWeight:'bold'}}>Tipo</Typography>
                               <Typography sx={{ flex: 'none', width: '25%', textAlign: 'center', fontWeight:'bold' }}>Tiempo</Typography>
@@ -340,6 +479,7 @@ useEffect(() => {
             
                             {/* Filas de datos */}
                             {horasExtra.map((hora) => {
+
                               const tipoInfo = getTipoInfo(hora.tipo);
                               return (
                                 <Box key={hora.id} display="flex" alignItems="center" p={1} borderBottom="1px solid" borderColor="grey.200">
@@ -364,7 +504,7 @@ useEffect(() => {
                                   py={1}
                                   borderTop="2px solid" 
                                   borderColor="grey.400"
-                                  bgcolor="naranja.fondo"
+                                  bgcolor={isEditing?"azul.fondo":"naranja.fondo"}
                                  > 
                                   <Typography sx={{ width: '30%', textAlign:'center', fontSize:'1rem', flex: 'none', fontWeight:'bold' }}>
                                     TOTAL
@@ -373,7 +513,7 @@ useEffect(() => {
                                     {formatearTiempo(horasTotales, minutosTotales)}
                                   </Typography>                      
                                    <Typography sx={{ pr:1, width: '35%', textAlign:'right', fontSize:'1rem', flex: 'none',fontWeight: 'bold' }}>
-                                    {formatCurrency(totalImporte)}
+                                    {formatCurrency(totalImporteHorasExtra)}
                                   </Typography>                              
                                 </Box>
                           </Box>
@@ -381,7 +521,7 @@ useEffect(() => {
 
                         <Divider sx={{ bgcolor:'black', mt:4 }} />
                         <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', mt:3,}}>
-                        <Typography  variant="h6"  color="naranja.main" fontWeight="bold">
+                        <Typography  variant="h6"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
                           Complemento Extra
                         </Typography>
                         
@@ -389,15 +529,15 @@ useEffect(() => {
                           control={
                             <Switch
                               checked={tieneExtra}
-                              onChange={(e)=> setTieneExtra(e.target.checked)}
+                              onChange={handleTieneExtraChange}
                                 sx={{ 
                                 '& .MuiSwitch-switchBase': {
                                 color: 'grey.400',
                                 '&.Mui-checked': {
-                                  color: 'naranja.main', 
+                                  color: isEditing?"azul.main":"naranja.main", 
                                 },
                               },
-                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: 'naranja.main' }
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: isEditing?"azul.main":"naranja.main" }
                               }}
                             />
                           }
@@ -424,14 +564,14 @@ useEffect(() => {
                               sx={{
                                 '& .MuiOutlinedInput-root': {
                                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   },
                                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   }
                                 },
                                 '& .MuiInputLabel-root.Mui-focused': {
-                                  color: 'naranja.main'
+                                  color: isEditing?"azul.main":"naranja.main"
                                 }
                               }}
                             />              
@@ -450,14 +590,14 @@ useEffect(() => {
                                 mt:2,
                                 '& .MuiOutlinedInput-root': {
                                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   },
                                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   }
                                 },
                                 '& .MuiInputLabel-root.Mui-focused': {
-                                  color: 'naranja.main'
+                                  color: isEditing?"azul.main":"naranja.main"
                                 }
                               }}
                             />
@@ -466,7 +606,7 @@ useEffect(() => {
 
                         <Divider sx={{ bgcolor:'black', mt:4 }} />
                         <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', mt:3,}}>
-                        <Typography  variant="h6"  color="naranja.main" fontWeight="bold">
+                        <Typography  variant="h6"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
                           Deducciones
                         </Typography>
                         
@@ -474,15 +614,15 @@ useEffect(() => {
                           control={
                             <Switch
                               checked={tieneDeduccion}
-                              onChange={(e)=> setTieneDeduccion(e.target.checked)}
+                              onChange={handleTieneDeduccionChange}
                                 sx={{ 
                                 '& .MuiSwitch-switchBase': {
                                 color: 'grey.400',
                                 '&.Mui-checked': {
-                                  color: 'naranja.main', 
+                                  color: isEditing?"azul.main":"naranja.main", 
                                 },
                               },
-                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: 'naranja.main' }
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: isEditing?"azul.main":"naranja.main" }
                               }}
                             />
                           }
@@ -509,14 +649,14 @@ useEffect(() => {
                               sx={{
                                 '& .MuiOutlinedInput-root': {
                                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   },
                                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   }
                                 },
                                 '& .MuiInputLabel-root.Mui-focused': {
-                                  color: 'naranja.main'
+                                  color: isEditing?"azul.main":"naranja.main"
                                 }
                               }}
                             />              
@@ -535,14 +675,14 @@ useEffect(() => {
                                 mt:2,
                                 '& .MuiOutlinedInput-root': {
                                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   },
                                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'naranja.main'
+                                    borderColor: isEditing?"azul.main":"naranja.main"
                                   }
                                 },
                                 '& .MuiInputLabel-root.Mui-focused': {
-                                  color: 'naranja.main'
+                                  color: isEditing?"azul.main":"naranja.main"
                                 }
                               }}
                             />
@@ -554,32 +694,32 @@ useEffect(() => {
             <Card elevation={5} sx={{ borderRadius: 4, border: 'px solid rgba(0,0,0,0.08)', mt:4 }}>
               <CardContent>
                 {selectedDate && (
-            <Typography textAlign="center" variant="h6" fontSize="1.2rem" fontWeight="bold" color="naranja.main">
+            <Typography textAlign="center" variant="h6" fontSize="1.2rem" fontWeight="bold" color={isEditing?"azul.main":"naranja.main"}>
               Nómina de {capitalizeFirstLetter(dayjs(selectedDate).locale(es).format('MMMM'))} de {dayjs(selectedDate).format('YYYY')}
             </Typography>
             )}
 
-            {calculando || loadingConfiguracion ? (
+            {loadingConfiguracion ? (
               <Box textAlign="center" py={3} sx={{mt:1}}>
                 <CircularProgress />
                 <Typography sx={{ mt: 2 }}>Calculando nómina...</Typography>
               </Box>
-            ) : calculo ? (
+            ) : nominaCalculada ? (
               <Box  py={3} sx={{mt:-1 }}>
                     <Box display="flex" justifyContent="space-between" p={1}>
-                    <Typography><strong>Sueldo base:</strong></Typography> <Typography>{formatCurrency(calculo.sueldoBase)}</Typography>
+                    <Typography><strong>Sueldo base:</strong></Typography> <Typography>{formatCurrency(nominaCalculada.sueldoBase)}</Typography>
                     </Box>
-                    {calculo.totalTrienios > 0 && (
+                    {nominaCalculada.totalTrienios > 0 && (
                       <>
                     <Divider />
                     <Box display="flex" justifyContent="space-between" p={1}>
                     <Typography><strong>Trienios:</strong></Typography>
-                     <Typography>{formatCurrency(calculo.totalTrienios)}</Typography>
+                     <Typography>{formatCurrency(nominaCalculada.totalTrienios)}</Typography>
                     </Box>
                       </>
                     )}
-                    {calculo.otrosComplementos && calculo.otrosComplementos.length > 0 && (
-                      calculo.otrosComplementos.map((comp, idx) => (
+                    {nominaCalculada.otrosComplementos && nominaCalculada.otrosComplementos.length > 0 && (
+                      nominaCalculada.otrosComplementos.map((comp, idx) => (
                         <>
                         <Divider />
                         <Box display="flex" justifyContent="space-between" p={1} key={idx}>
@@ -594,7 +734,7 @@ useEffect(() => {
                     <Divider />
                     <Box display="flex" justifyContent="space-between" p={1}>  
                     <Typography><strong>Horas extra:</strong> </Typography>
-                    <Typography>{formatCurrency(calculo.totalHorasExtra)}</Typography>
+                    <Typography>{formatCurrency(nominaCalculada.horasExtra.total)}</Typography>
                     </Box>
                     {tieneExtra && (
                       <>
@@ -605,7 +745,7 @@ useEffect(() => {
                     <Typography color="textSecondary" variant='body2'><strong>{extraConcepto}</strong></Typography>
                     </Box>
                     <Box display="flex" flexDirection="column" justifyContent={'center'}>
-                     <Typography >{formatCurrency(extraCantidad)}</Typography>
+                     <Typography >{formatCurrency(nominaCalculada.extra.cantidad)}</Typography>
                      </Box>
                     </Box>
                       </>
@@ -619,7 +759,7 @@ useEffect(() => {
                     <Typography color="textSecondary" variant='body2'><strong>{deduccionConcepto}</strong></Typography>
                     </Box>
                     <Box display="flex" flexDirection="column" justifyContent={'center'}>
-                     <Typography color='rojo.main'>{formatCurrency(-deduccionCantidad)}</Typography>
+                     <Typography color='rojo.main'>{formatCurrency(-nominaCalculada.deduccion.cantidad)}</Typography>
                      </Box>
                     </Box>
                       </>
@@ -628,7 +768,7 @@ useEffect(() => {
                     <Box 
                       borderTop="2px solid" 
                       borderColor="grey.400"
-                      bgcolor="naranja.fondo" 
+                      bgcolor={isEditing?"azul.fondo":"naranja.fondo"} 
                       display="flex" 
                       justifyContent="space-between" 
                       p={1}
@@ -637,7 +777,7 @@ useEffect(() => {
                       TOTAL: 
                     </Typography>
                     <Typography  fontWeight="bold" >
-                      {formatCurrency(calculo.totalNomina)}
+                      {formatCurrency(nominaCalculada.total)}
                     </Typography>
                     </Box>  
 
@@ -651,23 +791,29 @@ useEffect(() => {
                   sx={{
                       py: 2,
                       borderRadius: 3,
-                      background: 'linear-gradient(135deg, #FB8C00 0%, #F57C00 100%)',
+                      background: isEditing ? 
+                        'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)':
+                        'linear-gradient(135deg, #FB8C00 0%, #F57C00 100%)',
                       fontSize: '1.1rem',
                       fontWeight: 600,
                       textTransform: 'none',
                       boxShadow: '0 4px 15px rgba(255, 165, 0, 0.3)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #F57C00 0%, #FB8C00 100%)',
+                        background: isEditing ?
+                        'linear-gradient(135deg, #1976D2 0%, #2196F3 100%)':
+                        'linear-gradient(135deg, #F57C00 0%, #FB8C00 100%)',
                         boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
                         transform: 'translateY(-2px)'
                       },
                       '&:disabled': {
-                        background: 'linear-gradient(135deg, #FFDAB9 0%, #FFC19A 100%)',
+                        background: isEditing ?
+                        'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)':
+                        'linear-gradient(135deg, #FFDAB9 0%, #FFC19A 100%)',
                       },
                       transition: 'all 0.3s ease'                    
                   }}
                 >
-                  {saving ? "Guardando..." : "Guardar Nómina"}
+                  {saving ? "Guardando..." :  (isEditing ? "Actualizar Nómina" : "Guardar Nómina")}
                 </Button>
                 </Box>
               </Box>

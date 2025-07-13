@@ -57,7 +57,7 @@ const HorasExtras = () => {
     },
     {
       id: 'configuracion',
-      title: 'Configuración de tarifas',
+      title: 'Configuración de Tarifas',
       subtitle: '',
       icon: ConfigIcon,
       color: 'purpura.main',

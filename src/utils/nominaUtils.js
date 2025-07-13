@@ -23,40 +23,6 @@ export const tiposHorasExtra = [
   { value: 'festivaNocturna', label: 'Festiva Nocturna', color: '#FF0000',short: 'F.Noc' }
 ];
 
-export const sugerenciasFechas = [
-  {
-    label: "Últimos 7 días",
-    dias: 7,
-    descripcion: "Para ver horas recientes"
-  },
-  {
-    label: "Últimos 15 días", 
-    dias: 15,
-    descripcion: "Período corto común"
-  },
-  {
-    label: "Últimos 30 días",
-    dias: 30,
-    descripcion: "Aproximadamente un mes"
-  },
-  {
-    label: "Últimos 45 días",
-    dias: 45,
-    descripcion: "Período extendido"
-  }
-];
-
-export const calcularFechasSugeridas = (diasAtras) => {
-  const hoy = new Date();
-  const fechaInicio = new Date();
-  fechaInicio.setDate(hoy.getDate() - diasAtras);
-  
-  return {
-    fechaInicio: formatDateForInput(fechaInicio),
-    fechaFin: formatDateForInput(hoy)
-  };
-};
-
 export const validarPeriodo = (fechaInicio, fechaFin) => {
   const errors = {};
   
@@ -120,7 +86,6 @@ export const calcularImporteHorasExtra = (horas, tarifa) => {
   return parseFloat((horas * tarifa).toFixed(2));
 };
 
-// ✅ NUEVA - Función para calcular días entre fechas
 export const calcularDiasEntreFechas = (fechaInicio, fechaFin) => {
   const inicio = new Date(fechaInicio);
   const fin = new Date(fechaFin);
@@ -128,7 +93,6 @@ export const calcularDiasEntreFechas = (fechaInicio, fechaFin) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
-// ✅ NUEVA - Función para formatear período para mostrar
 export const formatearPeriodo = (fechaInicio, fechaFin) => {
   const dias = calcularDiasEntreFechas(fechaInicio, fechaFin);
   return `${formatDate(fechaInicio)} - ${formatDate(fechaFin)} (${dias} días)`;

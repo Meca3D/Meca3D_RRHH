@@ -13,6 +13,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   AccessTime as AccessTimeIcon,
+  Clear as ClearIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
@@ -24,8 +25,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { formatCurrency, formatDate, convertirHorasDecimalesAHorasYMinutos } from '../../utils/nominaUtils';
 import { obtenerNumeroMes } from '../Helpers';
 import { useUIStore } from '../../stores/uiStore';
-import { useHorasExtraStore } from '../../stores/horasExtraStore';
-  
+
 
 // Styled components para cascada vertical
 const CascadeContainer = styled(Box)(({ theme }) => ({
@@ -193,7 +193,7 @@ const handleDeleteClick = (nomina, e) => {
 
   const handleEditClick = (nominaId, e) => {
     e.stopPropagation();
-    navigate(`/generar-nomina/${nominaId}`);
+    navigate(`/nominas/generar/${nominaId}`);
   };
 
 
@@ -380,9 +380,7 @@ const handleDeleteClick = (nomina, e) => {
           startIcon={<EditIcon />}
           onClick={(e) => handleEditClick(nomina.id, e)}
           sx={{
-            fontSize:'1.2rem',
             borderRadius:2,
-            textTransform: 'none',
             fontWeight: 600,
             borderColor: '#3b82f6',
             color: '#3b82f6',
@@ -395,18 +393,15 @@ const handleDeleteClick = (nomina, e) => {
           Editar
         </Button>
         <Button
-          variant="outlined"
+          variant="contained"
           color="error"
           startIcon={<DeleteIcon />}
           onClick={(e) => handleDeleteClick(nomina, e)}
           sx={{
-            
-            fontSize:'1.2rem',
             borderRadius:2,
-            textTransform: 'none',
             fontWeight: 600,
             borderColor: '#ef4444',
-            color: '#ef4444',
+
             '&:hover': {
               backgroundColor: '#fee2e2',
               borderColor: '#dc2626',
@@ -443,17 +438,17 @@ const handleDeleteClick = (nomina, e) => {
             <ArrowBackIosNewIcon />
           </IconButton>
           
-          <Box sx={{ textAlign: 'center', flex: 1, mx: 2 }}>
+          <Box sx={{ my:0.5, textAlign: 'center', flex: 1, mx: 2 }}>
             <Typography
-              variant="h6"
-              fontWeight="600"
-              sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}
+              variant="h5"
+              fontWeight="bold"
+              sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' }, lineHeight: 1.2 }}
             >
               Histórico de Nóminas
             </Typography>
             <Typography
               variant="caption"
-              sx={{ opacity: 0.9, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              sx={{ opacity: 0.9, fontSize: { xs: '0.9rem', sm: '1rem' } }}
             >
               Consulta tus nóminas guardadas
             </Typography>
@@ -476,16 +471,19 @@ const handleDeleteClick = (nomina, e) => {
         }}>
           <FormControl sx={{ 
             bgcolor: 'white', 
-            minWidth: { xs: 100, sm: 120 },
+            minWidth: { xs: 140, sm: 170 },
             borderRadius: 1,
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
           }}>
-            <InputLabel>Año</InputLabel>
+            <InputLabel shrink={true} id="select-ano-label">Año</InputLabel>
             <Select
+              labelId="select-ano-label"
               value={filtroAño}
+              displayEmpty
+              renderValue={selected => selected == "" ? "Todos" : selected}
               label="Año"
               onChange={e => setFiltroAño(e.target.value)}
-              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+              sx={{ fontSize: { xs: '1rem', sm: '1.2rem' } }}
             >
               <MenuItem value="">Todos</MenuItem>
               {añosDisponibles.map(año => (
@@ -496,19 +494,22 @@ const handleDeleteClick = (nomina, e) => {
           
           <FormControl sx={{ 
             bgcolor: 'white', 
-            minWidth: { xs: 100, sm: 120 },
+            minWidth: { xs: 140, sm: 170 },
             borderRadius: 1,
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
           }}>
-            <InputLabel>Mes</InputLabel>
+            <InputLabel shrink={true} id="select-mes-label">Mes</InputLabel>
             <Select
+              labelId="select-mes-label"
               value={filtroMes}
+              displayEmpty
+              renderValue={selected => selected == "" ? "Todos" : selected}
               label="Mes"
               onChange={e => setFiltroMes(e.target.value)}
-              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+              sx={{ fontSize: { xs: '1rem', sm: '1.2rem' } }}
             >
               <MenuItem value="">Todos</MenuItem>
-              {mesesDisponibles.map(mes => (
+              {mesesDisponibles.sort((a, b) => obtenerNumeroMes(a) - obtenerNumeroMes(b)).map(mes => (
                 <MenuItem key={mes} value={mes}>{mes}</MenuItem>
               ))}
             </Select>
@@ -602,18 +603,19 @@ const handleDeleteClick = (nomina, e) => {
         aria-describedby="alert-dialog-description"
 
       >
-        <DialogTitle color='rojo.main' textAlign='center' id="alert-dialog-title">{"Confirmar Borrado"}</DialogTitle>
+        <DialogTitle color='rojo.main' textAlign='center' id="alert-dialog-title"><strong>{"Confirmar Borrado"}</strong></DialogTitle>
         <DialogContent>
-          <Typography id="alert-dialog-description">
-            ¿Estás seguro de que quieres borrar la nómina de {nominaToDelete?.mes} {nominaToDelete?.año}? Esta acción no se puede deshacer.
+          <Typography textAlign='center' id="alert-dialog-description">
+            ¿Estás seguro de que quieres  <Box component="span" sx={{ color: 'rojo.main', fontWeight: 'bold' }}>eliminar</Box> la nómina de <strong>{nominaToDelete?.mes} {nominaToDelete?.año}</strong>?
           </Typography>
         </DialogContent>
         <DialogActions sx={{display:'flex', justifyContent:'space-between'}}>
           <Button 
             onClick={handleCloseDeleteDialog} 
             variant='outlined'
+            startIcon={<ClearIcon />}
             color="primary" 
-            sx={{p:1}}
+            sx={{px:2,py:1,borderRadius:2}}
           >
             Cancelar
           </Button>
@@ -621,8 +623,9 @@ const handleDeleteClick = (nomina, e) => {
             onClick={handleConfirmDelete} 
             variant='contained'
             color="error" 
+            startIcon={<DeleteIcon />}
             autoFocus 
-            sx={{p:1}}
+            sx={{px:2,py:1,borderRadius:2}}
           >
             Borrar
           </Button>

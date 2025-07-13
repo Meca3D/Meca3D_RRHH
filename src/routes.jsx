@@ -77,7 +77,7 @@ const AppRoutes = () => {
         <Route path="/nominas" element={<Nominas />} />
         <Route path="/nominas/configurar" element={<ConfigurarDatosSalariales />} />
         <Route path="/nominas/generar" element={<GenerarNomina />} />
-        <Route path="/nominas/generar/:nominaId" element={<GenerarNomina />} />
+        <Route path="/nominas/generar/:id" element={<GenerarNomina />} />
         <Route path="/nominas/gestionar" element={<GestionarNominas />} />
         <Route path="vacaciones" element={<MisVacaciones />} />
         <Route path="/horas-extras" element={<HorasExtras />} />
