@@ -62,8 +62,8 @@ export function capitalizeFirstLetter(str) {
 
 export function obtenerNumeroMes (nombreMes) {
   const meses = {
-    'Enero': 1, 'Febrero': 2, 'Marzo': 3, 'Abril': 4, 'Mayo': 5, 'Junio': 6,
-    'Julio': 7, 'Agosto': 8, 'Septiembre': 9, 'Octubre': 10, 'Noviembre': 11, 'Diciembre': 12
+    'Enero': 1, 'Febrero': 2, 'Marzo': 3, 'Abril': 4, 'Mayo': 5, 'Junio': 6, 'P.E. Verano':6.5,
+    'Julio': 7, 'Agosto': 8, 'Septiembre': 9, 'Octubre': 10, 'Noviembre': 11, 'P.E. Navidad':11.5, 'Diciembre': 12
   };
   return meses[nombreMes] || 0;
 };

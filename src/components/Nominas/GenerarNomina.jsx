@@ -172,7 +172,7 @@ const GenerarNomina = () => {
 
       setNominaCalculada({
         empleadoEmail: user.email,
-        año: añoNomina,
+        año: Number(añoNomina),
         mes: capitalizeFirstLetter(mesNomina),
         tipo: "mensual",
         periodoHorasExtra: { fechaInicio, fechaFin },
@@ -184,7 +184,7 @@ const GenerarNomina = () => {
         },
         otrosComplementos: calculo.otrosComplementos,
         deduccion: {
-          concepto: tieneDeduccion ? deduccionConcepto : 'sin deducción',
+          concepto: tieneDeduccion ? deduccionConcepto : 'sin complemento extra',
           cantidad: tieneDeduccion ? Number(deduccionCantidad) : 0,
         },
 

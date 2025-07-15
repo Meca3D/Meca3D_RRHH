@@ -47,7 +47,7 @@ const Nominas = () => {
     },
     {
       id: 'paga-extra',
-      title: 'Pagas Extra',
+      title: 'Paga Extra',
       subtitle: 'Verano o Navidad',
       description: 'Generar paga extra',
       label:"Verano y Navidad",
@@ -55,7 +55,7 @@ const Nominas = () => {
       color: 'rojo.main',
       bgColor: 'rojo.fondo',
       gradient: 'linear-gradient(135deg, #7B1FA2 0%, #6A1B9A 100%)',
-      route: '/nominas/paga-extra'
+      route: '/nominas/paga_extra'
     },
     {
       id: 'resumen',

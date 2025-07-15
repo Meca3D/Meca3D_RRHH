@@ -74,7 +74,7 @@ const CascadeCard = styled(Card, {
 const CardHeader = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isExpanded',
 })(({ theme, isExpanded }) => ({
-  height: '64px',
+
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
@@ -284,6 +284,8 @@ const handleDeleteClick = (nomina, e) => {
           </>
         )}
         
+        {nomina.tipo==="mensual" &&
+        <>
         <Divider sx={{ my: 1 }} />
         <Box 
           display="flex" 
@@ -317,6 +319,8 @@ const handleDeleteClick = (nomina, e) => {
             {formatCurrency(nomina.horasExtra?.total || 0)}
           </Typography>
         </Box>
+        </>
+        }
 
         {/* Desglose de horas extra */}
         {nomina.horasExtra?.desglose?.length > 0 && (
@@ -549,7 +553,15 @@ const handleDeleteClick = (nomina, e) => {
                         color="#111827"
                         sx={{ fontSize: { xs: '1.3rem', sm: '1.5rem' } }}
                       >
-                        {nomina.mes} {nomina.año}
+                        {nomina.año}
+                      </Typography>
+                                            <Typography 
+                        variant="h5" 
+                        fontWeight="600" 
+                        color="#111827"
+                        sx={{ fontSize: { xs: '1.3rem', sm: '1.5rem' } }}
+                      >
+                        {nomina.mes} 
                       </Typography>
                       <Typography 
                         variant="body2" 
