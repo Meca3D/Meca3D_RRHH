@@ -34,20 +34,20 @@ const ConfigurarDatosSalariales = () => {
   const [formData, setFormData] = useState({
     // Sueldo base único
     nivelSalarial: '',
-    sueldoBase: '',
+    sueldoBase: 0,
     
     // Trienios con switch
     tieneTrienios: false, // Switch disabled por defecto
-    trienios: '',
-    valorTrienio: '',
+    trienios: 0,
+    valorTrienio: 0,
     
     // Otros complementos
     tieneOtrosComplementos: false,
-    otroComplemento1: { concepto: '', importe: '' },
-    otroComplemento2: { concepto: '', importe: '' },
+    otroComplemento1: { concepto: '', importe: 0 },
+    otroComplemento2: { concepto: '', importe: 0 },
     
     // Paga extra
-    pagaExtra: ''
+    pagaExtra: 0
   });
 
   const [saving, setSaving] = useState(false);
@@ -72,8 +72,8 @@ const ConfigurarDatosSalariales = () => {
       const fechaIngreso = userProfile.fechaIngreso;
       
       // ✅ Sueldo base predeterminado del nivel
-      let sueldoBasePredeterminado = '';
-      let valorTrienioPredeterminado = '';
+      let sueldoBasePredeterminado = 0;
+      let valorTrienioPredeterminado = 0;
       
       if (nivelUsuario && nivelesSalariales.niveles[nivelUsuario]) {
         sueldoBasePredeterminado = nivelesSalariales.niveles[nivelUsuario].sueldoBase;
@@ -113,9 +113,9 @@ const ConfigurarDatosSalariales = () => {
         trienios: configuracionNomina.trienios || prev.trienios,
         valorTrienio: configuracionNomina.valorTrienio || prev.valorTrienio,
         tieneOtrosComplementos: configuracionNomina.tieneOtrosComplementos || false,
-        otroComplemento1: configuracionNomina.otroComplemento1 || { concepto: '', importe: '' },
-        otroComplemento2: configuracionNomina.otroComplemento2 || { concepto: '', importe: '' },
-        pagaExtra: configuracionNomina.pagaExtra || ''
+        otroComplemento1: configuracionNomina.otroComplemento1 || { concepto: '', importe: 0 },
+        otroComplemento2: configuracionNomina.otroComplemento2 || { concepto: '', importe: 0 },
+        pagaExtra: configuracionNomina.pagaExtra || 0
       }));
     }
   }, [configuracionNomina]);
@@ -213,14 +213,16 @@ const ConfigurarDatosSalariales = () => {
       };
 
       await updateConfiguracionNomina(user.email, configuracionActualizada);
-      showSuccess('Configuración guardada correctamente');
-      
+      showSuccess('Configuración guardada correctamente');     
     } catch (error) {
       showError(`Error al guardar la configuración: ${error}`);
     } finally {
       setSaving(false);
+      setTimeout(() => {
+        navigate('/nominas')
+    }, 2000);
     }
-  };
+}
 
   const nivelOptions = nivelesSalariales?.niveles ? Object.keys(nivelesSalariales.niveles) : [];
 
@@ -281,7 +283,7 @@ const ConfigurarDatosSalariales = () => {
               cursor: 'default'
             }}
           >
-            <SettingsIcon />
+            <SettingsIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>
@@ -369,7 +371,7 @@ const ConfigurarDatosSalariales = () => {
                 {/* ✅ SECCIÓN: Trienios  */}
                 <Grid sx={{mt:-2}} size={{ xs: 12 }}>
                   <Typography variant="h6" color="purpura.main" fontWeight="600" >
-                    Trienios
+                    Antigüedad
                   </Typography>
                   
                   <FormControlLabel
@@ -391,7 +393,7 @@ const ConfigurarDatosSalariales = () => {
                     label={
                       <Box sx={{ ml:1 }}>
                         <Typography variant="body1" fontWeight={600}>
-                          {formData.tieneTrienios? "Tengo trienios" : "No tengo trienios"}
+                          {formData.tieneTrienios? "Cobro trienios" : "No cobro trienios"}
                         </Typography>
                       </Box>
                     }

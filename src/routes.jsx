@@ -1,5 +1,4 @@
 // routes.jsx - Agregar las nuevas rutas de empleados
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/Layout/MainLayout';
 import Login from './components/Auth/Login';
@@ -28,7 +27,6 @@ import Nominas from './components/Nominas/Nominas';
 import ConfigurarDatosSalariales from './components/Nominas/ConfigurarDatosSalariales';
 import GenerarNomina from './components/Nominas/GenerarNomina';
 import GestionarNominas from './components/Nominas/GestionarNominas';
-import PagaExtra from './components/Nominas/PagaExtra';
 import MisVacaciones from './components/Vacaciones/MisVacaciones';
 import HorasExtras from './components/HorasExtras/HorasExtras';
 import RegistrarHorasExtras from './components/HorasExtras/RegistrarHorasExtras';
@@ -54,6 +52,7 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const AppRoutes = () => {
+
   return (
     <Routes>
       {/* Ruta de login SIN layout */}
@@ -80,7 +79,6 @@ const AppRoutes = () => {
         <Route path="/nominas/generar" element={<GenerarNomina />} />
         <Route path="/nominas/generar/:id" element={<GenerarNomina />} />
         <Route path="/nominas/gestionar" element={<GestionarNominas />} />
-        <Route path="/nominas/paga_extra" element={<PagaExtra />} />
         <Route path="vacaciones" element={<MisVacaciones />} />
         <Route path="/horas-extras" element={<HorasExtras />} />
         <Route path="/horas-extras/registrar" element={<RegistrarHorasExtras />} />

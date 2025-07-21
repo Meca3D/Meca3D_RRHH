@@ -18,6 +18,7 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   CalendarMonth as CalendarMonthIcon,
+  EditNoteOutlined as EditNoteIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useNominaStore } from '../../stores/nominaStore';
@@ -228,9 +229,9 @@ const handleDeleteClick = (nomina, e) => {
       {/* Conceptos de la nómina */}
       <Box sx={{ mb: 2 }}>
         <Box display="flex" justifyContent="space-between" py={0.5}>
-          <Typography variant="body1" color="#374151">Sueldo base</Typography>
+          <Typography variant="body1" color="#374151">{nomina.sueldoBase>0?'Sueldo base':'Base Paga Extra'}</Typography>
           <Typography variant="body1" fontWeight="600" color="#111827">
-            {formatCurrency(nomina.sueldoBase)}
+            {formatCurrency(nomina.sueldoBase||nomina.importePagaExtra)}
           </Typography>
         </Box>
         
@@ -276,10 +277,15 @@ const handleDeleteClick = (nomina, e) => {
           <>
             <Divider sx={{ my: 1 }} />
             <Box display="flex" justifyContent="space-between" py={0.5}>
-              <Typography variant="body1" color="#374151">{nomina.deduccion.concepto}</Typography>
-              <Typography variant="body1" fontWeight="600" color="#dc2626">
-                -{formatCurrency(nomina.deduccion.cantidad)}
-              </Typography>
+              <Box display="flex" flexDirection="column">
+                <Typography>Deducción:</Typography>
+                <Typography color="textSecondary" variant='body2'><strong>{nomina.deduccion.concepto}</strong></Typography>
+              </Box>
+              <Box display="flex" flexDirection="column" justifyContent={'center'}>
+                <Typography variant="body1" fontWeight="600" color="#dc2626">
+                  -{formatCurrency(nomina.deduccion.cantidad)}
+                </Typography>
+              </Box>
             </Box>
           </>
         )}
@@ -448,18 +454,18 @@ const handleDeleteClick = (nomina, e) => {
               fontWeight="bold"
               sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' }, lineHeight: 1.2 }}
             >
-              Histórico de Nóminas
+              Gestión de Nóminas
             </Typography>
             <Typography
               variant="caption"
               sx={{ opacity: 0.9, fontSize: { xs: '0.9rem', sm: '1rem' } }}
             >
-              Consulta tus nóminas guardadas
+              Consultar, Modificar y Eliminar
             </Typography>
           </Box>
           
           <IconButton edge="end" color="inherit" sx={{ cursor: 'default' }}>
-            <HistoryIcon />
+            <EditNoteIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>

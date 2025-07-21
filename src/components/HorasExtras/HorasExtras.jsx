@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import {
   Euro as EuroIcon,
-  AddCircleOutline as AddIcon,
+  AlarmAddOutlined as AddIcon,
   EditOutlined as EditIcon,
   PollOutlined as StatsIcon,
   SettingsOutlined as ConfigIcon,
@@ -16,15 +16,16 @@ import {
 } from '@mui/icons-material';
 import { useHorasExtraStore } from '../../stores/horasExtraStore';
 import { formatCurrency, formatearTiempo } from '../../utils/nominaUtils';
+import { useGlobalData } from '../../hooks/useGlobalData';
 
 const HorasExtras = () => {
   const navigate = useNavigate();
   const { horasExtra, calcularTotalHorasDecimales, calcularTotalHorasExtra } = useHorasExtraStore();
-
     const totalHorasEsteMes = calcularTotalHorasDecimales(horasExtra);
     const totalImporteEsteMes = calcularTotalHorasExtra(horasExtra);
     const horasFormateadas = Math.floor(totalHorasEsteMes);
     const minutosFormateados = Math.round((totalHorasEsteMes % 1) * 60);
+    const { userSalaryInfo } = useGlobalData();
 
   // ✅ Configuración de las 4 cards principales
   const quickActions = [
@@ -103,10 +104,9 @@ const HorasExtras = () => {
             <Typography sx={{ml:-5}} color='naranja.main' variant="h4"  textAlign="center" fontWeight="bold" gutterBottom>
               Horas Extras
             </Typography>
-            <Box display="flex" flexDirection="column" alignContent="center" flexWrap="wrap" sx={{mr:7}}>
-            <Typography  width="5rem" bgcolor="naranja.fondo" color="naranja.main" variant="h6" fontSize=" 1rem" textAlign='center' lineHeight={1.2} fontWeight="bold" >
-              Este Mes
-
+            <Box display="flex" flexDirection="column" alignContent="center" flexWrap="nowrap" sx={{mr:8}}>
+            <Typography   color="naranja.main" variant="h6" fontSize="1rem" textAlign='center' lineHeight={1.2} fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
+              Estimado {userSalaryInfo.mesNomina || 'Mes Actual'} 
             </Typography>
               <Typography textAlign="center" color="naranja.main"><strong>{formatearTiempo(horasFormateadas, minutosFormateados)}</strong></Typography>
               

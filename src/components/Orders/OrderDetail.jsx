@@ -241,7 +241,7 @@ useEffect(() => {
               transition: 'all 0.3s ease'
             }}
           >
-            <ReceiptIcon />
+            <ReceiptIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>

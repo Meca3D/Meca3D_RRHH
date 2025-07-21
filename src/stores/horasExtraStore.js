@@ -14,8 +14,16 @@ export const useHorasExtraStore = create((set, get) => {
     error: null,
 
    fetchHorasExtra: (userEmail, fechaInicio = null, fechaFin = null) => {
+
+          if (!userEmail) {
+        console.warn("HorasExtraStore: No se puede obtener horas extra sin un userEmail.");
+        get().clearHorasExtra(); // Limpiar si no hay userEmail
+        return;
+      }
+
       if (unsubscribeHorasExtra) {
         unsubscribeHorasExtra();
+         unsubscribeHorasExtra = null;
       }
 
       set({ loading: true });
@@ -90,8 +98,14 @@ export const useHorasExtraStore = create((set, get) => {
       };
     },
     fetchHorasExtraBasic: (userEmail, fechaInicio = null, fechaFin = null) => {
+        if (!userEmail) {
+        console.warn("HorasExtraStore: No se puede obtener horas extra básicas sin un userEmail.");
+        get().clearHorasExtra(); // Limpiar si no hay userEmail
+        return;
+      }
       if (unsubscribeHorasExtra) {
         unsubscribeHorasExtra();
+        unsubscribeHorasExtra = null;
       }
 
       set({ loading: true });

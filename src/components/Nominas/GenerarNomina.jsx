@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Container, Typography, Box, Card, CardContent, AppBar, Toolbar, FormControlLabel, Switch,
-  IconButton, Button, Grid, TextField, Divider, Alert, CircularProgress, Paper
+  Container, Typography, Box, Card, CardContent, AppBar, Toolbar, FormControl, FormControlLabel,
+  Switch, IconButton, Button, Grid, TextField, Divider, Alert, CircularProgress, FormLabel,
+  RadioGroup, Radio, MenuItem,
 } from '@mui/material';
 import {
   ArrowBackIosNew as ArrowBackIosNewIcon,
@@ -10,7 +11,9 @@ import {
   Save as SaveIcon,
   CalendarMonth as CalendarMonthIcon,
   AccessTime as TimeIcon,
-  Wysiwyg as WysiwygIcon  
+  Wysiwyg as WysiwygIcon,
+  PostAddOutlined as AddIcon , 
+  EditOutlined as EditIcon
 } from '@mui/icons-material';
 import { useHorasExtraStore } from '../../stores/horasExtraStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -60,22 +63,25 @@ const GenerarNomina = () => {
 
   const { showSuccess, showError } = useUIStore();
   const [mesNomina, setMesNomina] = useState('');
-  const [añoNomina, setAñoNomina] = useState('');
+  const [añoNomina, setAñoNomina] = useState(new Date().getFullYear());
     // State for form fields
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [tieneDeduccion, setTieneDeduccion] = useState(false);
   const [deduccionConcepto, setDeduccionConcepto] = useState('');
-  const [deduccionCantidad, setDeduccionCantidad] = useState('');
+  const [deduccionCantidad, setDeduccionCantidad] = useState(0);
   const [tieneExtra, setTieneExtra] = useState(false);
   const [extraConcepto, setExtraConcepto] = useState('');
-  const [extraCantidad, setExtraCantidad] = useState('');
+  const [extraCantidad, setExtraCantidad] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [tipoNomina, setTipoNomina] = useState('mensual'); // 'mensual' or 'extra'
+  const [tipoNomina, setTipoNomina] = useState('mensual'); 
+
+  const [tipoPaga, setTipoPaga] = useState('verano');
+  const [importe, setImporte] = useState(0);
 
   const [nominaCalculada, setNominaCalculada] = useState(null);
-  const [isEditing, setIsEditing] = useState(false); // New state to track edit mode
+  const [isEditing, setIsEditing] = useState(false); 
   const [horasExtraPeriodo,setHorasExtraPeriodo]= useState([])
 
   useEffect(() => {
@@ -88,27 +94,34 @@ const GenerarNomina = () => {
   }, [user?.email, loadConfiguracionUsuario]);
 
   useEffect(() => {
+    if (configuracionNomina?.pagaExtra) {
+      setImporte(configuracionNomina.pagaExtra);
+    }
+  }, [configuracionNomina]);
+
+  useEffect(() => {
        if (nominaId && user?.email && !loadingConfiguracion && configuracionNomina) {
       setIsEditing(true);
       const loadNominaData = async () => {
         const nomina = await getNominaById(nominaId);
          if (nomina) {
-          // Set form states with fetched data
           setSelectedDate(dayjs().month(obtenerNumeroMes(nomina.mes)-1).year(nomina.año));
           setFechaInicio(nomina.periodoHorasExtra?.fechaInicio);
           setFechaFin(nomina.periodoHorasExtra?.fechaFin);
-          setTipoNomina(nomina.tipo || 'mensual');
+          setTipoNomina(nomina.tipo);
           setAñoNomina(nomina.año)
           setMesNomina(nomina.mes)
+          setTipoPaga(nomina.mes==='P.E. Verano'?"verano" : 'navidad')
+          setImporte(nomina.total)
 
           if (nomina.deduccion && nomina.deduccion.cantidad > 0) {
             setTieneDeduccion(true);
-            setDeduccionConcepto(nomina.deduccion.concepto || '');
+            setDeduccionConcepto(nomina.deduccion.concepto);
             setDeduccionCantidad(nomina.deduccion.cantidad);
           } else {
             setTieneDeduccion(false);
             setDeduccionConcepto('');
-            setDeduccionCantidad('');
+            setDeduccionCantidad(0);
           }
 
           if (nomina.extra && nomina.extra.cantidad > 0) {
@@ -118,7 +131,7 @@ const GenerarNomina = () => {
           } else {
             setTieneExtra(false);
             setExtraConcepto('');
-            setExtraCantidad('');
+            setExtraCantidad(0);
           }
           // Fetch horas extra for the specific period of the loaded nomina
           fetchHorasExtra(user.email, nomina.periodoHorasExtra?.fechaInicio, nomina.periodoHorasExtra?.fechaFin);
@@ -132,9 +145,9 @@ const GenerarNomina = () => {
     } else {
       setIsEditing(false); 
       setDeduccionConcepto('');
-      setDeduccionCantidad('');
+      setDeduccionCantidad(0);
       setExtraConcepto('');
-      setExtraCantidad('');
+      setExtraCantidad(0);
       setTipoNomina('mensual');
       setFechaInicio(dayjs(selectedDate).startOf('month').subtract(9,'days').format('YYYY-MM-DD'));
       setFechaFin(dayjs(selectedDate).endOf('month').subtract(7,'days').format('YYYY-MM-DD'));
@@ -159,7 +172,6 @@ const GenerarNomina = () => {
       setHorasExtraPeriodo(horasExtra);
     }, [horasExtra]);
 
-// Recalculate nomina when dependencies change
   useEffect(() => {
     if (configuracionNomina && fechaInicio && fechaFin && !loadingHorasExtra) {
       
@@ -201,6 +213,61 @@ const GenerarNomina = () => {
     }
   }, [configuracionNomina, fechaInicio, fechaFin, horasExtraPeriodo, loadingHorasExtra, tieneDeduccion, deduccionCantidad, tieneExtra, extraCantidad, tipoNomina, selectedDate, calcularNominaCompleta, calcularTotalHorasExtra, getEstadisticasPeriodo]);
 
+  // Guardar paga extra
+  const handleGuardar = async () => {
+    if (!importe || isNaN(importe) || Number(importe) <= 0) {
+      showError('El importe debe ser mayor que 0');
+      return;
+    }
+    setSaving(true);
+
+    const nominaToSave = {
+        empleadoEmail: user.email,
+        año: Number(añoNomina),
+        mes: tipoPaga === 'verano' ? 'P.E. Verano' : 'P.E. Navidad',
+        tipo: "paga extra",
+        importePagaExtra: Number(configuracionNomina.pagaExtra),
+        sueldoBase: 0,
+        trienios: 0,
+        otrosComplementos: [],
+        horasExtra: { total: 0, desglose: [] },
+        deduccion: {
+          concepto: deduccionConcepto,
+          cantidad:  deduccionCantidad,
+        },
+  
+        extra: {
+          concepto: 'sin complemento extra',
+          cantidad: 0,
+        },
+        total: Number(importe-deduccionCantidad)
+      };
+
+    try {
+      let success = false;
+      if (isEditing && nominaId) {
+        success = await actualizarNomina(nominaId, nominaToSave);
+        if (success) {
+          showSuccess('Paga Extra actualizada correctamente.');
+        } else {
+          showError('Error al actualizar la Paga Extra.');
+        }
+      } else {
+        const newNominaId = await guardarNomina(nominaToSave);
+        if (newNominaId) {
+          showSuccess('Paga Extra guardada correctamente.');
+        } else {
+          showError('Error al guardar Paga Extra.');
+        }
+      }
+      navigate('/nominas'); // Redirect after save/update
+    } catch (error) {
+      showError(`Error: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  }; 
+ 
   const handleGuardarNomina = async () => {
     if (!nominaCalculada) {
       showError('No hay una nómina calculada para guardar.');
@@ -242,6 +309,9 @@ const GenerarNomina = () => {
       setSaving(false);
     }
   };
+
+
+  const añosDisponibles = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
   const handleFechaChange = (date) => {
     setSelectedDate(date);
@@ -344,7 +414,7 @@ const GenerarNomina = () => {
               variant="caption" 
               sx={{ opacity: 0.9, fontSize: { xs: '0.9rem', sm: '1rem' } }}
             >
-              {isEditing ? "Modifica los datos" : "Selecciona Mes y Año de la Nómina"}
+              {isEditing ? "Modifica los datos" : "Rellena los datos de la Nómina"}
               
             </Typography>
           </Box>
@@ -353,49 +423,86 @@ const GenerarNomina = () => {
             edge="end"
             color="inherit"
             sx={{
-              cursor: 'default'
+              cursor: 'default',
             }}
           >
-            <ReceiptIcon />
+            {isEditing?<EditIcon sx={{fontSize:'2rem'}}/> : <AddIcon sx={{fontSize:'2rem'}}/>}
           </IconButton>
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
-      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
-        <Card elevation={5} sx={{ mb: 3, borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
-          <CardContent sx={{ p: 2,  }}>
-        <Box sx={{display:'flex', justifyContent:'center', mb:1,  overflow:'hidden'}}>
-        <Typography fontWeight="bold" textAlign="center" variant="h5" color={isEditing?"azul.main":"naranja.main"} gutterBottom >
-          Mes y Año de la nómina
-        </Typography>
-        </Box>
-        <Box sx={{ display:'flex', justifyContent:'center', mt:1, mx: 'auto' , borderRadius:3}}>
-          <MobileDatePicker
-            views={['month', 'year']}
-            label="Mes y año"
-            minDate={dayjs('2010-01-01')}
-            maxDate={dayjs().add(2, 'year')}
-            value={selectedDate}
-            onChange={handleFechaChange}
-            inputFormat="MM/YYYY"
-            slotProps={{
-              textField: {
-                fullWidth: true,
-                sx: { borderRadius: 3, bgcolor: 'white' }
-               },
-              htmlInput: {
-                inputMode: 'numeric',
-                pattern: '[0-9/]*'
-              }
-            }}
-            sx={{
-              '& .MuiInputBase-root': { fontSize: '1.2rem', bgcolor: 'white' },
-            }}
-           
-          />
-        </Box>
-        <Divider sx={{ bgcolor:'black', mt:4 }} />
+            <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+                    <Card elevation={5} sx={{ mb: 3, borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
+                      <CardContent sx={{ p: 2,  }}>
+                          <FormControl component="fieldset" sx={{ width: '100%', my: 2 }}>
+                            <FormLabel component="legend"  sx={{ textAlign:'center' }}>
+                              <Typography fontWeight="bold" textAlign="center" variant="h5" color={isEditing?"azul.main":"naranja.main"} >
+                                Tipo de Nómina
+                              </Typography>
+                            </FormLabel>
+                            <RadioGroup
+                              row
+                              aria-label="tipo de nómina"
+                              name="tipoNomina"
+                              value={tipoNomina}
+                              onChange={(e)=>setTipoNomina(e.target.value)}
+                              sx={{
+                                justifyContent:'center',
+                                gap: { xs: 2, sm: 4 },
+                                flexWrap: 'wrap'
+                              }}
+                            >
+                              <FormControlLabel
+                                value="mensual"
+                                control={<Radio sx={{color: isEditing? 'azul,main':'naranja.main', '&.Mui-checked': { color: isEditing? 'azul,main':'naranja.main' }}}/>}
+                                label="Mensual"
+                                sx={{ mr: 2 }}
+                              />
+                              <FormControlLabel
+                                value="paga extra"
+                                control={<Radio sx={{color: isEditing? 'azul,main':'naranja.main', '&.Mui-checked': { color: isEditing? 'azul,main':'naranja.main' }}} />}
+                                label="Paga Extra"
+                                />
+                            </RadioGroup>
+                          </FormControl>
+                          <Divider sx={{ bgcolor:'black', mb:3 }} />
+                                        
+                          
+                        {tipoNomina==="mensual" ? (
+                          <>
+                        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+                        <Box sx={{display:'flex', justifyContent:'center', mb:1,  overflow:'hidden'}}>
+                        <Typography fontWeight="bold" textAlign="center" variant="h5" color={isEditing?"azul.main":"naranja.main"} gutterBottom >
+                          Mes y Año de la nómina
+                        </Typography>
+                        </Box>
+                        <Box sx={{ display:'flex', justifyContent:'center', mt:1, mx: 'auto' , borderRadius:3}}>
+                          <MobileDatePicker
+                            views={['month', 'year']}
+                            label="Mes y año"
+                            minDate={dayjs('2010-01-01')}
+                            maxDate={dayjs().add(2, 'year')}
+                            value={selectedDate}
+                            onChange={handleFechaChange}
+                            inputFormat="MM/YYYY"
+                            slotProps={{
+                              textField: {
+                                fullWidth: true,
+                                sx: { borderRadius: 3, bgcolor: 'white' }
+                              },
+                              htmlInput: {
+                                inputMode: 'numeric',
+                                pattern: '[0-9/]*'
+                                }
+                              }}
+                            sx={{
+                              '& .MuiInputBase-root': { fontSize: '1.2rem', bgcolor: 'white' },
+                            }}
+                          
+                          />
+                        </Box>
+                        </LocalizationProvider >
+                        <Divider sx={{ bgcolor:'black', mt:4 }} />
 
             {/* --- Paso 1: SelectorPeriodo --- */}
                         <Box sx={{display:'flex', flexDirection:"column", justifyContent:'center',mt:3, mb:2}}>
@@ -461,12 +568,12 @@ const GenerarNomina = () => {
                           <Alert sx={{mb:-1,mt:2}} severity="info">
                             {!fechaInicio || !fechaFin  ? 
                               'Selecciona un período para ver los registros' :
-                              'No hay horas extra en este período'
+                              'No tienes horas extra en este período'
                             }
                           </Alert>
                         ) : (
                           <Box mt={3}>
-                            <Typography variant="h6" textAlign="center" color={isEditing?"azul.main":"naranja.main"} fontWeight="bold" gutterBottom>
+                            <Typography variant="h5" textAlign="center" color={isEditing?"azul.main":"naranja.main"} fontWeight="bold" gutterBottom>
                               Horas Extras del Mes
                             </Typography>
                             {/* Header de tabla */}
@@ -521,8 +628,8 @@ const GenerarNomina = () => {
 
                         <Divider sx={{ bgcolor:'black', mt:4 }} />
                         <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', mt:3,}}>
-                        <Typography  variant="h6"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
-                          Complemento Extra
+                        <Typography  variant="h5"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
+                          Pago Extra
                         </Typography>
                         
                         <FormControlLabel
@@ -606,7 +713,7 @@ const GenerarNomina = () => {
 
                         <Divider sx={{ bgcolor:'black', mt:4 }} />
                         <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', mt:3,}}>
-                        <Typography  variant="h6"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
+                        <Typography  variant="h5"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
                           Deducciones
                         </Typography>
                         
@@ -688,9 +795,176 @@ const GenerarNomina = () => {
                             />
                             </Box>
                             )}
+</>
+                        ):(
+                          
+                          <Box>
+                              <Typography textAlign="center" variant="h5" color={isEditing? 'azul,main':'naranja.main'} fontWeight="600" gutterBottom>
+                                Tipo de paga extra
+                              </Typography>
+                              <RadioGroup
+                                row
+                                value={tipoPaga}
+                                onChange={e => setTipoPaga(e.target.value)}
+                                sx={{ mb: 3, justifyContent:'center' }}
+                              >
+                                <FormControlLabel
+                                  value="verano"
+                                  control={<Radio sx={{ color: isEditing? 'azul,main':'naranja.main', '&.Mui-checked': { color: isEditing? 'azul,main':'naranja.main' } }} />}
+                                  label="Verano"
+                                />
+                                <FormControlLabel
+                                  value="navidad"
+                                  control={<Radio sx={{ color: isEditing? 'azul,main':'naranja.main', '&.Mui-checked': { color: isEditing? 'azul,main':'naranja.main' } }} />}
+                                  label="Navidad"
+                                />
+                              </RadioGroup>
+                              <TextField
+                                select
+                                label="Año"
+                                value={añoNomina}
+                                onChange={e => setAñoNomina(e.target.value)}
+                                fullWidth
+                                sx={{ mb: 3,
+                                  '& .MuiOutlinedInput-root': {
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: isEditing? 'azul,main':'naranja.main'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: isEditing? 'azul,main':'naranja.main'
+                                    }
+                                  },
+                                  '& .MuiInputLabel-root.Mui-focused': {
+                                    color: isEditing? 'azul,main':'naranja.main'
+                                  }
+                                 }}
+                              >
+                                {añosDisponibles.map(a => (
+                                  <MenuItem key={a} value={a}>{a}</MenuItem>
+                                ))}
+                              </TextField>
+                              <TextField
+                                type="number"
+                                label="Importe paga extra (€)"
+                                value={importe}
+                                onChange={(e) => setImporte(e.target.value)}
+                                fullWidth
+                                slotProps={{ 
+                                  htmlInput:{
+                                      min: 0, step: 0.01 
+                                    }
+                                  }}
+                                sx={{
+                                  
+                                  '& .MuiOutlinedInput-root': {
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: isEditing? 'azul,main':'naranja.main'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: isEditing? 'azul,main':'naranja.main'
+                                    }
+                                  },
+                                  '& .MuiInputLabel-root.Mui-focused': {
+                                    color: isEditing? 'azul,main':'naranja.main'
+                                  }
+                                }}
+                              />
+
+                        <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', mt:2,}}>
+                        <Typography  variant="h5"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
+                          Deducciones
+                        </Typography>
+                        
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={tieneDeduccion}
+                              onChange={handleTieneDeduccionChange}
+                                sx={{ 
+                                '& .MuiSwitch-switchBase': {
+                                color: 'grey.400',
+                                '&.Mui-checked': {
+                                  color: isEditing?"azul.main":"naranja.main", 
+                                },
+                              },
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: isEditing?"azul.main":"naranja.main" }
+                              }}
+                            />
+                          }
+                          label={''}
+                          sx={{ mb: tieneDeduccion? '2': '0', display: 'flex'}}
+                        />
+                        </Box>
+                        <Box sx={{display:'flex', flexDirection:'column', p:2, mt:-1}}>
+                          <Typography variant="body1" fontWeight={600} textAlign={'center'}>
+                            {tieneDeduccion? 'Tengo una deduccion' : 'No tengo deducción'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" textAlign={'center'}>
+                            {tieneDeduccion && 'La deducción se restará al total de la paga Extra. Por ej. si has estado de baja.'}
+                          </Typography>
+                        </Box>
+                        {tieneDeduccion && (
+                          <Box>
+                            <TextField
+                              label="Concepto"
+                              placeholder="Baja médica"
+                              value={deduccionConcepto}
+                              onChange={(e)=>{setDeduccionConcepto(e.target.value)}}
+                              fullWidth
+                              sx={{
+                                '& .MuiOutlinedInput-root': {
+                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: isEditing?"azul.main":"naranja.main"
+                                  },
+                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: isEditing?"azul.main":"naranja.main"
+                                  }
+                                },
+                                '& .MuiInputLabel-root.Mui-focused': {
+                                  color: isEditing?"azul.main":"naranja.main"
+                                }
+                              }}
+                            />              
+                            <TextField
+                              type="number"
+                              label="Deducción (€)"
+                              value={deduccionCantidad}
+                              onChange={(e)=>{setDeduccionCantidad(e.target.value)}}
+                              fullWidth
+                              slotProps={{ 
+                                htmlInput:{
+                                  min: 0 
+                                  }
+                                }}
+                               sx={{
+                                mt:2,
+                                mb:4,
+                                '& .MuiOutlinedInput-root': {
+                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: isEditing?"azul.main":"naranja.main"
+                                  },
+                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: isEditing?"azul.main":"naranja.main"
+                                  }
+                                },
+                                '& .MuiInputLabel-root.Mui-focused': {
+                                  color: isEditing?"azul.main":"naranja.main"
+                                }
+                              }}
+                            />
+                            </Box>
+                            )}
+
+                          
+                          </Box>
+                          )}
                       </CardContent>
                     </Card>
+                    
             {/* --- Paso 3: VistaPrevia --- */}
+
+
+              {tipoNomina==="mensual" ? (
             <Card elevation={5} sx={{ borderRadius: 4, border: 'px solid rgba(0,0,0,0.08)', mt:4 }}>
               <CardContent>
                 {selectedDate && (
@@ -821,10 +1095,88 @@ const GenerarNomina = () => {
             <Alert severity="info" sx={{ mt: 3 }}>
               Selecciona un periodo para calcular tu nómina.
             </Alert>
-                      )}
-              </CardContent>
+              )}
+            </CardContent>
             </Card>
-        </LocalizationProvider >
+                      ):(
+            <Card elevation={5} sx={{ borderRadius: 4, border: 'px solid rgba(0,0,0,0.08)', mt:4 }}>
+              <CardContent>
+                <Typography style={{mt:1}}  textAlign="center" variant="h6" fontSize="1.3rem" fontWeight="bold" color={isEditing?"azul.main":"naranja.main"}>
+                 Paga Extra de {capitalizeFirstLetter(tipoPaga)}
+                </Typography>
+                <Box  py={3} sx={{mt:-1 }}>
+                    <Box display="flex" justifyContent="space-between" p={1}>
+                    <Typography><strong>Base Paga Extra:</strong></Typography> <Typography>{formatCurrency(importe)}</Typography>
+                    </Box>
+                    
+
+                    <Divider />
+                    {tieneDeduccion && (
+                      <>
+                    <Divider />
+                    <Box display="flex" justifyContent="space-between" p={1}>
+                      <Box display="flex" flexDirection="column">
+                    <Typography><strong>Deducción:</strong></Typography>
+                    <Typography color="textSecondary" variant='body2'><strong>{deduccionConcepto}</strong></Typography>
+                    </Box>
+                    <Box display="flex" flexDirection="column" justifyContent={'center'}>
+                     <Typography color='rojo.main'>{formatCurrency(-deduccionCantidad)}</Typography>
+                     </Box>
+                    </Box>
+                      </>
+                    )}
+                    <Box 
+                      borderTop="2px solid" 
+                      borderColor="grey.400"
+                      bgcolor={isEditing?"azul.fondo":"naranja.fondo"} 
+                      display="flex" 
+                      justifyContent="space-between" 
+                      p={1}
+                    >
+                    <Typography   fontWeight="bold" >
+                      TOTAL: 
+                    </Typography>
+                    <Typography  fontWeight="bold" >
+                      {formatCurrency(importe-Number(deduccionCantidad))}
+                    </Typography>
+                    </Box>  
+                    </Box>
+                  <Button
+                    variant="contained"
+                    startIcon={<SaveIcon />}
+                    onClick={handleGuardar}
+                    disabled={saving}
+                    fullWidth
+                    sx={{
+                        py: 2,
+                        borderRadius: 3,
+                        background: isEditing ? 
+                          'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)':
+                          'linear-gradient(135deg, #FB8C00 0%, #F57C00 100%)',
+                        fontSize: '1.1rem',
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        boxShadow: '0 4px 15px rgba(255, 165, 0, 0.3)',
+                        '&:hover': {
+                          background: isEditing ?
+                          'linear-gradient(135deg, #1976D2 0%, #2196F3 100%)':
+                          'linear-gradient(135deg, #F57C00 0%, #FB8C00 100%)',
+                          boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+                          transform: 'translateY(-2px)'
+                        },
+                        '&:disabled': {
+                          background: isEditing ?
+                          'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)':
+                          'linear-gradient(135deg, #FFDAB9 0%, #FFC19A 100%)',
+                        },
+                        transition: 'all 0.3s ease'                    
+                    }}
+                  >
+                    {saving ? "Guardando..." :  (isEditing ? "Actualizar Paga Extra" : "Guardar Paga Extra")}
+                  </Button>
+              </CardContent>
+              </Card>
+                      )}        
       </Container>
     </>
   );

@@ -185,12 +185,13 @@ export const useNominaStore = create((set, get) => {
     },
 
     // ✅ NUEVO: Cleanup all listeners
-    cleanup: () => {
+cleanup: () => {
+      console.log("NominaStore: cleanup called. Unsubscribing all listeners.");
       if (unsubscribeNiveles) {
         unsubscribeNiveles();
         unsubscribeNiveles = null;
       }
-      if (unsubscribeHorasExtra) {
+      if (unsubscribeHorasExtra) { 
         unsubscribeHorasExtra();
         unsubscribeHorasExtra = null;
       }
@@ -202,6 +203,17 @@ export const useNominaStore = create((set, get) => {
         unsubscribeNominas();
         unsubscribeNominas = null;
       }
+      // Resetear estados relevantes
+      set({
+        nivelesSalariales: {},
+        horasExtra: [],
+        configuracionNomina: null,
+        nominasGuardadas: [],
+        loading: false,
+        error: null,
+        initialized: false,
+        loadingConfiguracion: false
+      });
     },
 
     saveUserNominaConfig: async (userEmail, formData) => {
@@ -270,6 +282,17 @@ export const useNominaStore = create((set, get) => {
       return horasDecimales * (parseFloat(tarifa) || 0);
     },
   loadConfiguracionUsuario: (userEmail) => {
+      const { isAuthenticated, user } = useAuthStore.getState();
+      if (!isAuthenticated || !user || user.email !== userEmail) {
+        console.warn("NominaStore: No se puede cargar configuración de usuario sin autenticación o permisos.");
+        if (unsubscribeConfiguracion) {
+          unsubscribeConfiguracion();
+          unsubscribeConfiguracion = null;
+        }
+        set({ configuracionNomina: null, loadingConfiguracion: false, error: "Sin permisos para acceder a configuración" });
+        return () => {};
+      }
+
       if (unsubscribeConfiguracion) {
         return () => {};
       }
@@ -308,10 +331,20 @@ export const useNominaStore = create((set, get) => {
 
     // ✅ NUEVO: Listener para nóminas guardadas del usuario
     loadNominasUsuario: (userEmail) => {
-      if (unsubscribeNominas) {
+const { isAuthenticated, user } = useAuthStore.getState();
+      if (!isAuthenticated || !user || user.email !== userEmail) {
+        console.warn("NominaStore: No se pueden cargar nóminas de usuario sin autenticación o permisos.");
+        if (unsubscribeNominas) {
+          unsubscribeNominas();
+          unsubscribeNominas = null;
+        }
+        set({ nominasGuardadas: [], loading: false, error: "Sin permisos para acceder a nóminas" });
         return () => {};
       }
 
+      if (unsubscribeNominas) {
+        return () => {};
+      }
       unsubscribeNominas = onSnapshot(
         query(collection(db, 'NOMINAS'), where('empleadoEmail', '==', userEmail)),
         (snapshot) => {

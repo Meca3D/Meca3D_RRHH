@@ -12,6 +12,7 @@ import {
   AssessmentOutlined as AssessmentIcon,
   WysiwygOutlined as WysiwygOutlinedIcon,
   EditOutlined as EditIcon,
+  PostAddOutlined as AddIcon
 } from '@mui/icons-material';
 import { useGlobalData } from '../../hooks/useGlobalData';
 import { formatCurrency } from '../../utils/nominaUtils';
@@ -28,7 +29,7 @@ const Nominas = () => {
       subtitle: 'Del mes actual',
       description: 'Calcular y guardar',
       label:"Automático",
-      icon: ReceiptIcon,
+      icon: AddIcon,
       color: 'naranja.main',
       bgColor: 'naranja.fondo',
       route: '/nominas/generar'
@@ -44,18 +45,6 @@ const Nominas = () => {
       bgColor: 'azul.fondo',
       gradient: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
       route: '/nominas/gestionar'
-    },
-    {
-      id: 'paga-extra',
-      title: 'Paga Extra',
-      subtitle: 'Verano o Navidad',
-      description: 'Generar paga extra',
-      label:"Verano y Navidad",
-      icon: GiftIcon,
-      color: 'rojo.main',
-      bgColor: 'rojo.fondo',
-      gradient: 'linear-gradient(135deg, #7B1FA2 0%, #6A1B9A 100%)',
-      route: '/nominas/paga_extra'
     },
     {
       id: 'resumen',
@@ -113,15 +102,15 @@ const Nominas = () => {
         
         <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
             <WysiwygOutlinedIcon sx={{ fontSize: '4rem', color:'verde.main'}} />
-          <Box flex={1}>
-            <Typography sx={{color:'verde.main', ml:-4}} textAlign="center" variant="h4" fontWeight="bold" gutterBottom>
+          <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{ml:-5}}>
+            <Typography sx={{ color:'verde.main'}} textAlign="center" variant="h4" fontWeight="bold" gutterBottom>
               Gestión de Nóminas
             </Typography>
-            <Box display="flex" gap={1} flexWrap="wrap">
-              {userSalaryInfo ? (
+            <Box display="flex" gap={1} flexWrap="nowrap">
+              {userSalaryInfo.salarioCompletoEstimado ? (
                 <>
-                  <Box display="flex" flexDirection="column" flexWrap="wrap" sx={{ml:4}}>
-                  <Typography  color="verde.main" variant="h6" fontSize=" 1rem" textAlign="center" fontWeight="bold" >
+                  <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{px:5}}>
+                  <Typography  color="verde.main" variant="h6" fontSize=" 1rem" textAlign="center" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                     Estimado {userSalaryInfo.mesNomina || 'Mes Actual'}   
                   </Typography>
                   <Typography textAlign="center" color="verde.main"><strong>{formatCurrency(userSalaryInfo.salarioCompletoEstimado)}</strong></Typography>
@@ -129,7 +118,7 @@ const Nominas = () => {
                 </>
               ) : (
                 <Chip 
-                  label="Configurar datos"
+                  label="Falta configuración"
                   sx={{ 
                     bgcolor: 'rojo.fondo', 
                     color: 'rojo.main',

@@ -14,6 +14,14 @@ export const useOrdersStore = create((set, get) => {
 
   fetchOrders: () => {
     const state = get();
+          const { isAuthenticated, user } = useAuthStore.getState();
+
+      // ✅ IMPORTANTE: Solo suscribirse si hay un usuario autenticado
+      if (!isAuthenticated || !user) {
+        console.warn("OrdersStore: No se pueden cargar pedidos sin autenticación. Limpiando el store.");
+        get().clearOrders(); // Limpiar si no hay usuario autenticado
+        return () => {}; // Retornar una función vacía para mantener la consistencia
+      }
       
     if (state.initialized || unsubscribe) {
         return () => {};
@@ -61,6 +69,15 @@ export const useOrdersStore = create((set, get) => {
                  }
       };
   },
+
+      clearOrders: () => {
+      console.log("OrdersStore: clearOrders called. Unsubscribing listener.");
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      set({ orders: [], loading: false, error: null, initialized: false });
+    },
 
       isDataLoaded: () => {
       const state = get();

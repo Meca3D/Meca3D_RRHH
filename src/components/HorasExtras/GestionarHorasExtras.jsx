@@ -187,7 +187,7 @@ const GestionarHorasExtras = () => {
                 lineHeight: 1.2
               }}
             >
-              Gestionar Horas Extra
+              Gestionar Horas Extras
             </Typography>
             <Typography 
               variant="caption" 
@@ -196,7 +196,7 @@ const GestionarHorasExtras = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Consultar, editar y eliminar
+              Consultar, Modificar y Eliminar
             </Typography>
           </Box>
           {/* Icono decorativo */}
@@ -207,7 +207,7 @@ const GestionarHorasExtras = () => {
               cursor: 'default'
             }}
           >
-            <EditIcon />
+            <EditIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>

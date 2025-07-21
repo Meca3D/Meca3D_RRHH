@@ -47,10 +47,11 @@ const Dashboard = () => {
   const stats = [
     {
       title: 'Nómina',
-      value: userSalaryInfo
+      value: userSalaryInfo?.salarioCompletoEstimado 
         ? formatCurrency(userSalaryInfo.salarioCompletoEstimado)
         : '0€',
-      subtitle: `estimado ${userSalaryInfo.mesNomina || 'este mes'}`,
+      subtitle: userSalaryInfo?.salarioCompletoEstimado 
+        ? `estimado ${userSalaryInfo.mesNomina}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
@@ -271,10 +272,10 @@ const Dashboard = () => {
           <Avatar 
             src={userProfile?.photoURL} 
             sx={{ 
-              ml:1,
-              width: 80, 
-              height: 80, 
-              border: '4px solid rgba(255,255,255,0.2)',
+              width: 100, 
+              height: 100,  
+              border:'2px solid grey',
+              boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
               fontSize: '2rem'
             }}
           >

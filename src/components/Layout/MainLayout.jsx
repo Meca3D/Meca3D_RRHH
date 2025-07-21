@@ -14,6 +14,7 @@ import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PaymentIcon from '@mui/icons-material/Payment';
+import WysiwygOutlinedIcon from '@mui/icons-material/WysiwygOutlined'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -44,7 +45,7 @@ const MainLayout = () => {
     {
       name: 'Nóminas',
       path: '/nominas',
-      icon: PaymentIcon,
+      icon: WysiwygOutlinedIcon,
       roles: ['user', 'admin', 'owner'],
       color: 'verde' 
     },
@@ -84,7 +85,7 @@ const MainLayout = () => {
     if (location.pathname.startsWith('/nominas')) return 'Mis Nóminas';
     if (location.pathname.startsWith('/vacaciones')) return 'Mis Vacaciones';
     if (location.pathname.startsWith('/permisos')) return 'Mis Permisos/Bajas';
-    if (location.pathname.startsWith('/horas-extras')) return 'Mis Horas Extra';
+    if (location.pathname.startsWith('/horas-extras')) return 'Mis Horas Extras';
     return 'Mecaformas 3D';
   };
 

@@ -14,10 +14,11 @@ import {
 } from '@mui/icons-material';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart
+  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart, ComposedChart,
 } from 'recharts';
 import { useAuthStore } from '../../stores/authStore';
 import { useHorasExtraStore } from '../../stores/horasExtraStore';
+import { useNominaStore } from '../../stores/nominaStore';
 import { useUIStore } from '../../stores/uiStore';
 import { 
   tiposHorasExtra, 
@@ -25,6 +26,8 @@ import {
   formatDate, 
   formatearTiempo 
 } from '../../utils/nominaUtils';
+
+ 
 
 const EstadisticasHorasExtras = () => {
   const navigate = useNavigate();
@@ -38,6 +41,8 @@ const EstadisticasHorasExtras = () => {
     loading 
   } = useHorasExtraStore();
   const { showError } = useUIStore();
+
+  const {obtenerPeriodoHorasExtras} = useNominaStore()
 
   // Estados para filtros y datos
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState('mesActual');
@@ -54,6 +59,7 @@ const EstadisticasHorasExtras = () => {
   const periodosPreconfigurados = [
     { value: 'mesActual', label: 'Mes Actual' },
     { value: 'mesAnterior', label: 'Mes Anterior' },
+    { value: 'ultimos3meses', label: 'Últimos 3 Meses' },
     { value: 'ultimos6meses', label: 'Últimos 6 Meses' },
     { value: 'anoActual', label: 'Año Actual' },
     { value: 'anoAnterior', label: 'Año Anterior' },
@@ -61,23 +67,64 @@ const EstadisticasHorasExtras = () => {
   ];
 
   // ✅ Calcular fechas según período seleccionado
-  const calcularFechasPeriodo = (periodo) => {
+  const calcularFechasPeriodo = async (periodo) => {
     const now = new Date();
     let inicio, fin;
-
     switch (periodo) {
-      case 'mesActual':
+    case 'mesActual': {
+      // Buscar nómina del mes anterior
+      const periodoAnterior = await obtenerPeriodoHorasExtras(user.email, 1);
+      if (periodoAnterior.encontrada) {
+        // Empezar el día siguiente al fin del período anterior
+        const inicioNuevo = new Date(periodoAnterior.fechaFin);
+        inicioNuevo.setDate(inicioNuevo.getDate() + 1).iso;
+        inicio = inicioNuevo;
+        fin = now;
+      } else {        // Lógica actual si no hay nómina anterior
         inicio = new Date(now.getFullYear(), now.getMonth(), -7);
-        fin = new Date(now.getFullYear(), now.getMonth() + 1, -7);
-        break;
-      case 'mesAnterior':
+        fin = now;
+      }
+      break;
+    }
+      case 'mesAnterior':{
+             // Cargar período exacto de la nómina anterior
+      const periodoAnterior = await obtenerPeriodoHorasExtras(user.email, 1);
+      if (periodoAnterior.encontrada) {
+        inicio = new Date(periodoAnterior.fechaInicio);
+        fin = new Date(periodoAnterior.fechaFin);
+      } else {
+        // Lógica actual
         inicio = new Date(now.getFullYear(), now.getMonth() - 1, -7);
-        fin = new Date(now.getFullYear(), now.getMonth(),-6);
-        break;
-      case 'ultimos6meses':
+        fin = new Date(now.getFullYear(), now.getMonth(), -6);
+      }
+      break;
+    }
+    case 'ultimos3meses': {
+      // Empezar desde la nómina de hace 2 meses hasta ahora
+      const periodoInicio = await obtenerPeriodoHorasExtras(user.email, 2);
+      if (periodoInicio.encontrada) {
+        inicio = new Date(periodoInicio.fechaInicio);
+        fin = now;
+      } else {
+        inicio = new Date(now.getFullYear(), now.getMonth() - 2, -7);
+        fin = now;
+      }
+      break;
+    }
+
+    case 'ultimos6meses': {
+      // Empezar desde la nómina de hace 5 meses hasta ahora
+      const periodoInicio = await obtenerPeriodoHorasExtras(user.email, 5);
+      if (periodoInicio.encontrada) {
+        inicio = new Date(periodoInicio.fechaInicio);
+        fin = now;
+      } else {
+        // Lógica actual
         inicio = new Date(now.getFullYear(), now.getMonth() - 5, -7);
-        fin = new Date(now.getFullYear(), now.getMonth() + 1, -7);
-        break;
+        fin = now;
+      }
+      break;
+    }
       case 'anoActual':
         inicio = new Date(now.getFullYear(), 0, 1);
         fin = new Date(now.getFullYear(), 11, 31);
@@ -100,20 +147,24 @@ const EstadisticasHorasExtras = () => {
   useEffect(() => {
     if (!user?.email) return;
 
+
+  const loadData = async () => {
     let fechas;
     if (periodoSeleccionado === 'personalizado') {
       if (!fechaInicio || !fechaFin) return;
       fechas = { fechaInicio, fechaFin };
     } else {
-      fechas = calcularFechasPeriodo(periodoSeleccionado);
+      // ✅ Usar nueva función inteligente
+      fechas = await calcularFechasPeriodo(periodoSeleccionado);
       setFechaInicio(fechas.fechaInicio);
       setFechaFin(fechas.fechaFin);
     }
 
     const unsubscribe = fetchHorasExtra(user.email, fechas.fechaInicio, fechas.fechaFin);
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    return unsubscribe;
+  };
+
+  loadData();
   }, [user?.email, periodoSeleccionado, fechaInicio, fechaFin]);
 
   // ✅ Procesar datos para gráficos cuando cambien las horas extra
@@ -178,14 +229,13 @@ const EstadisticasHorasExtras = () => {
     distribucionTipos[hora.tipo].registros += 1;
   });
 
-  // ✅ CORREGIDO: Crear array ordenado según tiposHorasExtra
   const distribucionOrdenada = tiposHorasExtra
-    .map(tipoBase => distribucionTipos[tipoBase.value]) // Mapear en el orden correcto
-    .filter(Boolean); // Filtrar los undefined (tipos que no tienen datos)
+    .map(tipoBase => distribucionTipos[tipoBase.value]) 
+    .filter(Boolean); 
 
   setDatosGraficos({
     evolucionMensual: Object.values(evolucionMensual).sort((a, b) => a.mes.localeCompare(b.mes)),
-    distribucionTipos: distribucionOrdenada, // ✅ Usar array ordenado
+    distribucionTipos: distribucionOrdenada, 
     comparativaAnual: []
   });
 };
@@ -199,12 +249,11 @@ const EstadisticasHorasExtras = () => {
     }
   };
 
-  // ✅ Colores para gráficos
+  
   const COLORES_PIE = ['#FB8C00', '#3B82F6', '#10B981', '#EF4444', '#7B1FA2', '#F59E0B'];
 
   return (
     <>
-      {/* ✅ AppBar con gradiente verde */}
       <AppBar  
         sx={{ 
           overflow:'hidden',
@@ -214,7 +263,6 @@ const EstadisticasHorasExtras = () => {
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between', px: 2 }}>
-          {/* Botón Volver */}
           <IconButton
             edge="start"
             color="inherit"
@@ -253,8 +301,6 @@ const EstadisticasHorasExtras = () => {
               Análisis de horas extra
             </Typography>
           </Box>
-
-          {/* Icono decorativo */}
           <IconButton
             edge="end"
             color="inherit"
@@ -262,7 +308,7 @@ const EstadisticasHorasExtras = () => {
               cursor: 'default'
             }}
           >
-            <BarChartIcon />
+            <BarChartIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>
@@ -439,14 +485,22 @@ const EstadisticasHorasExtras = () => {
               {/* Evolución mensual */}
               {datosGraficos.evolucionMensual.length > 0 && (
                 <Grid size={{ xs: 12, md: 8 }}>
-                  <Card elevation={0} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
+                  <Card elevation={5} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
                         <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                         Evolución Temporal
                       </Typography>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={datosGraficos.evolucionMensual}>
+                      <ResponsiveContainer width="100%" height={400}>
+                        <ComposedChart
+                          data={datosGraficos.evolucionMensual}
+                          margin={{
+                            top: 20,
+                            right: -10,
+                            bottom: -10,
+                            left: -10,
+                          }}
+                        >
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="mesFormateado" />
                           <YAxis yAxisId="horas" orientation="left" />
@@ -457,23 +511,26 @@ const EstadisticasHorasExtras = () => {
                               name === 'horas' ? 'Horas' : 'Importe'
                             ]}
                           />
-                          <Legend />
+                          <Legend 
+                            verticalAlign="bottom"
+                            height={50}
+                          />
                           <Area 
                             yAxisId="horas"
                             type="monotone" 
                             dataKey="horas" 
-                            stackId="1"
-                            stroke="#3B82F6" 
-                            fill="rgba(59, 130, 246, 0.3)" 
-                            name="horas"
+                            fill="rgba(59, 130, 246, 0.3)"
+                            stroke="#3B82F6"
+                            name="Horas"
                           />
                           <Bar 
                             yAxisId="importe"
                             dataKey="importe" 
-                            fill="#10B981" 
-                            name="importe"
+                            fill="#10B981"
+                            name="Importe"
+                            maxBarSize={datosGraficos.evolucionMensual.length <= 2 ? 20 : 20}
                           />
-                        </AreaChart>
+                        </ComposedChart>
                       </ResponsiveContainer>
                     </CardContent>
                   </Card>

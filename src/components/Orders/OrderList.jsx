@@ -98,7 +98,7 @@ useEffect(() => {
           }}
         />
         
-        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}>
+        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1} sx={{py:1}}>
           <Avatar 
             sx={{ 
               width: 80, 
@@ -145,7 +145,7 @@ useEffect(() => {
             borderRadius: 3,
             mb:4,
             background: 'linear-gradient(to bottom, #003399, #3366CC, #003399)',
-            fontSize: '1.2rem',
+            fontSize: '1.4rem',
             fontWeight: 600,
             textTransform: 'none',
             boxShadow: '0 4px 15px rgba(109, 59, 7, 0.3)',
@@ -351,18 +351,6 @@ useEffect(() => {
         }}
       >
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
-          <Avatar 
-            sx={{ 
-              width: 60, 
-              height: 60, 
-              mx: 'auto', 
-              mb: 2,
-              bgcolor: 'rojo.fondo',
-              color: 'rojo.main'
-            }}
-          >
-            <DeleteIcon />
-          </Avatar>
           <Typography component="div" variant="h6" fontWeight="bold" color="rojo.main">
             Eliminar Pedido
           </Typography>
@@ -371,7 +359,7 @@ useEffect(() => {
         
         <DialogContent sx={{ textAlign: 'center', py: 2 }}>
           <Typography variant="body1" color="text.primary" gutterBottom>
-            ¿Estás seguro de que deseas eliminar el pedido
+            ¿Estás seguro de que deseas <Box component="span" sx={{ color: 'rojo.main', fontWeight: 'bold' }}>eliminar</Box> el pedido
           </Typography>
           <Typography variant="h6" fontWeight="bold" color="dorado.main">
             "{orderToDelete?.nombre}"?
@@ -388,7 +376,7 @@ useEffect(() => {
             size="large"
             startIcon={<CloseIcon />}
             sx={{
-              borderRadius: 3,
+              borderRadius: 2,
               px: 4,
               textTransform: 'none',
               fontWeight: 600
@@ -403,7 +391,7 @@ useEffect(() => {
             size="large"
             startIcon={<DeleteIcon />}
             sx={{
-              borderRadius: 3,
+              borderRadius: 2,
               px: 4,
               textTransform: 'none',
               fontWeight: 600,

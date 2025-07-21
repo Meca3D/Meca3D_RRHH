@@ -5,8 +5,8 @@ import {
   Container, Typography, Box, Grid, Card, CardContent, TextField, Button,
   MenuItem, Alert, AppBar, Toolbar, IconButton
 } from '@mui/material';
-import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import {
+  AlarmAddOutlined as AddIcon,
   Save as SaveIcon,
   ArrowBackIosNew as ArrowBackIosNewIcon,
   AccessTime as TimeIcon
@@ -162,7 +162,7 @@ const RegistrarHorasExtras = () => {
               cursor: 'default'
             }}
           >
-            <AddCircleOutlineOutlinedIcon />
+            <AddIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
 
         </Toolbar>

@@ -1,5 +1,5 @@
 // src/components/Auth/Login.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -33,9 +33,19 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const { loading: authLoading } = useAuthStore();
+  const { loading: authLoading, isAuthenticated } = useAuthStore(); 
   const { showSuccess, showError } = useUIStore();
   const navigate = useNavigate();
+
+
+  useEffect(() => {
+    console.log("Login.jsx useEffect: isAuthenticated =", isAuthenticated, "authLoading =", authLoading);
+    // Si ya está autenticado y no está cargando el perfil, navegar a la ruta principal
+    if (isAuthenticated && !authLoading) {
+      console.log("Login.jsx useEffect: Usuario autenticado y perfil cargado. Navegando a /.");
+      navigate('/');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -51,9 +61,12 @@ const Login = () => {
 
     try {
       // Autenticar con Firebase
+      console.log("Login.jsx handleSubmit: Intentando iniciar sesión...");
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
       showSuccess(`¡Bienvenido de nuevo!`);
-      navigate('/');
+            console.log("Login.jsx handleSubmit: signInWithEmailAndPassword exitoso.");
+      console.log("Login.jsx handleSubmit: Llamando a initAuthListener para forzar actualización de estado.");
+      useAuthStore.getState().initAuthListener();
 
     } catch (err) {
       let errorMessage = 'Error al iniciar sesión';
@@ -70,8 +83,10 @@ const Login = () => {
       
       setError(errorMessage);
       showError(errorMessage);
+            console.error("Login.jsx handleSubmit: Error al iniciar sesión:", err);
     } finally {
       setIsSubmitting(false);
+      console.log("Login.jsx handleSubmit: Proceso de envío finalizado.");
     }
   };
 

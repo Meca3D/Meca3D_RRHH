@@ -106,6 +106,9 @@ const ConfiguracionHorasExtras = () => {
       showError('Error al guardar tarifas: ' + error.message);
     } finally {
       setSaving(false);
+      setTimeout(() => {
+        navigate('/horas-extras')
+    }, 2000);
     }
   };
 
@@ -177,7 +180,7 @@ const ConfiguracionHorasExtras = () => {
               cursor: 'default'
             }}
           >
-            <SettingsIcon />
+            <SettingsIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>
@@ -210,22 +213,28 @@ const ConfiguracionHorasExtras = () => {
                       <Box display="flex" alignItems="center" gap={2} mb={2}>
                         <Box 
                           sx={{ 
-                            width: 16, 
-                            height: 16, 
+                            width: 15, 
+                            height: 15, 
+                            minWidth: 15, 
+                            minHeight: 15, 
+                            maxWidth: 15, 
+                            maxHeight: 15, 
                             bgcolor: tipoInfo.color, 
                             borderRadius: '50%' 
                           }} 
                         />
-                        <Typography variant="h6" fontWeight="bold">
+
+                        <Typography variant="h6" fontWeight="bold" sx={{ml:-1}}>
                           {tipoInfo.label}
                         </Typography>
                         {hasChanges && tarifas[tipo.value] !== tarifasOriginales[tipo.value] && (
                           <Chip 
                             label="Modificado" 
                             size="small" 
-                            sx={{ bgcolor: 'naranja.main', color: 'white' }}
+                            sx={{ marginLeft:'auto', fontSize:'0.8rem', bgcolor: 'naranja.main', color: 'white' }}
                           />
                         )}
+                        
                       </Box>
 
                       {/* Input de tarifa */}
@@ -267,7 +276,7 @@ const ConfiguracionHorasExtras = () => {
             {hasChanges && (
               <Alert severity="warning" sx={{ mt: 3 }}>
                 <Typography variant="body1" fontWeight="bold" gutterBottom>
-                  Cambios pendientes de guardar:
+                  Cambios pendientes:
                 </Typography>
                 {Object.keys(tarifas).map(tipo => {
                   if (tarifas[tipo] !== tarifasOriginales[tipo]) {
