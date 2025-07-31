@@ -1,6 +1,6 @@
 // stores/nominaStore.js
 import { create } from 'zustand';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { convertirHorasMinutosADecimal } from '../utils/nominaUtils'
 import { useAuthStore } from './authStore';
@@ -95,7 +95,9 @@ export const useNominaStore = create((set, get) => {
       set({ loading: true });
 
       unsubscribeHorasExtra = onSnapshot(
+        query(
         collection(db, 'HORAS_EXTRA'),
+        where('empleadoEmail', '==', empleadoEmail)),
         (snapshot) => {
           const todasLasHoras = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -130,44 +132,6 @@ export const useNominaStore = create((set, get) => {
       };
     },
 
-    calcularDatosNomina: (usuario, nivelesSalariales = null) => {
-      const niveles = nivelesSalariales || get().nivelesSalariales;
-      
-      if (usuario.tipoNomina === "manual") {
-        return {
-          sueldoBase: usuario.sueldoBaseManual || 0,
-          trienios: usuario.trieniosManual || 0,
-          valorTrienio: usuario.valorTrienioManual || 0
-        };
-      } else {
-        const nivelData = niveles.niveles?.[usuario.nivelSalarial];
-        if (!nivelData) return { sueldoBase: 0, trienios: 0, valorTrienio: 0 };
-
-        let trienios = 0;
-        let valorTrienio = nivelData.valorTrienio;
-      if (usuario.trieniosAutomaticos === true && usuario.fechaIngreso) {
-      try {
-        const añosServicio = get().calcularAñosServicio(usuario.fechaIngreso);
-        trienios = Math.floor(añosServicio / 3);
-      } catch (error) {
-        console.error('Error calculando años de servicio:', error);
-        trienios = usuario.trieniosManual || 0;
-      }
-    } else {
-      trienios = usuario.trieniosManual || 0;
-      if (usuario.valorTrienioManual && usuario.valorTrienioManual > 0) {
-        valorTrienio = usuario.valorTrienioManual;
-      }
-    }
-
-        return {
-          sueldoBase: nivelData.sueldoBase,
-          trienios,
-          valorTrienio
-        };
-      }
-    },
-
     updateConfiguracionNomina: async (userEmail, configuracion) => {
       try {
         set({ loadingConfiguracion: true });
@@ -186,7 +150,7 @@ export const useNominaStore = create((set, get) => {
 
     // ✅ NUEVO: Cleanup all listeners
 cleanup: () => {
-      console.log("NominaStore: cleanup called. Unsubscribing all listeners.");
+
       if (unsubscribeNiveles) {
         unsubscribeNiveles();
         unsubscribeNiveles = null;
@@ -251,12 +215,10 @@ cleanup: () => {
       }
     },
 
-    calcularAñosServicio: (fechaIngreso) => {
+    calcularAñosServicio: (fechaIngreso, fechaNomina = new Date()) => {
       const inicio = new Date(fechaIngreso);
-      const ahora = new Date();
-
-
-      const diffTime = Math.abs(ahora - inicio);
+      const nomina = new Date(fechaNomina);
+      const diffTime = Math.abs(nomina.getTime() - inicio.getTime());
       const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
       return diffYears;
     },
@@ -284,7 +246,6 @@ cleanup: () => {
   loadConfiguracionUsuario: (userEmail) => {
       const { isAuthenticated, user } = useAuthStore.getState();
       if (!isAuthenticated || !user || user.email !== userEmail) {
-        console.warn("NominaStore: No se puede cargar configuración de usuario sin autenticación o permisos.");
         if (unsubscribeConfiguracion) {
           unsubscribeConfiguracion();
           unsubscribeConfiguracion = null;
@@ -329,11 +290,10 @@ cleanup: () => {
       };
     },
 
-    // ✅ NUEVO: Listener para nóminas guardadas del usuario
+
     loadNominasUsuario: (userEmail) => {
 const { isAuthenticated, user } = useAuthStore.getState();
       if (!isAuthenticated || !user || user.email !== userEmail) {
-        console.warn("NominaStore: No se pueden cargar nóminas de usuario sin autenticación o permisos.");
         if (unsubscribeNominas) {
           unsubscribeNominas();
           unsubscribeNominas = null;
@@ -376,7 +336,7 @@ const { isAuthenticated, user } = useAuthStore.getState();
       };
     },
 
-    calcularNominaCompleta: (configuracion, horasExtra = [], extra,deduccion) => {
+    calcularNominaCompleta: (configuracion, numeroTrienios, horasExtra = [], extra,deduccion) => {
       if (!configuracion) {
         return {
           sueldoBase: 0,
@@ -393,7 +353,7 @@ const { isAuthenticated, user } = useAuthStore.getState();
       }
 
       const totalHorasExtra = get().calcularTotalHorasExtra(horasExtra);
-      const totalTrienios = (configuracion.trienios || 0) * (configuracion.valorTrienio || 0);
+      const totalTrienios = (numeroTrienios || 0) * (configuracion.valorTrienio || 0);
 
       const otrosComplementos = [];
       let totalOtrosComplementos = 0;
@@ -413,7 +373,7 @@ const { isAuthenticated, user } = useAuthStore.getState();
 
       return {
         sueldoBase: configuracion.sueldoBase || 0,
-        trienios: configuracion.trienios || 0,
+        trienios: numeroTrienios || 0,
         valorTrienio: configuracion.valorTrienio || 0,
         totalTrienios,
         extra,
@@ -425,7 +385,48 @@ const { isAuthenticated, user } = useAuthStore.getState();
       };
     },
 
-    // ✅ NUEVO: Guardar nómina en BD
+getEstadisticasPeriodoNomina: (nominas) => {
+      const totalNominaNeta = nominas.reduce((sum, n) => sum + (n.total || 0), 0); 
+      const totalSueldoBase = nominas.reduce((sum, n) => sum + (n.sueldoBase || 0), 0);
+      const totalTrienios = nominas.reduce((sum, n) => sum + (n.trienios || 0), 0); 
+
+      // Sumar importes de horasExtra.desglose
+      const totalHorasExtra = nominas.reduce((sum, n) => 
+        sum + (n.horasExtra?.desglose?.reduce((hSum, h) => hSum + (h.importe || 0), 0) || 0)
+      , 0);
+
+      // Sumar importes de otrosComplementos
+      const totalOtrosComplementos = nominas.reduce((sum, n) => 
+        sum + (n.otrosComplementos?.reduce((cSum, c) => cSum + (c.importe || 0), 0) || 0)
+      , 0);
+
+      // Acceder a .cantidad de extra y deduccion
+      const totalExtra = nominas.reduce((sum, n) => sum + (n.extra?.cantidad || 0), 0);
+      const totalDeduccion = nominas.reduce((sum, n) => sum + (n.deduccion?.cantidad || 0), 0);
+
+      // Para el desglose:
+      const breakdown = {
+          'Sueldo Base': totalSueldoBase,
+          'Trienios': totalTrienios,
+          'Otros Complementos': totalOtrosComplementos,
+          'Horas Extra': totalHorasExtra,
+          'Extras Adicionales': totalExtra,
+          'Deducciones Adicionales': totalDeduccion
+      };
+
+      return {
+          totalNominaNeta,
+          totalSueldoBase,
+          totalTrienios,
+          totalOtrosComplementos,
+          totalHorasExtra,
+          totalExtra,
+          totalDeduccion,
+          breakdown,
+          count: nominas.length
+      };
+    },
+
     guardarNomina: async (nominaData) => {
       try {
         const docRef = await addDoc(collection(db, 'NOMINAS'), {
@@ -478,6 +479,57 @@ const { isAuthenticated, user } = useAuthStore.getState();
         console.error("Error al obtener nómina por ID:", error);
         set({ error: error.message, loading: false });
         return null;
+      }
+    },
+
+        buscarNominaPorMesAno: async (userEmail, mes, año) => {
+      try {
+        const nominasRef = collection(db, 'NOMINAS');
+        const q = query(
+          nominasRef,
+          where('empleadoEmail', '==', userEmail),
+          where('mes', '==', mes),
+          where('año', '==', año),
+          where('tipo', '==', 'mensual')
+        );
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          return { id: doc.id, ...doc.data() };
+        }
+        return null;
+      } catch (error) {
+        console.error('Error buscando nómina:', error);
+        return null;
+      }
+    },
+
+    // Obtener período de horas extras de una nómina específica
+    obtenerPeriodoHorasExtras: async (userEmail, mesesAtras) => {
+      try {
+        const fechaReferencia = new Date();
+        fechaReferencia.setMonth(fechaReferencia.getMonth() - mesesAtras);
+        
+        const mes = fechaReferencia.toLocaleDateString('es-ES', { month: 'long' });
+        const año = fechaReferencia.getFullYear();
+        
+        const nomina = await get().buscarNominaPorMesAno(userEmail, 
+          mes.charAt(0).toUpperCase() + mes.slice(1), año);
+        
+        if (nomina && nomina.periodoHorasExtra) {
+          return {
+            fechaInicio: nomina.periodoHorasExtra.fechaInicio,
+            fechaFin: nomina.periodoHorasExtra.fechaFin,
+            encontrada: true
+          };
+        }
+        
+        return { encontrada: false };
+      } catch (error) {
+        console.error('Error obteniendo período:', error);
+        return { encontrada: false };
       }
     },
 

@@ -139,7 +139,31 @@ export const useEmpleadosStore = create((set, get) => {
       }
     },
 
-    // ✅ Métodos de utilidad
+      changeEmployeePassword: async (email, newPassword) => {
+        try {
+          set({ loading: true, error: null });
+          
+          const response = await fetch('/.netlify/functions/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, newPassword })
+          });
+
+          const result = await response.json();
+          
+          if (result.success) {
+            set({ loading: false });
+            return { success: true, message: result.message };
+          } else {
+            set({ error: result.message, loading: false });
+            return { success: false, message: result.message };
+          }
+        } catch (error) {
+          set({ error: error.message, loading: false });
+          return { success: false, message: error.message };
+        }
+      },
+
     clearEmpleadoSeleccionado: () => {
       set({ empleadoSeleccionado: null });
     },

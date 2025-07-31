@@ -39,10 +39,9 @@ const Login = () => {
 
 
   useEffect(() => {
-    console.log("Login.jsx useEffect: isAuthenticated =", isAuthenticated, "authLoading =", authLoading);
+
     // Si ya está autenticado y no está cargando el perfil, navegar a la ruta principal
     if (isAuthenticated && !authLoading) {
-      console.log("Login.jsx useEffect: Usuario autenticado y perfil cargado. Navegando a /.");
       navigate('/');
     }
   }, [isAuthenticated, authLoading, navigate]);
@@ -61,11 +60,8 @@ const Login = () => {
 
     try {
       // Autenticar con Firebase
-      console.log("Login.jsx handleSubmit: Intentando iniciar sesión...");
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
       showSuccess(`¡Bienvenido de nuevo!`);
-            console.log("Login.jsx handleSubmit: signInWithEmailAndPassword exitoso.");
-      console.log("Login.jsx handleSubmit: Llamando a initAuthListener para forzar actualización de estado.");
       useAuthStore.getState().initAuthListener();
 
     } catch (err) {
@@ -86,7 +82,6 @@ const Login = () => {
             console.error("Login.jsx handleSubmit: Error al iniciar sesión:", err);
     } finally {
       setIsSubmitting(false);
-      console.log("Login.jsx handleSubmit: Proceso de envío finalizado.");
     }
   };
 

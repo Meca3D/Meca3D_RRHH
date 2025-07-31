@@ -67,12 +67,9 @@ export const useHorasExtraStore = create((set, get) => {
             console.error('Error en onSnapshot horas extra:', error);
             
             if (error.code === "failed-precondition") {
-              // ✅ Error de índice faltante
-              console.log("🔍 Índice compuesto requerido. Usando query básica...");
               // Fallback a query básica
               get().fetchHorasExtraBasic(userEmail, fechaInicio, fechaFin);
             } else if (error.code === "permission-denied") {
-              console.log("Listener horas extra: permission-denied ignorado", error);
               set({ 
                 horasExtra: [], 
                 loading: false, 
@@ -119,7 +116,6 @@ export const useHorasExtraStore = create((set, get) => {
       unsubscribeHorasExtra = onSnapshot(
         horasExtraQuery,
         (snapshot) => {
-          console.log('🔍 Snapshot básico recibido:', snapshot.docs.length, 'horas extra');
           
           let horasData = snapshot.docs.map(doc => ({
             id: doc.id,

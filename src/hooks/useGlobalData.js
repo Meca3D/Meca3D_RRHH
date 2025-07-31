@@ -20,6 +20,7 @@ export const useGlobalData = () => {
   } = useHorasExtraStore();
   const {
     loadConfiguracionUsuario,
+    calcularAñosServicio,
     configuracionNomina,
     nivelesSalariales,
     loadNivelesSalariales, 
@@ -46,16 +47,17 @@ export const useGlobalData = () => {
     }
     if (user?.email) {
       fetchHorasExtra(user.email, firstDay, lastDay);
-    }
-    if (user?.email) {
-      fetchHorasExtra(user.email, firstDay, lastDay);
       loadConfiguracionUsuario(user.email);
     }
+
 
   }, [isAuthenticated, orders.length, products.length, ordersLoading, productsLoading, nivelesSalariales?.niveles, nominaLoading, user?.email]);
     
    const hasUserNominaConfig = !!(userProfile && configuracionNomina && userProfile.tarifasHorasExtra);
-
+   const numTrienios = userProfile?.fechaIngreso ? 
+    Math.floor(calcularAñosServicio(userProfile.fechaIngreso, lastDay) / 3) : 0; 
+    
+   
 
   return {
     dataLoaded: orders.length > 0 && products.length > 0,
@@ -75,21 +77,15 @@ export const useGlobalData = () => {
       totalTiempoMesActual: convertirHorasDecimalesAHorasYMinutos(calcularTotalHorasDecimales(horasExtra)),
       mesNomina: capitalizeFirstLetter(new Date(lastDay).toLocaleString('default', { month: 'long' })),  
       sueldoBase: configuracionNomina.sueldoBase|| 0,
-      trienios: configuracionNomina.tieneTrienios ? configuracionNomina.trienios : 0,
+      trienios: configuracionNomina.tieneTrienios ? numTrienios: 0,
       valorTrienio: configuracionNomina.tieneTrienios ? configuracionNomina.valorTrienio : 0,
       totalTrienios: configuracionNomina.tieneTrienios ? 
-        configuracionNomina.trienios * configuracionNomina.valorTrienio : 0,
+        numTrienios * configuracionNomina.valorTrienio : 0,
       nivelSalarial: configuracionNomina.nivelSalarial || null,
       nivelPreasignado: userProfile.nivel || null,
       tieneNivelPreasignado: !!(userProfile.nivel),
       isConfigured: true,
-      tarifasHorasExtra: configuracionNomina.tarifasHorasExtra ||
-        nivelesSalariales?.tarifasHorasExtraBase || {
-          normal: 15,
-          nocturna: 20,
-          festiva: 24.75,
-          festivaNocturna: 30
-        },
+      tarifasHorasExtra: userProfile.tarifasHorasExtra,
       salarioBase: configuracionNomina.sueldoBase ? `${Math.round(configuracionNomina.sueldoBase)}€` : '0€',
       fechaIngreso: userProfile.fechaIngreso || null,
       añosServicio: userProfile.fechaIngreso ?
@@ -98,7 +94,7 @@ export const useGlobalData = () => {
       tieneotrosComplementos: (configuracionNomina.tieneotrosComplementos || false),
       salarioCompletoEstimado: 
         (configuracionNomina.sueldoBase || 0) +
-        ((configuracionNomina.trienios || 0) * (configuracionNomina.valorTrienio || 0)) +
+        ((numTrienios|| 0) * (configuracionNomina.valorTrienio || 0)) +
         ((configuracionNomina?.otroComplemento1?.importe || 0) + (configuracionNomina?.otroComplemento2?.importe || 0)) +
         calcularTotalHorasExtra(horasExtra),
     } : { totalImporteHorasMesActual: +calcularTotalHorasExtra(horasExtra),

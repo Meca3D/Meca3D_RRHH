@@ -14,7 +14,7 @@ export const useProductsStore = create((set, get) => {
     
 
 fetchProducts: () => {
-  // ✅ AÑADIR: Evitar múltiples listeners
+
    const state = get();
       if (state.initialized || unsubscribe) {
         return () => {};
@@ -28,7 +28,7 @@ fetchProducts: () => {
         id: doc.id,
         ...doc.data()
       }))
-      // ✅ Ordenar en el cliente
+
       .sort((a, b) => {
         if (a.tipo === b.tipo) {
           return a.nombre.localeCompare(b.nombre);

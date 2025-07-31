@@ -17,7 +17,7 @@ export const formatDateForInput = (date) => {
 };
 
 export const tiposHorasExtra = [
-  { value: 'normal', label: 'Normal', color: '#00FF00', short: 'N' },
+  { value: 'normal', label: 'Normal', color: '#10B981', short: 'N' },
   { value: 'festiva', label: 'Festiva', color: '#0000FF', short: 'F' },
   { value: 'nocturna', label: 'Nocturna', color: '#7B1FA2', short: 'Noc' },
   { value: 'festivaNocturna', label: 'Festiva Nocturna', color: '#FF0000',short: 'F.Noc' }

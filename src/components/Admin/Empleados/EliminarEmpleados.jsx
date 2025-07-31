@@ -148,7 +148,7 @@ const EliminarEmpleados = () => {
             </Typography>
           </Box>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={3} sx={{ p:3 }} >
             {empleados.map((empleado) => (
               <Grid key={empleado.email} size={{ xs: 12, sm: 6, md: 4 }}>
                 {/* ✅ CARD ROJA DEL EMPLEADO */}
@@ -220,7 +220,7 @@ const EliminarEmpleados = () => {
 
                     <Typography 
                       variant="body2" 
-                      color="text.secondary"
+                      color="rojo.main"
                       sx={{ 
                         mb: 0,
                         fontSize: '1.1rem',

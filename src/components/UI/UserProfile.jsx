@@ -141,6 +141,9 @@ const UserProfile = ({ open, onClose }) => {
       showSuccess('Perfil actualizado correctamente');
       setEditMode(false);
       setSelectedFile(null);
+      setTimeout(() => {
+        onClose()
+       }, 2000);
       
     } catch (error) {
       showError(error.message || 'Error al actualizar el perfil');
@@ -412,7 +415,7 @@ const UserProfile = ({ open, onClose }) => {
               </TextField>
 
               <TextField
-                label="Nivel profesional"
+                label="Nivel salarial"
                 value={formData.nivel}
                 onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}
                 fullWidth

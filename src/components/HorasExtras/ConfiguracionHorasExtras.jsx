@@ -21,6 +21,7 @@ import {
 } from '../../utils/nominaUtils';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import {formatearNombre} from '../../components/Helpers';
 
 const ConfiguracionHorasExtras = () => {
   const navigate = useNavigate();
@@ -52,10 +53,10 @@ const ConfiguracionHorasExtras = () => {
     } else {
       // Si no tiene tarifas personalizadas, usar las base del sistema
       const tarifasBase = {
-        normal: 10,
-        nocturna: 15,
-        festiva: 20,
-        festivaNocturna: 25
+        normal: 0,
+        nocturna: 0,
+        festiva: 0,
+        festivaNocturna: 0
       };
       setTarifas(tarifasBase);
       setTarifasOriginales(tarifasBase);
@@ -102,13 +103,13 @@ const ConfiguracionHorasExtras = () => {
 
       setTarifasOriginales(tarifas);
       showSuccess('Tarifas actualizadas correctamente');
+      setTimeout(() => {
+        navigate('/horas-extras')
+    }, 2000);
     } catch (error) {
       showError('Error al guardar tarifas: ' + error.message);
     } finally {
       setSaving(false);
-      setTimeout(() => {
-        navigate('/horas-extras')
-    }, 2000);
     }
   };
 
@@ -159,7 +160,7 @@ const ConfiguracionHorasExtras = () => {
                 lineHeight: 1.2
               }}
             >
-              Configuración de Tarifas
+              Configuración de Precios
             </Typography>
             <Typography 
               variant="caption" 
@@ -243,6 +244,7 @@ const ConfiguracionHorasExtras = () => {
                         label="Precio por hora (€)"
                         value={tarifas[tipo.value] || ''}
                         onChange={(e) => handleTarifaChange(tipo.value, e.target.value)}
+                        onWheel={(e) => e.target.blur()}
                         slotProps={{ 
                             htmlInput:{
                           min: 0, 
@@ -283,7 +285,7 @@ const ConfiguracionHorasExtras = () => {
                     const tipoInfo = getTipoInfo(tipo);
                     return (
                       <Typography key={tipo} variant="body2">
-                        • <strong>{tipoInfo.label}:</strong> {formatCurrency(tarifasOriginales[tipo])} → {formatCurrency(tarifas[tipo])}
+                        • <strong>{formatearNombre(tipoInfo.label)}:</strong> {formatCurrency(tarifasOriginales[tipo])} → {formatCurrency(tarifas[tipo])}
                       </Typography>
                     );
                   }

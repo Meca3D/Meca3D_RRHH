@@ -39,7 +39,7 @@ import { obtenerNumeroMes } from '../Helpers';
 const GenerarNomina = () => {
   const navigate = useNavigate();
   const { id: nominaId } = useParams()
-  const { user} = useAuthStore();
+  const { user, userProfile } = useAuthStore();
   const {
     loadConfiguracionUsuario,
     configuracionNomina,
@@ -47,7 +47,8 @@ const GenerarNomina = () => {
     guardarNomina,
     loadingConfiguracion,
     actualizarNomina,
-    getNominaById
+    getNominaById,
+    calcularAñosServicio
   } = useNominaStore();
 
   
@@ -76,6 +77,8 @@ const GenerarNomina = () => {
   const [extraCantidad, setExtraCantidad] = useState(0);
   const [saving, setSaving] = useState(false);
   const [tipoNomina, setTipoNomina] = useState('mensual'); 
+  const [numeroTrienios, setNumeroTrienios] = useState(0);
+
 
   const [tipoPaga, setTipoPaga] = useState('verano');
   const [importe, setImporte] = useState(0);
@@ -108,6 +111,7 @@ const GenerarNomina = () => {
           setSelectedDate(dayjs().month(obtenerNumeroMes(nomina.mes)-1).year(nomina.año));
           setFechaInicio(nomina.periodoHorasExtra?.fechaInicio);
           setFechaFin(nomina.periodoHorasExtra?.fechaFin);
+          setNumeroTrienios(Math.floor(nomina.trienios/configuracionNomina.valorTrienio));
           setTipoNomina(nomina.tipo);
           setAñoNomina(nomina.año)
           setMesNomina(nomina.mes)
@@ -172,11 +176,26 @@ const GenerarNomina = () => {
       setHorasExtraPeriodo(horasExtra);
     }, [horasExtra]);
 
+    useEffect(() => {
+      if (configuracionNomina?.tieneTrienios && userProfile?.fechaIngreso) {
+        try {
+          const fechaNomina = dayjs(selectedDate).startOf('month').format('YYYY-MM-DD');
+          const añosServicio = calcularAñosServicio(userProfile?.fechaIngreso, fechaNomina);
+          const trieniosAutomaticos = Math.floor(añosServicio / 3);
+          setNumeroTrienios(trieniosAutomaticos);
+        } catch (error) {
+          console.error('Error calculando trienios:', error);
+          setNumeroTrienios(0);
+        }
+      }
+}, [configuracionNomina, user?.fechaIngreso, selectedDate]);
+
   useEffect(() => {
     if (configuracionNomina && fechaInicio && fechaFin && !loadingHorasExtra) {
       
       const calculo = calcularNominaCompleta(
         configuracionNomina,
+        numeroTrienios,
         horasExtraPeriodo,
         tieneExtra? Number(extraCantidad):0, 
         tieneDeduccion?Number(deduccionCantidad):0
@@ -196,12 +215,12 @@ const GenerarNomina = () => {
         },
         otrosComplementos: calculo.otrosComplementos,
         deduccion: {
-          concepto: tieneDeduccion ? deduccionConcepto : 'sin complemento extra',
+          concepto: tieneDeduccion ? deduccionConcepto : 'sin deducción',
           cantidad: tieneDeduccion ? Number(deduccionCantidad) : 0,
         },
 
         extra: {
-          concepto: tieneExtra ? extraConcepto : 'sin deducción',
+          concepto: tieneExtra ? extraConcepto : 'sin complemento extra',
           cantidad: tieneExtra ? Number(extraCantidad) : 0,
         },
           
@@ -211,7 +230,7 @@ const GenerarNomina = () => {
     } else {
       setNominaCalculada(null);
     }
-  }, [configuracionNomina, fechaInicio, fechaFin, horasExtraPeriodo, loadingHorasExtra, tieneDeduccion, deduccionCantidad, tieneExtra, extraCantidad, tipoNomina, selectedDate, calcularNominaCompleta, calcularTotalHorasExtra, getEstadisticasPeriodo]);
+  }, [configuracionNomina, fechaInicio, fechaFin, horasExtraPeriodo, loadingHorasExtra, tieneDeduccion, deduccionCantidad, tieneExtra, extraCantidad, tipoNomina, selectedDate, calcularNominaCompleta, calcularTotalHorasExtra, getEstadisticasPeriodo, numeroTrienios]);
 
   // Guardar paga extra
   const handleGuardar = async () => {
@@ -233,7 +252,7 @@ const GenerarNomina = () => {
         horasExtra: { total: 0, desglose: [] },
         deduccion: {
           concepto: deduccionConcepto,
-          cantidad:  deduccionCantidad,
+          cantidad:  Number(deduccionCantidad),
         },
   
         extra: {
@@ -249,6 +268,7 @@ const GenerarNomina = () => {
         success = await actualizarNomina(nominaId, nominaToSave);
         if (success) {
           showSuccess('Paga Extra actualizada correctamente.');
+          navigate('/nominas/gestionar');
         } else {
           showError('Error al actualizar la Paga Extra.');
         }
@@ -256,11 +276,12 @@ const GenerarNomina = () => {
         const newNominaId = await guardarNomina(nominaToSave);
         if (newNominaId) {
           showSuccess('Paga Extra guardada correctamente.');
+          navigate('/nominas'); 
         } else {
           showError('Error al guardar Paga Extra.');
         }
       }
-      navigate('/nominas'); // Redirect after save/update
+
     } catch (error) {
       showError(`Error: ${error.message}`);
     } finally {
@@ -291,6 +312,7 @@ const GenerarNomina = () => {
         success = await actualizarNomina(nominaId, nominaToSave);
         if (success) {
           showSuccess('Nómina actualizada correctamente.');
+          navigate('/nominas/gestionar');
         } else {
           showError('Error al actualizar la nómina.');
         }
@@ -298,11 +320,11 @@ const GenerarNomina = () => {
         const newNominaId = await guardarNomina(nominaToSave);
         if (newNominaId) {
           showSuccess('Nómina guardada correctamente.');
+          navigate('/nominas');
         } else {
           showError('Error al guardar la nómina.');
         }
       }
-      navigate('/nominas'); // Redirect after save/update
     } catch (error) {
       showError(`Error: ${error.message}`);
     } finally {
@@ -627,6 +649,99 @@ const GenerarNomina = () => {
                         )}
 
                         <Divider sx={{ bgcolor:'black', mt:4 }} />
+
+                        {/* Trienios Dinámicos */}
+                        {configuracionNomina?.tieneTrienios && (
+                            <Box sx={{display:'flex', flexDirection:'column',  mt:2}}>
+                              <Typography textAlign="center" variant="h5" color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
+                                Trienios
+                              </Typography>
+                              {!userProfile?.fechaIngreso && (
+                              <Alert severity="error" sx={{ mb: 2 }}>
+                                <Typography textAlign="center" variant='body2'>
+                                  Configura en tu perfil, la fecha de ingreso en la empresa para calcular automaticamente tus trienios
+                                </Typography>
+                              </Alert>
+                              )}
+
+                              <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', p:2, mt:1,}}>
+                                <TextField
+                                  label="Cantidad Trienios"
+                                  type="number"
+                                  value={numeroTrienios}
+                                  onChange={(e) => setNumeroTrienios(parseInt(e.target.value) || 0)}
+                                  fullWidth
+
+                                  sx={{
+                                    '& .MuiInputLabel-root': {
+                                      color: 'black',
+                                    },
+                                    '& .MuiOutlinedInput-root': {
+                                      
+                                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: isEditing ? "azul.main" : "naranja.main"
+                                      },
+                                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: isEditing ? "azul.main" : "naranja.main"
+                                      },
+                                      '&.Mui-disabled .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: isEditing ? "azul.main" : "naranja.main"
+                                      }
+                                    },
+                                  '& .MuiInputLabel-root.Mui-focused': {
+                                    color: isEditing?"azul.main":"naranja.main"
+                                  }
+                                  }}
+                                />
+                                 <TextField
+                                  label="Precio Trienio"
+                                  type="string"
+                                  value={formatCurrency(configuracionNomina.valorTrienio)}
+                                  disabled
+                                  variant="outlined" 
+                                  sx={{
+                                    bgcolor:'rgba(0,0,0,0.08)',
+                                    // Estilos para el borde cuando el TextField está deshabilitado (variante outlined)
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: 'black !important', // Borde negro
+                                    },
+                                    // Estilos para el texto de entrada cuando el TextField está deshabilitado
+                                    '& .MuiInputBase-input.Mui-disabled': {
+                                      textAlign: 'center',
+                                      color: 'black !important', // Color del texto negro
+                                      // Esto es crucial para navegadores basados en WebKit (Chrome, Safari)
+                                      // que pueden tener un estilo de texto gris predeterminado para inputs deshabilitados
+                                      WebkitTextFillColor: 'black !important', 
+                                    },
+                                    '& .MuiInputBase-input': {
+                                      textAlign: 'center', // Centra el texto horizontalmente
+                                      color: 'black !important', // Asegura que el texto siga siendo negro
+                                      WebkitTextFillColor: 'black !important', // Crucial para navegadores WebKit
+                                    },
+                                    // Estilos para la etiqueta (label) cuando el TextField está deshabilitado
+                                    '& .MuiInputLabel-root.Mui-disabled': {
+                                      textAlign: 'center',
+                                      color: 'black !important', // Color de la etiqueta negro
+                                    },
+
+                                    // Si usas la variante 'filled' o 'standard', también querrás esto para el underline
+                                     '& .MuiFilledInput-underline:before': { // Para 'filled'
+                                       borderBottomColor: 'black !important',
+                                     },
+                                     '& .MuiInput-underline:before': { // Para 'standard'
+                                       borderBottomColor: 'black !important',
+                                     },
+                                  }}
+                                />
+                            </Box>
+                            <Divider sx={{ bgcolor:'black', mt:3}} />
+                            </Box>
+                        )}
+
+
+
+
+
                         <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', mt:3,}}>
                         <Typography  variant="h5"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
                           Pago Extra
@@ -979,30 +1094,35 @@ const GenerarNomina = () => {
                 <Typography sx={{ mt: 2 }}>Calculando nómina...</Typography>
               </Box>
             ) : nominaCalculada ? (
-              <Box  py={3} sx={{mt:-1 }}>
+              <Box  py={3} sx={{mt:-1 }}>              
                     <Box display="flex" justifyContent="space-between" p={1}>
                     <Typography><strong>Sueldo base:</strong></Typography> <Typography>{formatCurrency(nominaCalculada.sueldoBase)}</Typography>
                     </Box>
-                    {nominaCalculada.totalTrienios > 0 && (
+                    {nominaCalculada.trienios > 0 && (
                       <>
                     <Divider />
                     <Box display="flex" justifyContent="space-between" p={1}>
-                    <Typography><strong>Trienios:</strong></Typography>
-                     <Typography>{formatCurrency(nominaCalculada.totalTrienios)}</Typography>
+                      <Box display="flex" flexDirection="column">
+                        <Typography><strong>Trienios:</strong></Typography>
+                        <Typography variant='body2' textAlign='center'>{numeroTrienios} x {configuracionNomina.valorTrienio}€</Typography>
+                      </Box>
+                      <Box display="flex" flexDirection="column" justifyContent={'center'}>
+                        <Typography>{formatCurrency(nominaCalculada.trienios)}</Typography>
+                      </Box>
                     </Box>
                       </>
                     )}
                     {nominaCalculada.otrosComplementos && nominaCalculada.otrosComplementos.length > 0 && (
                       nominaCalculada.otrosComplementos.map((comp, idx) => (
-                        <>
+                        <Box key={idx}>
                         <Divider />
-                        <Box display="flex" justifyContent="space-between" p={1} key={idx}>
+                        <Box display="flex" justifyContent="space-between" p={1} >
                         <Typography key={idx}>
                           <strong>{comp.concepto}:</strong>
                         </Typography>
                         <Typography>{formatCurrency(comp.importe)}</Typography>
                         </Box>
-                        </>
+                        </Box>
                       ))
                     )}
                     <Divider />
@@ -1030,7 +1150,7 @@ const GenerarNomina = () => {
                     <Box display="flex" justifyContent="space-between" p={1}>
                       <Box display="flex" flexDirection="column">
                     <Typography><strong>Deducción:</strong></Typography>
-                    <Typography color="textSecondary" variant='body2'><strong>{deduccionConcepto}</strong></Typography>
+                    <Typography variant='body2'> {deduccionConcepto}</Typography>
                     </Box>
                     <Box display="flex" flexDirection="column" justifyContent={'center'}>
                      <Typography color='rojo.main'>{formatCurrency(-nominaCalculada.deduccion.cantidad)}</Typography>
@@ -1041,7 +1161,7 @@ const GenerarNomina = () => {
                     
                     <Box 
                       borderTop="2px solid" 
-                      borderColor="grey.400"
+                      borderColor="black"
                       bgcolor={isEditing?"azul.fondo":"naranja.fondo"} 
                       display="flex" 
                       justifyContent="space-between" 

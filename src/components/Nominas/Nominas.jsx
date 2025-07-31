@@ -16,10 +16,15 @@ import {
 } from '@mui/icons-material';
 import { useGlobalData } from '../../hooks/useGlobalData';
 import { formatCurrency } from '../../utils/nominaUtils';
+import { useNominaStore} from '../../stores/nominaStore';
+import { useAuthStore } from '../../stores/authStore';
 
 const Nominas = () => {
+  const { userProfile } = useAuthStore();
+  const { configuracionNomina }= useNominaStore()
   const navigate = useNavigate();
   const { userSalaryInfo } = useGlobalData();
+
 
   // ✅ 5 opciones del menú principal
   const quickActions = [
@@ -56,7 +61,7 @@ const Nominas = () => {
       color: 'verde.main',
       bgColor: 'verde.fondo',
       gradient: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
-      route: '/nominas/resumen'
+      route: '/nominas/estadisticas'
     },
     {
       id: 'configurar',
@@ -102,19 +107,30 @@ const Nominas = () => {
         
         <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
             <WysiwygOutlinedIcon sx={{ fontSize: '4rem', color:'verde.main'}} />
-          <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{ml:-5}}>
+          <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{ml: 2}}>
             <Typography sx={{ color:'verde.main'}} textAlign="center" variant="h4" fontWeight="bold" gutterBottom>
-              Gestión de Nóminas
+              Nóminas
             </Typography>
             <Box display="flex" gap={1} flexWrap="nowrap">
               {userSalaryInfo.salarioCompletoEstimado ? (
                 <>
+                {!userProfile.fechaIngreso && configuracionNomina.tieneTrienios ? (
+                  <Chip
+                    label="Falta fecha de ingreso"
+                    sx={{
+                      bgcolor: 'rojo.fondo',
+                      color: 'rojo.main',
+                      fontWeight: 700
+                    }}
+                  />
+                ) : (
                   <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{px:5}}>
                   <Typography  color="verde.main" variant="h6" fontSize=" 1rem" textAlign="center" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                     Estimado {userSalaryInfo.mesNomina || 'Mes Actual'}   
                   </Typography>
                   <Typography textAlign="center" color="verde.main"><strong>{formatCurrency(userSalaryInfo.salarioCompletoEstimado)}</strong></Typography>
                   </Box>
+                )}
                 </>
               ) : (
                 <Chip 

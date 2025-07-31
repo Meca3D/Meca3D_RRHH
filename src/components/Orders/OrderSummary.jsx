@@ -150,12 +150,12 @@ const productoCompleto = products.find(p => p.id === productoId);
       const canvas = await html2canvas(summaryRef.current, options);
       
       // Convertir a URL de datos
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpg');
       
       // Crear link para descargar
       const link = document.createElement('a');
       link.href = imgData;
-      link.download = `${order.nombre || 'Pedido'}-${new Date().toLocaleDateString()}.png`;
+      link.download = `${order.nombre || 'Pedido'}-${new Date().toLocaleDateString()}.jpg`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

@@ -21,14 +21,11 @@ export const useAuthStore = create((set, get) => ({
   // Function to initialize the auth listener (called once, likely in App.jsx or main entry)
   // This ensures the listener is set up correctly when the app loads
  initAuthListener: () => {
-    console.log("AuthStore: initAuthListener called.");
     if (unsubscribeAuth) {
-      console.log("AuthStore: Existing auth listener found, returning.");
       return; 
     }
 
     unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      console.log("AuthStore: onAuthStateChanged fired. User:", user ? user.email : 'null');
       if (user) {
         set({
           user,
@@ -36,11 +33,9 @@ export const useAuthStore = create((set, get) => ({
           loading: true, // Still loading while user profile is fetched
         });
         // Cargar perfil
-        console.log("AuthStore: User authenticated, loading profile for:", user.email);
         loadUserProfileFunction(user.email, set); 
       } else {
         // No user, reset all states
-        console.log("AuthStore: No user authenticated, resetting state.");
         set({
           user: null,
           userRole: null,
@@ -49,13 +44,11 @@ export const useAuthStore = create((set, get) => ({
           loading: false, // Auth check complete, no user logged in
         });
         if (unsubscribeUserProfile) {
-          console.log("AuthStore: Unsubscribing user profile listener on logout.");
           unsubscribeUserProfile();
           unsubscribeUserProfile = null;
         }
         useHorasExtraStore.getState().clearHorasExtra();
         useNominaStore.getState().cleanup();
-        console.log("AuthStore: Called cleanup on other stores.");
       }
     });
   },
@@ -157,22 +150,15 @@ export const useAuthStore = create((set, get) => ({
   },
 
 logout: async () => {
-    console.log("AuthStore: Initiating logout process.");
-    // Asegurarse de que Firebase signOut ocurra primero
-    await signOut(auth);
-    console.log("AuthStore: Firebase signOut completed.");
 
-    // Desuscribir el listener de autenticación *después* de signOut
-    // Esto asegura que onAuthStateChanged tenga la oportunidad de dispararse con user: null
+    await signOut(auth);
     if (unsubscribeAuth) {
       unsubscribeAuth();
       unsubscribeAuth = null;
-      console.log("AuthStore: Auth listener unsubscribed after signOut.");
     }
     if (unsubscribeUserProfile) {
       unsubscribeUserProfile();
       unsubscribeUserProfile = null;
-      console.log("AuthStore: User profile listener unsubscribed after signOut.");
     }
 
     // Resetear el estado del store después de un signOut exitoso
@@ -183,19 +169,17 @@ logout: async () => {
       isAuthenticated: false,
       loading: false, // Ya no está cargando después del logout
     });
-    console.log("AuthStore: State reset after logout.");
     useHorasExtraStore.getState().clearHorasExtra();
     useNominaStore.getState().cleanup();
     useOrdersStore.getState().clearOrders();
-    console.log("AuthStore: Called cleanup on other stores during explicit logout.");
   },
 
   setUserProfile: (profile) => {
     set({ userProfile: { ...get().userProfile, ...profile } });
-        console.log("AuthStore: setUserProfile called.");
   },
 
     // Getters para roles
+    isCocinero: () => get().userRole === 'cocinero',
     isOwner: () => get().userRole === 'owner',
     isAdmin: () => get().userRole === 'admin',
     isUser: () => get().userRole === 'user',
@@ -204,20 +188,15 @@ logout: async () => {
   }));
 
 const loadUserProfileFunction = (userEmail, set) => {
-  console.log("AuthStore: loadUserProfileFunction called for:", userEmail);
   if (unsubscribeUserProfile) {
     unsubscribeUserProfile();
-    console.log("AuthStore: Unsubscribed previous user profile listener in loadUserProfileFunction.");
- 
   }
 
   unsubscribeUserProfile = onSnapshot(
     doc(db, 'USUARIOS', userEmail),
     (docSnap) => {
-      console.log("AuthStore: onSnapshot callback fired for user profile.");
       if (docSnap.exists()) {
         const userData = docSnap.data();
-        console.log("AuthStore: User profile document exists. Data:", userData);
         set({ 
           userProfile: {
             email: userEmail,
@@ -236,9 +215,7 @@ const loadUserProfileFunction = (userEmail, set) => {
           userRole: userData.rol,
           loading: false
         });
-        console.log("AuthStore: User profile loaded and state updated. Loading: false.");
       } else {
-        console.warn("AuthStore: User profile document does NOT exist for:", userEmail);
         set({ 
           userProfile: {
             email: userEmail,
@@ -249,7 +226,6 @@ const loadUserProfileFunction = (userEmail, set) => {
           userRole: 'user',
           loading: false
         });
-        console.log("AuthStore: User profile not found, default state set. Loading: false.");
       }
     },
     (error) => {
@@ -264,7 +240,6 @@ const loadUserProfileFunction = (userEmail, set) => {
         userRole: 'user',
         loading: false
       });
-      console.log("AuthStore: Error loading user profile, default state set. Loading: false.");
     }
   );
 };

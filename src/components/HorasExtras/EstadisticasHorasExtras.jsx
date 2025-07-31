@@ -19,7 +19,6 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useHorasExtraStore } from '../../stores/horasExtraStore';
 import { useNominaStore } from '../../stores/nominaStore';
-import { useUIStore } from '../../stores/uiStore';
 import { 
   tiposHorasExtra, 
   formatCurrency, 
@@ -27,7 +26,69 @@ import {
   formatearTiempo 
 } from '../../utils/nominaUtils';
 
- 
+ const CustomPieChartLegend = (props) => {
+  const { payload } = props;
+
+  // Asegurarse de que payload sea un array válido antes de mapear
+  const validPayload = Array.isArray(payload) ? payload : [];
+
+  return (
+    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
+      {validPayload.map((entry, index) => {
+        const name = entry.payload.tipo; 
+        const color = entry.color;
+
+        if (!name || Math.abs(entry.value) < 0.005) { // No mostrar si no hay nombre o el valor es cero
+          return null;
+        }
+
+        return (
+          <li key={`legend-${index}`} style={{ display: 'inline-flex', alignItems: 'center', marginRight: '10px', marginBottom: '5px', fontSize: '0.9rem',  }}>
+            <span
+              style={{
+                display: 'inline-block',
+                width: '10px',
+                height: '10px',
+                borderRadius: '2px',
+                backgroundColor: color,
+                marginRight: '5px',
+                verticalAlign: 'middle',
+              }}
+            />
+            {/* ✅ Texto en color negro */}
+            <Typography variant="subtitle1" sx={{ color: 'text.primary', fontWeight: '500' }}>
+              {name}
+            </Typography>
+          </li>
+        );
+      })}
+    </ul>
+  );
+};
+
+const CustomPieChartLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload }) => {
+  const radius = outerRadius * 1.3; // Ajusta este valor para mover el porcentaje más lejos o más cerca
+  const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+  const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+
+  // No mostrar la etiqueta si el porcentaje es muy pequeño para evitar superposiciones
+  if (percent * 100 < 0) { // Puedes ajustar este umbral
+    return null;
+  }
+
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="black" // ✅ Color del texto en negro
+      textAnchor={x > cx ? 'start' : 'end'} 
+      dominantBaseline="central"
+      fontSize="1rem"
+    >
+      {`${(percent * 100).toFixed(1)}%`}
+    </text>
+  );
+};
 
 const EstadisticasHorasExtras = () => {
   const navigate = useNavigate();
@@ -35,12 +96,9 @@ const EstadisticasHorasExtras = () => {
   const { 
     horasExtra, 
     fetchHorasExtra, 
-    calcularTotalHorasDecimales,
-    calcularTotalHorasExtra,
     getEstadisticasPeriodo,
     loading 
   } = useHorasExtraStore();
-  const { showError } = useUIStore();
 
   const {obtenerPeriodoHorasExtras} = useNominaStore()
 
@@ -554,13 +612,24 @@ const EstadisticasHorasExtras = () => {
                             cy="50%"
                             outerRadius={80}
                             dataKey="importe"
-                            label={({ tipo, percent }) => `${(percent * 100).toFixed(1)}%`}
+                            label={CustomPieChartLabel} 
+                            labelLine={true} // 
                           >
                             {datosGraficos.distribucionTipos.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color || COLORES_PIE[index % COLORES_PIE.length]} />
+                            <Cell key={`cell-${index}`} fill={entry.color || COLORES_PIE[index % COLORES_PIE.length]} />
                             ))}
                           </Pie>
                           <Tooltip formatter={(value) => formatCurrency(value)} />
+                             <Legend 
+                            layout="horizontal" 
+                            align="center" 
+                            verticalAlign="bottom" 
+                            wrapperStyle={{ fontSize: '0.85rem' }} 
+                            itemSorter={(item) => {
+                                return (item.payload.importe) * -1; // Ordena de mayor a menor importe
+                            }}
+                            content={<CustomPieChartLegend />}
+                            />
                         </PieChart>
                       </ResponsiveContainer>
                     </CardContent>

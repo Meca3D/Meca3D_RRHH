@@ -3,7 +3,7 @@ import { useEffect,useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
-  IconButton, List, ListItem, ListItemText, ListItemSecondaryAction,
+  IconButton, List, ListItem, ListItemText, InputAdornment,
   CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem,
   Backdrop
@@ -13,6 +13,9 @@ import {
   Edit as EditIcon,
   EditOutlined as EditOutlinedIcon,
   Save as SaveIcon,
+  Key as KeyIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
   Cancel as CancelIcon
 } from '@mui/icons-material';
 import { useEmpleadosStore } from '../../../stores/empleadosStore';
@@ -26,7 +29,8 @@ const EditarEmpleados = () => {
     error, 
     fetchEmpleados, 
     updateEmpleado,
-    fetchEmpleadoPorEmail 
+    fetchEmpleadoPorEmail,
+    changeEmployeePassword
   } = useEmpleadosStore();
   const { showSuccess, showError } = useUIStore();
 
@@ -35,6 +39,10 @@ const EditarEmpleados = () => {
   const [empleadoEditando, setEmpleadoEditando] = useState(null);
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
+  const [newPassword, setNewPassword] = useState(''); 
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordFocus, setPasswordFocus] = useState(false);
 
   // Opciones de puesto
   const opcionesPuesto = [
@@ -78,6 +86,7 @@ const EditarEmpleados = () => {
     setModalOpen(false);
     setEmpleadoEditando(null);
     setFormData({});
+    setNewPassword('');
   };
 
   const handleSaveChanges = async () => {
@@ -99,6 +108,8 @@ const EditarEmpleados = () => {
       
       if (success) {
         showSuccess('Empleado actualizado correctamente');
+        setNewPassword('');
+        setShowPassword(false);
         handleCloseModal();
       } else {
         showError('Error al actualizar empleado');
@@ -116,6 +127,41 @@ const EditarEmpleados = () => {
       [field]: e.target.value
     }));
   };
+
+      const handleChangePassword = async () => {
+        if (!empleadoEditando || !newPassword) {
+          showError('Por favor, ingresa una nueva contraseña.');
+          return;
+        }
+
+        if (newPassword.length < 6) {
+          showError('La contraseña debe tener al menos 6 caracteres.');
+          return;
+        }
+
+        setChangingPassword(true);
+        try {
+          // ✅ USAR la función del store en lugar de fetch directo
+          const result = await changeEmployeePassword(empleadoEditando.email, newPassword);
+
+          if (result.success) {
+            showSuccess('Contraseña actualizada correctamente');
+            setNewPassword(''); // Limpiar campo
+          } else {
+            showError(result.message || 'Error al cambiar contraseña');
+          }
+        } catch (error) {
+          showError(`Error al cambiar contraseña: ${error.message}`);
+        } finally {
+          setChangingPassword(false);
+        }
+  };
+
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+
   return (
     <>
       {/* AppBar azul */}
@@ -196,12 +242,12 @@ const EditarEmpleados = () => {
             </Typography>
           </Box>
         ) : (
-               <Grid container spacing={3}>
+               <Grid container spacing={3} sx={{ p:3 }  }>
             {empleados.map((empleado) => (
               <Grid key={empleado.email} size={{ xs: 12, sm: 6, md: 4 }}>
                 {/* ✅ CARD INDIVIDUAL DEL EMPLEADO */}
                 <Card
-                  elevation={2}
+                  elevation={5}
                   onClick={() => handleEditarEmpleado(empleado)}
                   sx={{
                     cursor: 'pointer',
@@ -237,7 +283,7 @@ const EditarEmpleados = () => {
                       transition: 'transform 0.1s ease'
                     },
 
-                                        // ✅ GRADIENTE ROJO EN EL BORDE SUPERIOR
+                                        // ✅ GRADIENTE AZUL EN EL BORDE SUPERIOR
                     '&::before': {
                       content: '""',
                       position: 'absolute',
@@ -471,6 +517,80 @@ const EditarEmpleados = () => {
                 </FormControl>
               </Grid>
 
+              {/* Cambio de PassWord */}       
+              <Grid size={{xs:12,md:6}}>
+                <TextField
+                  label="Nueva Contraseña"
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  fullWidth
+                  onFocus={() => setPasswordFocus(true)}
+                  onBlur={() => setPasswordFocus(false)}
+                  helperText="Mínimo 6 caracteres. Deja vacío para no cambiar."
+                  slotProps={{
+                    input:{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={toggleShowPassword}
+                            edge="end"
+                            onFocus={() => setPasswordFocus(true)}
+                            onBlur={() => setPasswordFocus(false)}
+                          >
+                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+  
+                    }
+  
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'azul.main'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'azul.main'
+                        
+                      }
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: 'azul.main'
+                    }
+                  }}
+                />
+                
+                {/* Botón para cambiar contraseña */}
+                <Button
+                  variant="outlined"
+                  onClick={handleChangePassword}
+                  startIcon={changingPassword ? <CircularProgress size={16} /> : <KeyIcon />}
+                  disabled={changingPassword || !newPassword}
+                  fullWidth
+                  sx={{
+                    mt: 2,
+                    borderRadius: 2,
+                    p: 1.5,
+                    borderColor: 'azul.main',
+                    color: 'azul.main',
+                    '&:hover': {
+                      borderColor: 'primary.dark',
+                      color: 'white',
+                      bgcolor: 'azul.main'
+                    },
+                    '&:disabled': {
+                      borderColor: 'grey.300',
+                      color: 'grey.400'
+                    }
+                  }}
+                >
+                  {changingPassword ? 'Cambiando...' : 'Cambiar Contraseña'}
+                </Button>
+              </Grid>
+
               {/* Sección Vacaciones */}
               <Grid size={{ xs: 12 }}>
                 <Typography 
@@ -571,11 +691,11 @@ const EditarEmpleados = () => {
             variant="contained"
             onClick={handleSaveChanges}
             startIcon={<SaveIcon />}
-            disabled={saving}
+            disabled={changingPassword || passwordFocus|| saving}
             sx={{
               p:2,
               borderRadius:2,
-              background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+              background: passwordFocus ? 'linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%)' : 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
               '&:hover': {
                 background: 'linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%)',
                 transform: 'translateY(-1px)',

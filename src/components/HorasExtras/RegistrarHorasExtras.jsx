@@ -142,7 +142,7 @@ const RegistrarHorasExtras = () => {
                 lineHeight: 1.2
               }}
             >
-              Registrar Horas Extra
+              Registrar Horas Extras
             </Typography>
             <Typography 
               variant="caption" 
@@ -151,7 +151,7 @@ const RegistrarHorasExtras = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Nuevo registro de tiempo
+              Nuevo registro
             </Typography>
           </Box>
           {/* Icono decorativo */}
@@ -257,9 +257,12 @@ const RegistrarHorasExtras = () => {
                       ...formData, 
                       horas: Math.max(0, parseInt(e.target.value) || 0)
                     })}
-                    inputProps={{ min: 0, max: 12 }}
+                    slotProps={{ 
+                      htmlInput:{
+                        min: 0
+                      }
+                     }}
                     fullWidth
-                    helperText="Máximo 12h"
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -286,9 +289,12 @@ const RegistrarHorasExtras = () => {
                       ...formData, 
                       minutos: Math.max(0, Math.min(59, parseInt(e.target.value) || 0))
                     })}
-                    inputProps={{ min: 0, max: 59, step: 5 }}
+                    slotProps={{
+                      htmlInput:{
+                         min: 0, max: 59, step: 5
+                      }
+                     }}
                     fullWidth
-                    helperText="0-59 min"
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -309,12 +315,15 @@ const RegistrarHorasExtras = () => {
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     type="number"
-                    label="Tarifa por hora (€)"
+                    label="Precio / Hora Extra (€)"
                     value={formData.tarifa}
                     onChange={(e) => setFormData({ ...formData, tarifa: e.target.value })}
-                    inputProps={{ min: 0, step: 0.01 }}
+                    slotProps={{
+                      htmlInput:{
+                         min: 0, step: 0.01 
+                      }
+                  }}
                     fullWidth
-                    helperText="Tarifa según tipo seleccionado"
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -342,21 +351,21 @@ const RegistrarHorasExtras = () => {
                     border: '1px solid rgba(251, 140, 0, 0.2)'
                     }}
               >
-                <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+                <Box display="flex" justifyContent="center" alignItems="center" flexWrap="wrap" gap={2}>
                   <Box>
-                    <Typography variant="body1" fontWeight="600">
-                      <TimeIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1.2rem' }} />
+                    <Typography textAlign="center" fontSize='1.35rem' variant="body1" fontWeight="600">
+                      <TimeIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1.35rem', fontWeight:"600" }} />
                       Tiempo: {formatearTiempoPreview(formData.horas, formData.minutos)}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Tarifa: {formData.tarifa}€/hora
+                    <Typography textAlign="center" variant="body1">
+                      Precio: {formData.tarifa}€/hora
                     </Typography>
                   </Box>
                   <Box textAlign="right">
-                    <Typography variant="h5" color="naranja.main" fontWeight="bold">
+                    <Typography textAlign="center" variant="h4" color="naranja.main" fontWeight="bold">
                       {importeCalculado.toFixed(2)}€
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography textAlign="center" variant="body2">
                       Importe total
                     </Typography>
                   </Box>

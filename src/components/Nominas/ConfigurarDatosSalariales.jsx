@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useNominaStore } from '../../stores/nominaStore';
 import { useUIStore } from '../../stores/uiStore';
+import { formatDate } from '../../utils/nominaUtils';
 
 const ConfigurarDatosSalariales = () => {
   const navigate = useNavigate();
@@ -37,8 +38,7 @@ const ConfigurarDatosSalariales = () => {
     sueldoBase: 0,
     
     // Trienios con switch
-    tieneTrienios: false, // Switch disabled por defecto
-    trienios: 0,
+    tieneTrienios: false, 
     valorTrienio: 0,
     
     // Otros complementos
@@ -69,7 +69,6 @@ const ConfigurarDatosSalariales = () => {
   useEffect(() => {
     if (userProfile && nivelesSalariales?.niveles) {
       const nivelUsuario = userProfile.nivel;
-      const fechaIngreso = userProfile.fechaIngreso;
       
       // ✅ Sueldo base predeterminado del nivel
       let sueldoBasePredeterminado = 0;
@@ -80,23 +79,11 @@ const ConfigurarDatosSalariales = () => {
         valorTrienioPredeterminado = nivelesSalariales.niveles[nivelUsuario].valorTrienio;
       }
 
-      // ✅ Trienios predeterminados de la fecha
-      let trieniosPredeterminados = '';
-      if (fechaIngreso) {
-        try {
-          const añosServicio = calcularAñosServicio(fechaIngreso);
-          trieniosPredeterminados = Math.floor(añosServicio / 3);
-        } catch (error) {
-          console.error('Error calculando trienios:', error);
-          trieniosPredeterminados = 0;
-        }
-      }
 
       setFormData(prev => ({
         ...prev,
         nivelSalarial: nivelUsuario || '',
         sueldoBase: prev.sueldoBase || sueldoBasePredeterminado,
-        trienios: prev.trienios || trieniosPredeterminados, 
         valorTrienio: prev.valorTrienio || valorTrienioPredeterminado 
       }));
     }
@@ -110,7 +97,6 @@ const ConfigurarDatosSalariales = () => {
         nivelSalarial: configuracionNomina.nivelSalarial || prev.nivelSalarial,
         sueldoBase: configuracionNomina.sueldoBase || prev.sueldoBase,
         tieneTrienios: configuracionNomina.tieneTrienios || false,
-        trienios: configuracionNomina.trienios || prev.trienios,
         valorTrienio: configuracionNomina.valorTrienio || prev.valorTrienio,
         tieneOtrosComplementos: configuracionNomina.tieneOtrosComplementos || false,
         otroComplemento1: configuracionNomina.otroComplemento1 || { concepto: '', importe: 0 },
@@ -147,8 +133,8 @@ const ConfigurarDatosSalariales = () => {
   // ✅ Actualizar sueldo cuando cambia el nivel
   const handleNivelChange = (e) => {
     const nuevoNivel = e.target.value;
-    const sueldoNuevo = nivelesSalariales?.niveles?.[nuevoNivel]?.sueldoBase || '';
-    const valorTrienioNuevo = nivelesSalariales?.niveles?.[nuevoNivel]?.valorTrienio || '';
+    const sueldoNuevo = nivelesSalariales?.niveles?.[nuevoNivel]?.sueldoBase || 0;
+    const valorTrienioNuevo = nivelesSalariales?.niveles?.[nuevoNivel]?.valorTrienio || 0;
     
     setFormData(prev => ({
       ...prev,
@@ -165,8 +151,8 @@ const ConfigurarDatosSalariales = () => {
       return;
     }
 
-    if (formData.tieneTrienios && (!formData.trienios || !formData.valorTrienio)) {
-      showError('Si tienes trienios, debes especificar cantidad y valor');
+    if (formData.tieneTrienios && (!formData.valorTrienio)) {
+      showError('Si tienes trienios, debes especificar su valor');
       return;
     }
 
@@ -194,7 +180,6 @@ const ConfigurarDatosSalariales = () => {
         
         // ✅ Trienios únicos
         tieneTrienios: formData.tieneTrienios,
-        trienios: formData.tieneTrienios ? parseInt(formData.trienios) || 0 : 0,
         valorTrienio: formData.tieneTrienios ? parseFloat(formData.valorTrienio) || 0 : 0,
         
         // Otros complementos
@@ -214,13 +199,13 @@ const ConfigurarDatosSalariales = () => {
 
       await updateConfiguracionNomina(user.email, configuracionActualizada);
       showSuccess('Configuración guardada correctamente');     
+      setTimeout(() => {
+        navigate('/nominas')
+    }, 2000);
     } catch (error) {
       showError(`Error al guardar la configuración: ${error}`);
     } finally {
       setSaving(false);
-      setTimeout(() => {
-        navigate('/nominas')
-    }, 2000);
     }
 }
 
@@ -338,6 +323,7 @@ const ConfigurarDatosSalariales = () => {
                         value={formData.sueldoBase}
                         onChange={handleChange('sueldoBase')}
                         required
+                        onWheel={(e) => e.target.blur()}
                         fullWidth
                         slotProps={{ 
                           htmlInput:{
@@ -402,46 +388,30 @@ const ConfigurarDatosSalariales = () => {
 
                   {formData.tieneTrienios && (
                     <Grid sx={{mt:2}} container spacing={2}>
+                      <Alert severity={userProfile?.fechaIngreso ? "info" : "error"} sx={{ mb: 2 }}>
+                       {userProfile?.fechaIngreso ? 
+                       <Typography textAlign="center" variant='body2'>
+                        Segun tu fecha de ingreso: <strong>{formatDate(userProfile?.fechaIngreso)}</strong>, cobras ahora mismo <strong>{Math.floor(calcularAñosServicio(userProfile.fechaIngreso)/3)} Trienios</strong>
+                        </Typography> 
+                       : 
+                       <Typography textAlign="center" variant='body2'>
+                        Configura en tu perfil, la fecha de ingreso en la empresa para calcular automaticamente tus trienios.
+                       </Typography>
+                       }
+                      </Alert>
                       <Grid size={{ xs: 6 }}>
                         <TextField
                           type="number"
-                          label="Nº de trienios"
-                          value={formData.trienios}
-                          onChange={handleChange('trienios')}
-                          fullWidth
-                          slotProps={{ 
-                            htmlInput:{min: 0, max: 20 
-                            }
-                          }}
-                          helperText={userProfile?.fechaIngreso ? "Calculado de tu fecha de ingreso" : "Configura manualmente"}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'purpura.main'
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'purpura.main'
-                              }
-                            },
-                            '& .MuiInputLabel-root.Mui-focused': {
-                              color: 'purpura.main'
-                            }
-                          }}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 6 }}>
-                        <TextField
-                          type="number"
-                          label="Valor/trienio (€)"
+                          label="Valor Trienio (€)"
                           value={formData.valorTrienio}
                           onChange={handleChange('valorTrienio')}
                           fullWidth
+                          onWheel={(e) => e.target.blur()}
                           slotProps={{ 
                             htmlInput: {
                               min: 0, step: 0.01 
                              }
                             }}
-                          helperText="Del nivel salarial seleccionado"
                           sx={{
                             '& .MuiOutlinedInput-root': {
                               '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -459,12 +429,8 @@ const ConfigurarDatosSalariales = () => {
                       </Grid>
                     </Grid>
                   )}
-                <Divider sx={{bgcolor:'purpura.main', mt:2}}/>
+                <Divider sx={{bgcolor:'purpura.main', mt:3}}/>
                 </Grid>
-
-
-
-
 
                 {/* ✅ SECCIÓN: Otros Complementos */}
                 <Grid sx={{mt:-2}} size={{ xs: 12 }}>
@@ -537,6 +503,7 @@ const ConfigurarDatosSalariales = () => {
                             value={formData.otroComplemento1.importe}
                             onChange={handleComplementoChange(1, 'importe')}
                             fullWidth
+                            onWheel={(e) => e.target.blur()}
                             slotProps={{
                               htmlInput:{
                                  min: 0, step: 0.01 
@@ -593,6 +560,7 @@ const ConfigurarDatosSalariales = () => {
                             value={formData.otroComplemento2.importe}
                             onChange={handleComplementoChange(2, 'importe')}
                             fullWidth
+                            onWheel={(e) => e.target.blur()}
                             slotProps={{
                               htmlInput:{
                                min: 0, step: 0.01
@@ -631,8 +599,10 @@ const ConfigurarDatosSalariales = () => {
                     type="number"
                     label="Importe paga extra (€)"
                     value={formData.pagaExtra}
+                    helperText="Si conoces el importe de tus pagas extras, introducelo aquí"
                     onChange={handleChange('pagaExtra')}
                     fullWidth
+                    onWheel={(e) => e.target.blur()}
                     slotProps={{ 
                       htmlInput:{
                         min: 0, step: 0.01 

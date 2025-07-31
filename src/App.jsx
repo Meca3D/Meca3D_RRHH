@@ -16,21 +16,15 @@ import { standarTheme } from './theme/standardTheme';
 
   function App() {
     useEffect(() => {
-      console.log("App.jsx: Llamando a initAuthListener desde useEffect.");
       useAuthStore.getState().initAuthListener();
     }, []);
   
 const { loading: authLoading } = useAuthStore(); // ✅ Ya no necesitas initializeAuth
   const { loading: uiLoading } = useUIStore();
-    console.log("App.jsx: authLoading =", authLoading, "uiLoading =", uiLoading);
-
 
   if (authLoading || uiLoading) {
-    console.log("App.jsx: Mostrando LoadingScreen.");
     return <LoadingScreen />;
   }
-  
-console.log("App.jsx: Carga de autenticación y UI completada, renderizando AppRoutes.");
  
   return (
     <ThemeProvider theme={standarTheme}>

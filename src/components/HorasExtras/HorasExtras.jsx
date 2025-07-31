@@ -14,6 +14,7 @@ import {
   SettingsOutlined as ConfigIcon,
   AccessTime as TimeIcon
 } from '@mui/icons-material';
+import { useAuthStore } from '../../stores/authStore';
 import { useHorasExtraStore } from '../../stores/horasExtraStore';
 import { formatCurrency, formatearTiempo } from '../../utils/nominaUtils';
 import { useGlobalData } from '../../hooks/useGlobalData';
@@ -26,6 +27,7 @@ const HorasExtras = () => {
     const horasFormateadas = Math.floor(totalHorasEsteMes);
     const minutosFormateados = Math.round((totalHorasEsteMes % 1) * 60);
     const { userSalaryInfo } = useGlobalData();
+    const { userProfile } = useAuthStore();
 
   // ✅ Configuración de las 4 cards principales
   const quickActions = [
@@ -58,12 +60,12 @@ const HorasExtras = () => {
     },
     {
       id: 'configuracion',
-      title: 'Configuración de Tarifas',
+      title: 'Configuración de Precios',
       subtitle: '',
       icon: ConfigIcon,
       color: 'purpura.main',
       bgColor: 'purpura.fondo',
-      route: '/horas-extras/configuracion'
+      route: '/horas-extras/configurar'
     }
   ];
 
@@ -74,7 +76,7 @@ const HorasExtras = () => {
         elevation={5} 
         sx={{ 
           border:'1px solid naranja.main',
-          p: 2, 
+          p: 1, 
           mb: 4, 
           borderRadius: 4,
           position: 'relative',
@@ -104,6 +106,16 @@ const HorasExtras = () => {
             <Typography sx={{ml:-5}} color='naranja.main' variant="h4"  textAlign="center" fontWeight="bold" gutterBottom>
               Horas Extras
             </Typography>
+            {!userProfile.tarifasHorasExtra ? (
+                <Chip
+                  label="Falta Configuracion"
+                  sx={{
+                    bgcolor: 'rojo.fondo',
+                    color: 'rojo.main',
+                    fontWeight: 700
+                  }}
+                />
+              ) : (
             <Box display="flex" flexDirection="column" alignContent="center" flexWrap="nowrap" sx={{mr:8}}>
             <Typography   color="naranja.main" variant="h6" fontSize="1rem" textAlign='center' lineHeight={1.2} fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
               Estimado {userSalaryInfo.mesNomina || 'Mes Actual'} 
@@ -113,6 +125,7 @@ const HorasExtras = () => {
               <Typography textAlign="center" color="naranja.main"><strong>{formatCurrency(totalImporteEsteMes)}</strong></Typography>
 
             </Box>
+              )}
           </Box>
         </Box>
       </Paper>

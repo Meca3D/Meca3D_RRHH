@@ -459,7 +459,7 @@ const GestionarHorasExtras = () => {
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 type="number"
-                label="Tarifa (€/hora)"
+                label="Precio (€/hora)"
                 value={editFormData.tarifa || 0}
                 onChange={(e) => setEditFormData({ ...editFormData, tarifa: parseFloat(e.target.value) || 0 })}
                 slotProps={{ 

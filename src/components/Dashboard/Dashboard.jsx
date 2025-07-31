@@ -9,6 +9,7 @@ import { useOrdersStore } from '../../stores/ordersStore';
 import { useProductsStore } from '../../stores/productsStore';
 import { useGlobalData } from '../../hooks/useGlobalData';
 
+
 // Iconos
 import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
@@ -21,13 +22,10 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddIcon from '@mui/icons-material/Add';
 import { formatearNombre } from '../Helpers';
 import { formatCurrency } from '../../utils/nominaUtils';
-import { capitalizeFirstLetter } from '../Helpers';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { horasExtraEsteMes, dataLoaded, loading, ordersCount, userSalaryInfo  } = useGlobalData();
-  const { orders } = useOrdersStore();
-  const { products } = useProductsStore();
+  const { loading, userSalaryInfo  } = useGlobalData();
   const { user, userProfile } = useAuthStore();
 
   if (loading) {
@@ -55,16 +53,21 @@ const Dashboard = () => {
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
-      action: () => navigate('/nominas')
+      action: userSalaryInfo?.salarioCompletoEstimado 
+        ? () => navigate('/nominas')
+        : () => navigate('/nominas/configurar')
     },
     {
       title: 'Horas Extras',
       value: formatCurrency(userSalaryInfo.totalImporteHorasMesActual),
-      subtitle: `estimado ${userSalaryInfo.mesNomina || 'este mes'}`,
+      subtitle:  (userProfile?.tarifasHorasExtra)
+        ? `estimado ${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
-      action:  () => navigate('/horas-extras')
+      action:   (userProfile?.tarifasHorasExtra)
+        ? () => navigate('/horas-extras')
+        : () => navigate('/horas-extras/configurar')
     },
     {
       title: 'Vacaciones',
@@ -78,11 +81,14 @@ const Dashboard = () => {
     {
       title: 'Horas Extras',
       value: userSalaryInfo?.totalTiempoMesActual,
-      subtitle: `estimado ${userSalaryInfo.mesNomina || 'este mes'}`,
+      subtitle: (userProfile?.tarifasHorasExtra)
+        ? `estimado ${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: AccessTimeIcon,
       color: 'naranja.main', 
       bgColor: 'naranja.fondo',
-      action: ()=> navigate('/horas-extras')
+      action:   (userProfile?.tarifasHorasExtra)
+        ? () => navigate('/horas-extras')
+        : () => navigate('/horas-extras/configurar')
     }
   ];
 
@@ -161,14 +167,14 @@ const Dashboard = () => {
 
         </Box>
         <Box sx={{ mb:-1, display:'flex', flexDirection:'column', justifyItems:'center', justifyContent:'center', alignItems:'center', alignContent:'center'}}>
-        <Typography  sx={{mt:1, fontSize:'1.5rem'}} textAlign="center" variant="h4" fontWeight="bold" color="text.primary" gutterBottom>
+        <Typography  sx={{mt:1, fontSize:'1.5rem', whiteSpace:'nowrap',}} textAlign="center" variant="h4" fontWeight="bold" color="text.primary" gutterBottom>
           {value}
         </Typography>
-        <Typography  textAlign="center" variant="body1" fontWeight="600" color="text.primary">
+        <Typography  sx={{whiteSpace:'nowrap',}} textAlign="center" variant="body1" fontWeight="600" color="text.primary">
           {title}
         </Typography >
         {subtitle && (
-          <Typography  textAlign="center" variant="body2" color="gray.600">
+          <Typography sx={{whiteSpace:'nowrap',}} textAlign="center" variant="body2" color="gray.600">
             {subtitle}
           </Typography>
         )}
@@ -284,12 +290,15 @@ const Dashboard = () => {
               (user?.email?.[0] || 'U').toUpperCase()
             }
           </Avatar>
-          <Box flex={1}>
+          <Box justifyItems="center" flex={1}sx={{ml:-5}}>
             <Typography variant="h5" fontWeight="bold" gutterBottom>
               {formatearNombre(userProfile?.nombre)}
             </Typography>
+            <Typography fontSize="1rem" sx={{ opacity: 0.9, mb: 0}}>
+              {userProfile?.puesto||'Operario'}
+            </Typography>
             <Typography fontSize="1rem" sx={{ opacity: 0.9, mb: 1 }}>
-              {userProfile?.puesto||'Operario'} • Nv {userProfile?.nivel||'7'} 
+              Nv {userProfile?.nivel||'?'} 
             </Typography>
           </Box>
         </Box>

@@ -71,7 +71,6 @@ export const useOrdersStore = create((set, get) => {
   },
 
       clearOrders: () => {
-      console.log("OrdersStore: clearOrders called. Unsubscribing listener.");
       if (unsubscribe) {
         unsubscribe();
         unsubscribe = null;
