@@ -1,4 +1,4 @@
-// netlify/functions/change-password.mjs
+// netlify/functions/change-password.js
 const admin = require('firebase-admin');
 
 // Inicializar Firebase Admin (similar a delete-employee)

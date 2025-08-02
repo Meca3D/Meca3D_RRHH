@@ -157,7 +157,7 @@ const CrearEmpleado = () => {
               cursor: 'default'
             }}
           >
-            <PersonAddIcon />
+            <PersonAddIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>

@@ -94,10 +94,8 @@ const {
       password, 
       nombre, 
       rol = 'user', 
-      // ❌ ELIMINADO: telefono,
       vacaDias, 
       vacaHoras,
-      // ✅ NUEVOS campos añadidos:
       fechaIngreso,
       nivel,
       puesto

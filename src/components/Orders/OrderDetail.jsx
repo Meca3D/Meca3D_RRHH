@@ -261,11 +261,11 @@ useEffect(() => {
   <Card elevation={5} sx={{ mb: 3, bgcolor:'dorado.fondo', border:'2px solid', borderColor:'dorado.main' }}>
   <CardContent >
     <Box display="flex" sx={{mb:1, alignItems:"center", justifyContent:"space-between"}}>
-    <AssignmentTurnedInOutlinedIcon sx={{color:'dorado.main'}}/>
-    <Typography  textAlign="center" variant="h6" gutterBottom color="dorado.main">
+    <AssignmentTurnedInOutlinedIcon sx={{fontSize:'2rem', color:'dorado.main'}}/>
+    <Typography  textAlign="center" variant="h5" gutterBottom color="dorado.main">
       <strong>Mi Selección</strong>
     </Typography>
-    <AssignmentTurnedInOutlinedIcon sx={{color:'dorado.main'}}/>
+    <AssignmentTurnedInOutlinedIcon sx={{fontSize:'2rem', color:'dorado.main'}}/>
     </Box>
     <Divider sx={{mb:2, bgcolor:'dorado.main'}}/>
     
@@ -273,24 +273,29 @@ useEffect(() => {
       <>
         <List dense>
           {selectedProducts.sort((a, b) => a.nombre.localeCompare(b.nombre)).map((producto, index) => (
-            <ListItem key={index} sx={{ pl: 0, marginY:-1.3 }}>
+            <ListItem key={index} sx={{ pl: 0, marginY:-1.3, py:2 }}>
               <ListItemIcon>
                 <IconButton
                   edge="start"
                   color="error"
-                  size="small"
+                  sx={{
+                    display:"flex", 
+                    justifyContent:"center", 
+                    alignItems:"center", 
+                    width:30,height:30,borderRadius:'50%', border:'1px solid red'}}
+                  
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleProductSelection(producto);
                   }}
                 >
-                  <ClearIcon />
+                  <ClearIcon sx={{fontSize:'2rem'}}/>
                 </IconButton>
               </ListItemIcon>
               <ListItemText slotProps={{
                 primary:{
                   ml:-3,
-                  fontSize: '0.9rem',
+                  fontSize: '1.1rem',
                   fontWeight: '600',
                   letterSpacing: 0,
 }

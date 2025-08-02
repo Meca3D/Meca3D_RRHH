@@ -8,8 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { useGlobalData } from '../../../hooks/useGlobalData';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/EditOutlined';
+import DeleteIcon from '@mui/icons-material/DeleteOutlined';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import FastfoodOutlinedIcon from '@mui/icons-material/FastfoodOutlined';
 

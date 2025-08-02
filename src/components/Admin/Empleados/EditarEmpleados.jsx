@@ -56,8 +56,10 @@ const EditarEmpleados = () => {
   ];
 
   useEffect(() => {
+    if (empleados.length === 0) {
     fetchEmpleados();
-  }, []);
+    }
+  }, [empleados.length]);
 
   const handleEditarEmpleado = async (empleado) => {
     try {
@@ -219,7 +221,7 @@ const EditarEmpleados = () => {
               cursor: 'default'
             }}
           >
-            <EditOutlinedIcon />
+            <EditOutlinedIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>

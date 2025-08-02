@@ -164,7 +164,7 @@ useEffect(() => {
       {/* Lista de pedidos */}
       {orders.length === 0 ? (
         <Paper 
-          elevation={0}
+          elevation={5}
           sx={{ 
             textAlign: 'center', 
             p: 3, 
@@ -351,20 +351,22 @@ useEffect(() => {
         }}
       >
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
-          <Typography component="div" variant="h6" fontWeight="bold" color="rojo.main">
+          <Typography component="div" variant="h5" fontWeight="bold" color="rojo.main">
             Eliminar Pedido
           </Typography>
         </DialogTitle>
         <Divider/>
         
         <DialogContent sx={{ textAlign: 'center', py: 2 }}>
-          <Typography variant="body1" color="text.primary" gutterBottom>
-            ¿Estás seguro de que deseas <Box component="span" sx={{ color: 'rojo.main', fontWeight: 'bold' }}>eliminar</Box> el pedido
+          <Typography variant="body1" color="black" gutterBottom>
+            ¿Estás seguro de que deseas <Box component="span" sx={{ color: 'rojo.main', fontWeight: 'bold' }}>eliminar</Box> este pedido?
           </Typography>
-          <Typography variant="h6" fontWeight="bold" color="dorado.main">
-            "{orderToDelete?.nombre}"?
+          <Typography variant="h5" fontWeight="bold" color="dorado.main">
+            {orderToDelete?.nombre}
+            <br />
+            {orderToDelete?.fechaReserva.toLocaleDateString('es-ES') }
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography variant="body1" color="black" sx={{ mt: 1 }}>
             Esta acción no se puede deshacer
           </Typography>
         </DialogContent>
@@ -377,7 +379,9 @@ useEffect(() => {
             startIcon={<CloseIcon />}
             sx={{
               borderRadius: 2,
-              px: 4,
+              px: 3,
+              py:2,
+              fontSize: '1.2rem',
               textTransform: 'none',
               fontWeight: 600
             }}
@@ -392,7 +396,9 @@ useEffect(() => {
             startIcon={<DeleteIcon />}
             sx={{
               borderRadius: 2,
-              px: 4,
+              px: 3,
+              py:2,
+              fontSize: '1.2rem',
               textTransform: 'none',
               fontWeight: 600,
               background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',

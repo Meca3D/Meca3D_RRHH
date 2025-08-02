@@ -104,7 +104,6 @@ const CrearProducto = () => {
                 <ArrowBackIosNewIcon />
               </IconButton>
     
-              {/* Título */}
               <Box sx={{ my:0.5, textAlign: 'center', flex: 1, mx: 2 }}>
                 <Typography 
                   variant="h5" 
@@ -126,7 +125,7 @@ const CrearProducto = () => {
                   Creación y lista de productos
                 </Typography>
               </Box>
-              {/* Icono decorativo */}
+
               <IconButton
                 edge="end"
                 color="inherit"
@@ -154,14 +153,26 @@ const CrearProducto = () => {
               <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
               <TextField
                 fullWidth
-                label="Nombre del Producto"
+                label="Nombre"
                 name="nombre"
                 color='naranja.main'
                 value={formData.nombre}
                 onChange={handleChange}
                 margin="normal"
                 required
+                slotProps={{
+                  inputLabel: {
+                    sx: {
+                      '&.MuiInputLabel-shrink': {
+                        fontSize: '1.2rem', // Tamaño cuando está en estado shrink
+                      },
+                    }
+                  }
+                }}
                 sx={{
+                      '& .MuiInputBase-input': {
+                        fontSize: '1.2rem',
+                      },
                       '& .MuiOutlinedInput-root': {
                         '&:hover .MuiOutlinedInput-notchedOutline': {
                           borderColor: 'naranja.main'
@@ -180,16 +191,15 @@ const CrearProducto = () => {
                 <InputLabel 
                   id="tipo-label"
                   sx={{
-                    // Default color for the label
+                    fontSize: '1.1rem', // Tamaño normal del label
                     color: 'text.secondary', // Or whatever your default label color is
-
+                    '&.MuiInputLabel-shrink': {
+                    fontSize: '1.2rem', // Tamaño cuando está en estado shrink
+                    color: 'naranja.main', // This will ensure it stays naranja.main when shrinked
+                    },
                     // Color when the label is focused
                     '&.Mui-focused': {
                       color: 'naranja.main',
-                    },
-                    // Color when the label has shrunk (i.e., has a value or is focused)
-                    '&.Mui-shrink': {
-                      color: 'naranja.main', // This will ensure it stays naranja.main when shrinked
                     },
                   }}
                 >
@@ -201,7 +211,19 @@ const CrearProducto = () => {
                   value={formData.tipo}
                   onChange={handleChange}
                   label="Tipo"
+                  MenuProps={{
+                    sx:{
+                      '& .MuiMenuItem-root': {
+                        fontSize: '1.3rem',
+                        padding: '22px 12px',
+                        }
+                      } // Tamaño del texto en el menú desplegable
+                    }}
                   sx={{
+                        '& .MuiInputBase-input': {
+                          fontSize: '1.1rem', 
+                          padding: '22px 12px',
+                        },
                         // Styles for the outlined input border
                         '& .MuiOutlinedInput-notchedOutline': {
                           borderColor: 'grey', // Default border color, you can change it if needed
@@ -290,12 +312,10 @@ const CrearProducto = () => {
                     display: 'flex', 
                     alignItems: 'center',
                     borderTop: '1px solid rgba(0, 0, 0, 0.5)',
-                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.2)' }
+                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.06)' }
                   }}
                 >
-                  <Box sx={{ width: '100%' }}>
                     <Typography sx={{px:1,py:2}} fontSize="1.2rem">{producto.nombre}</Typography>
-                  </Box>
                 </Box>
               ))}
             </CardContent>
@@ -325,9 +345,7 @@ const CrearProducto = () => {
                     '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.2)' }
                   }}
                 >
-                  <Box sx={{ width: '100%' }}>
                     <Typography sx={{px:1,py:2}} fontSize="1.2rem">{producto.nombre}</Typography>
-                  </Box>
                 </Box>
               ))}
             </CardContent>

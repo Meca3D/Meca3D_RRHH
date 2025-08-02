@@ -125,7 +125,7 @@ const EliminarEmpleados = () => {
               cursor: 'default'
             }}
           >
-            <DeleteOutlinedIcon />
+            <DeleteOutlinedIcon sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>
