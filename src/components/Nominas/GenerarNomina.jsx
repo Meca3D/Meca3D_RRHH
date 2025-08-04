@@ -48,7 +48,8 @@ const GenerarNomina = () => {
     loadingConfiguracion,
     actualizarNomina,
     getNominaById,
-    calcularAñosServicio
+    calcularAñosServicio,
+    checkDuplicateNomina
   } = useNominaStore();
 
   
@@ -240,6 +241,8 @@ const GenerarNomina = () => {
     }
     setSaving(true);
 
+    
+
     const nominaToSave = {
         empleadoEmail: user.email,
         año: Number(añoNomina),
@@ -263,6 +266,7 @@ const GenerarNomina = () => {
       };
 
     try {
+
       let success = false;
       if (isEditing && nominaId) {
         success = await actualizarNomina(nominaId, nominaToSave);
@@ -273,6 +277,12 @@ const GenerarNomina = () => {
           showError('Error al actualizar la Paga Extra.');
         }
       } else {
+        const duplicateCheck = await checkDuplicateNomina(user.email, nominaToSave.mes, nominaToSave.año, nominaToSave.tipo, nominaToSave.mes);
+          if (duplicateCheck.exists) {
+          showError(duplicateCheck.message);
+          setSaving(false);
+          return;
+        }
         const newNominaId = await guardarNomina(nominaToSave);
         if (newNominaId) {
           showSuccess('Paga Extra guardada correctamente.');
@@ -317,6 +327,13 @@ const GenerarNomina = () => {
           showError('Error al actualizar la nómina.');
         }
       } else {
+        const duplicateCheck = await checkDuplicateNomina(user.email, nominaToSave.mes, nominaToSave.año, nominaToSave.tipo, nominaToSave.mes);
+        if (duplicateCheck.exists) {
+          showError(duplicateCheck.message);
+          setSaving(false);
+          return;
+        }
+
         const newNominaId = await guardarNomina(nominaToSave);
         if (newNominaId) {
           showSuccess('Nómina guardada correctamente.');

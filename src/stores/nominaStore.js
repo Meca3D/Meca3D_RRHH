@@ -533,6 +533,40 @@ getEstadisticasPeriodoNomina: (nominas) => {
       }
     },
 
+        checkDuplicateNomina: async (userEmail, mes, año, tipoNomina, tipoPagaExtra = null) => {
+      try {
+        let q;
+        const nominasRef = collection(db, 'NOMINAS');
+
+        if (tipoNomina === 'mensual') {
+          q = query(
+            nominasRef,
+            where('empleadoEmail', '==', userEmail),
+            where('mes', '==', mes),
+            where('año', '==', año),
+            where('tipo', '==', 'mensual')
+          );
+        } else {
+          q = query(
+            nominasRef,
+            where('empleadoEmail', '==', userEmail),
+            where('año', '==', año),
+            where('tipo', '==', 'paga extra'),
+            where('mes', '==', tipoPagaExtra)
+          );
+        }
+
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          return { exists: true, message: `Ya existe una nómina ${tipoNomina === 'mensual' ? `para ${mes} de ${año}` : `${tipoPagaExtra} del año ${año}`}.` };
+        }
+        return { exists: false, message: '' };
+      } catch (error) {
+        console.error('Error al verificar duplicados de nómina:', error);
+        return { exists: false, message: 'Error al verificar duplicados.' };
+      }
+    },
+
 
 
   };

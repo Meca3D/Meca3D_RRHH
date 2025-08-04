@@ -1,5 +1,5 @@
 // src/hooks/useGlobalData.js
-import { useEffect } from 'react';
+import { useEffect,useState } from 'react';
 import { useOrdersStore } from '../stores/ordersStore';
 import { useProductsStore } from '../stores/productsStore';
 import { useNominaStore } from '../stores/nominaStore';
@@ -25,16 +25,19 @@ export const useGlobalData = () => {
     nivelesSalariales,
     loadNivelesSalariales, 
     loading: nominaLoading,
-    currentYear
+    currentYear,
+    obtenerPeriodoHorasExtras
   } = useNominaStore();
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
+    // const now = new Date();
+    const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+    //const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
+    //const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // ✅ Cargar datos automáticamente como en desayunos
+    const loadInitialData = async () => {
+    // ✅ Cargar datos automáticamente 
     if (orders.length === 0 && !ordersLoading) {
       fetchOrders();
     }
@@ -46,22 +49,46 @@ export const useGlobalData = () => {
       
     }
     if (user?.email) {
-      fetchHorasExtra(user.email, firstDay, lastDay);
       loadConfiguracionUsuario(user.email);
-    }
+      const now = new Date();
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]; // End of current month
 
+        let calculatedFirstDay;
+        // Check for previous month's nomina
+        const periodoAnterior = await obtenerPeriodoHorasExtras(user.email, 1); // 1 month back
+
+        if (periodoAnterior.encontrada) {
+          // Start one day after the end of the previous period
+          const inicioNuevo = new Date(periodoAnterior.fechaFin);
+          inicioNuevo.setDate(inicioNuevo.getDate() + 1);
+          calculatedFirstDay = inicioNuevo.toISOString().split('T')[0];
+        } else {
+          // Default logic: 7 days before the end of the current month
+          const defaultFirstDay = new Date(now.getFullYear(), now.getMonth(),-7);
+          calculatedFirstDay = defaultFirstDay.toISOString().split('T')[0];
+        }
+
+        fetchHorasExtra(user.email, calculatedFirstDay, lastDay);
+      }
+      setInitialLoadComplete(true);
+    };
+
+    loadInitialData();
 
   }, [isAuthenticated, orders.length, products.length, ordersLoading, productsLoading, nivelesSalariales?.niveles, nominaLoading, user?.email]);
     
+   
    const hasUserNominaConfig = !!(userProfile && configuracionNomina && userProfile.tarifasHorasExtra);
+   const now = new Date();
+   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]; 
    const numTrienios = userProfile?.fechaIngreso ? 
     Math.floor(calcularAñosServicio(userProfile.fechaIngreso, lastDay) / 3) : 0; 
     
    
 
   return {
-    dataLoaded: orders.length > 0 && products.length > 0,
-    loading: ordersLoading || productsLoading || nominaLoading,
+    dataLoaded: initialLoadComplete && orders.length > 0 && products.length > 0,
+    loading: ordersLoading || productsLoading || nominaLoading || !initialLoadComplete,
     ordersCount: orders.length,
     productsCount: products.length,
     nominaDataLoaded: !!nivelesSalariales?.niveles,

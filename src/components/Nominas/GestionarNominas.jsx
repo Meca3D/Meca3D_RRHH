@@ -390,6 +390,7 @@ const handleDeleteClick = (nomina, e) => {
           startIcon={<EditIcon />}
           onClick={(e) => handleEditClick(nomina.id, e)}
           sx={{
+            p:1.5,
             borderRadius:2,
             fontWeight: 600,
             borderColor: '#3b82f6',
@@ -408,6 +409,7 @@ const handleDeleteClick = (nomina, e) => {
           startIcon={<DeleteIcon />}
           onClick={(e) => handleDeleteClick(nomina, e)}
           sx={{
+            p:1.5,
             borderRadius:2,
             fontWeight: 600,
             borderColor: '#ef4444',
@@ -633,7 +635,7 @@ const handleDeleteClick = (nomina, e) => {
             variant='outlined'
             startIcon={<ClearIcon />}
             color="primary" 
-            sx={{px:2,py:1,borderRadius:2}}
+            sx={{px:2,py:1.5,borderRadius:2}}
           >
             Cancelar
           </Button>
@@ -643,7 +645,7 @@ const handleDeleteClick = (nomina, e) => {
             color="error" 
             startIcon={<DeleteIcon />}
             autoFocus 
-            sx={{px:2,py:1,borderRadius:2}}
+            sx={{px:2,py:1.5,borderRadius:2}}
           >
             Borrar
           </Button>

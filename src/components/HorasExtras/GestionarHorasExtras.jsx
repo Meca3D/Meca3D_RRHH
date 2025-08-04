@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useHorasExtraStore } from '../../stores/horasExtraStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useNominaStore } from '../../stores/nominaStore';
 import { 
   tiposHorasExtra, 
   formatCurrency, 
@@ -38,6 +39,7 @@ const GestionarHorasExtras = () => {
     calcularImporteHorasExtra,
     loading 
   } = useHorasExtraStore();
+  const { obtenerPeriodoHorasExtras } = useNominaStore();
   const { showSuccess, showError } = useUIStore();
 
   // Estados para filtros
@@ -62,12 +64,35 @@ const GestionarHorasExtras = () => {
 
   // ✅ Establecer período por defecto (mes actual)
   useEffect(() => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
+    //const now = new Date();
+    //const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
+    //const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
     
-    setFechaInicio(firstDay);
-    setFechaFin(lastDay);
+    //setFechaInicio(firstDay);
+    //setFechaFin(lastDay);
+
+     const setDefaultPeriod = async () => {
+      const now = new Date();
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -6).toISOString().split('T')[0]
+
+      let calculatedFirstDay;
+        const periodoAnterior = await obtenerPeriodoHorasExtras(user.email, 1); // 1 month back
+
+        if (periodoAnterior.encontrada) {
+          const inicioNuevo = new Date(periodoAnterior.fechaFin);
+          inicioNuevo.setDate(inicioNuevo.getDate() + 1);
+          calculatedFirstDay = inicioNuevo.toISOString().split('T')[0];
+        } else {
+          // Default logic: 7 days before the current date if no previous nomina
+          const defaultFirstDay = new Date(now.getFullYear(), now.getMonth(), - 7);
+          calculatedFirstDay = defaultFirstDay.toISOString().split('T')[0];
+        }
+      
+      setFechaInicio(calculatedFirstDay);
+      setFechaFin(lastDay);
+    };
+
+    setDefaultPeriod();
   }, []);
 
   const handleEdit = (horaExtra) => {

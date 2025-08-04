@@ -5,8 +5,6 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { useOrdersStore } from '../../stores/ordersStore';
-import { useProductsStore } from '../../stores/productsStore';
 import { useGlobalData } from '../../hooks/useGlobalData';
 
 
