@@ -35,7 +35,9 @@ const EliminarEmpleados = () => {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+        if (empleados.length === 0) {
     fetchEmpleados();
+    }
   }, []);
 
   const handleBorrarEmpleado = (empleado) => {

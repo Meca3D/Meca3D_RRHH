@@ -24,9 +24,9 @@ export const standarTheme = createTheme({
         fondoFuerte: alpha('#3B82F6',0.3)
     },
     verde: {
-        main:'#10B981',
-        fondo: alpha('#10B981',0.1),
-        fondoFuerte: alpha('#10B981',0.3)
+        main:'#129569ff',
+        fondo: alpha('#129569',0.1),
+        fondoFuerte: alpha('#129569',0.3)
     },
     naranja: {
         main:'#FB8C00',

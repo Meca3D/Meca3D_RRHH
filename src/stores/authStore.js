@@ -1,7 +1,7 @@
 // stores/authStore.js - AUTO-INICIALIZACIÓN
 import { create } from 'zustand';
 import { onAuthStateChanged,updatePassword,EmailAuthProvider,reauthenticateWithCredential,updateProfile,signOut } from 'firebase/auth';
-import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { useNominaStore } from './nominaStore';
 import { useHorasExtraStore } from './horasExtraStore';
@@ -91,6 +91,33 @@ export const useAuthStore = create((set, get) => ({
     isFavorite: (productId) => {
       const { userProfile } = get();
       return userProfile?.favoritos?.includes(productId);
+    },
+
+    obtenerDatosUsuarios: async (emails) => {
+      try {
+        const usuarios = {};
+        
+        for (const email of emails) {
+          const userDoc = await getDoc(doc(db, 'USUARIOS', email));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            usuarios[email] = {
+              nombre: userData.nombre || email,
+              puesto: userData.puesto || 'No definido'
+            };
+          } else {
+            usuarios[email] = {
+              nombre: email,
+              puesto: 'No definido'
+            };
+          }
+        }
+        
+        return usuarios;
+      } catch (error) {
+        console.error('Error obteniendo datos usuarios:', error);
+        return {};
+      }
     },
 
     updateUserProfile: async (profileData) => {
@@ -209,6 +236,10 @@ const loadUserProfileFunction = (userEmail, set) => {
             nivel: userData.nivel,
             vacaDias: userData.vacaDias,
             vacaHoras: userData.vacaHoras,
+            vacaciones:{
+              disponibles: userData.vacaciones.disponibles || 0,
+              pendientes: userData.vacaciones.pendientes ||0
+            },
             configuracionNomina: userData.configuracionNomina,
             tarifasHorasExtra: userData.tarifasHorasExtra,
           },

@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react';
 import {
   Grid, Card, CardContent, Typography, Box, Container, 
   Avatar, CircularProgress, Paper, IconButton, Chip
@@ -6,9 +7,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useGlobalData } from '../../hooks/useGlobalData';
+import { useVacacionesStore } from '../../stores/vacacionesStore';
+import { formatearTiempoVacas } from '../../utils/vacacionesUtils';
 
 
 // Iconos
+import AddAlarmOutlinedIcon from '@mui/icons-material/AddAlarmOutlined';
+import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
 import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
 import EuroIcon from '@mui/icons-material/Euro';
@@ -25,7 +30,29 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { loading, userSalaryInfo  } = useGlobalData();
   const { user, userProfile } = useAuthStore();
+  const { procesarSolicitudesCaducadas } = useVacacionesStore();
 
+  useEffect(() => {
+    const procesarCaducadas = async () => {
+      try {
+        const resultado = await procesarSolicitudesCaducadas();
+        
+        if (resultado.procesadas > 0) {
+          console.log(`🔄 Dashboard: ${resultado.procesadas} solicitudes caducadas procesadas automáticamente`);
+          
+        }
+      } catch (error) {
+        console.error('❌ Error procesando solicitudes caducadas en Dashboard:', error);
+      }
+    };
+
+    if (user?.email && !loading) {
+      const timeoutId = setTimeout(procesarCaducadas, 1000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user?.email, loading, procesarSolicitudesCaducadas]);
+  
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -69,12 +96,12 @@ const Dashboard = () => {
     },
     {
       title: 'Vacaciones',
-      value: `${userProfile?.vacaDias || 20}d ${userProfile?.vacaHoras || 3}h`,
+      value: `${formatearTiempoVacas(userProfile?.vacaciones.disponibles||0)}`,
       subtitle: 'Disponibles',
       icon: BeachAccessOutlinedIcon,
       color: 'purpura.main', 
       bgColor: 'purpura.fondo',
-      action: ()=>null
+      action: () => navigate('/vacaciones')
     },
     {
       title: 'Horas Extras',
@@ -94,14 +121,14 @@ const Dashboard = () => {
   const quickActions = [
         {
       label: 'Generar Nómina',
-      icon: AddIcon,
+      icon: PostAddOutlinedIcon,
       color:  'azul.main',
       bgColor: 'azul.fondo',
       onClick: () => navigate('/nominas/generar'),
     },
     {
       label: 'Registrar Horas Extra',
-      icon: AccessTimeIcon,
+      icon: AddAlarmOutlinedIcon,
       color: 'naranja.main',
       bgColor: 'naranja.fondo',
       onClick: () => navigate('/horas-extras/registrar'),
@@ -112,7 +139,7 @@ const Dashboard = () => {
       icon: BeachAccessOutlinedIcon,
       color: 'purpura.main',
       bgColor: 'purpura.fondo',
-      onClick: () => navigate('/vacaciones')
+      onClick: () => navigate('/vacaciones/crear')
     },
     {
       label: 'Registrar Permiso',

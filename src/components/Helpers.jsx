@@ -1,4 +1,4 @@
-// components/Helpers.jsx - VERSIÓN CORREGIDA
+
 export const formatDate = (date) => {
   if (!date) return '';
   

@@ -74,7 +74,7 @@ const CrearEmpleado = () => {
           puesto: ''
         });
         setTimeout(() => {
-          navigate('/admin/empleados/lista');
+          navigate('/admin/empleados');
         }, 2000);
       } else {
         setError(result.error);

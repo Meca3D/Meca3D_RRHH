@@ -1,5 +1,5 @@
 // components/HorasExtras/GestionarHorasExtras.jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Grid, Card, CardContent, TextField, Button,
@@ -73,11 +73,11 @@ const GestionarHorasExtras = () => {
 
      const setDefaultPeriod = async () => {
       const now = new Date();
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -6).toISOString().split('T')[0]
+      let lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -6).toISOString().split('T')[0]
 
       let calculatedFirstDay;
         const periodoAnterior = await obtenerPeriodoHorasExtras(user.email, 1); // 1 month back
-
+        const periodoActual = await obtenerPeriodoHorasExtras(user.email,0)
         if (periodoAnterior.encontrada) {
           const inicioNuevo = new Date(periodoAnterior.fechaFin);
           inicioNuevo.setDate(inicioNuevo.getDate() + 1);
@@ -87,6 +87,10 @@ const GestionarHorasExtras = () => {
           const defaultFirstDay = new Date(now.getFullYear(), now.getMonth(), - 7);
           calculatedFirstDay = defaultFirstDay.toISOString().split('T')[0];
         }
+        if (periodoActual.encontrada) {
+          calculatedFirstDay = new Date(periodoActual.fechaInicio).toISOString().split('T')[0];;
+          lastDay = new Date(periodoActual.fechaFin).toISOString().split('T')[0];;
+        } 
       
       setFechaInicio(calculatedFirstDay);
       setFechaFin(lastDay);

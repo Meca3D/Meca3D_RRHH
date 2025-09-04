@@ -157,7 +157,7 @@ const GenerarNomina = () => {
       setFechaInicio(dayjs(selectedDate).startOf('month').subtract(9,'days').format('YYYY-MM-DD'));
       setFechaFin(dayjs(selectedDate).endOf('month').subtract(7,'days').format('YYYY-MM-DD'));
   }
-  }, [nominaId, user?.email, getNominaById, navigate, showError,loadingConfiguracion,loadConfiguracionUsuario]);
+  }, [nominaId, user?.email, getNominaById, navigate,loadingConfiguracion,loadConfiguracionUsuario]);
 
     useEffect(() => {
       if (!isEditing) {

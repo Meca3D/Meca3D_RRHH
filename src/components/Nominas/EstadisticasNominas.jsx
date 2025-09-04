@@ -306,9 +306,6 @@ const EstadisticasNominas = () => {
         if (nominaMesNumero === 0) { // Si el mes no es válido, ignorar esta nómina
           return false;
         }
-
-        // Para la comparación de fechas, redondear los meses especiales al entero más cercano
-        // Esto permite que P.E. Verano (6.5) se agrupe con Junio (6) en el filtro de rango de fechas
         const nominaDate = new Date(nomina.año, Math.ceil(nominaMesNumero) - 1); 
         const startDate = new Date(currentAnoInicio, currentMesInicio - 1);
         const endDate = new Date(currentAnoFin, currentMesFin - 1);

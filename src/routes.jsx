@@ -24,12 +24,23 @@ import ListaEmpleados from './components/Admin/Empleados/ListaEmpleados';
 import EditarEmpleados from './components/Admin/Empleados/EditarEmpleados';
 import EliminarEmpleados from './components/Admin/Empleados/EliminarEmpleados';
 
+import GestionVacaciones from './components/Admin/Vacaciones/GestionVacaciones';
+import GestionarSaldos from './components/Admin/Vacaciones/GestionarSaldos';
+import GestionFestivos from './components/Admin/Vacaciones/GestionFestivos';
+import SolicitudesPendientes from './components/Admin/Vacaciones/SolicitudesPendientes';
+import CalendarioVacacionesAdmin from './components/Admin/Vacaciones/CalendarioVacacionesAdmin';
+import HistorialSolicitudes from './components/Admin/Vacaciones/HistorialSolicitudes';
+
 import Nominas from './components/Nominas/Nominas';
 import ConfigurarDatosSalariales from './components/Nominas/ConfigurarDatosSalariales';
 import GenerarNomina from './components/Nominas/GenerarNomina';
 import GestionarNominas from './components/Nominas/GestionarNominas';
 import EstadisticasNominas from './components/Nominas/EstadisticasNominas';
-import MisVacaciones from './components/Vacaciones/MisVacaciones';
+import Vacaciones from './components/Vacaciones/Vacaciones';
+import CrearSolicitudVacaciones from './components/Vacaciones/CrearSolicitudVacaciones';
+import EditarSolicitudVacaciones from './components/Vacaciones/EditarSolicitudVacaciones';
+import MisSolicitudesVacaciones from './components/Vacaciones/MisSolicitudesVacaciones';
+import MiSaldoVacaciones from './components/Vacaciones/MiSaldoVacaciones';
 import HorasExtras from './components/HorasExtras/HorasExtras';
 import RegistrarHorasExtras from './components/HorasExtras/RegistrarHorasExtras';
 import GestionarHorasExtras from './components/HorasExtras/GestionarHorasExtras';
@@ -82,7 +93,12 @@ const AppRoutes = () => {
         <Route path="/nominas/generar/:id" element={<GenerarNomina />} />
         <Route path="/nominas/gestionar" element={<GestionarNominas />} />
         <Route path="/nominas/estadisticas" element={<EstadisticasNominas />} />
-        <Route path="vacaciones" element={<MisVacaciones />} />
+        <Route path="/vacaciones" element={<Vacaciones />} />
+        <Route path="/vacaciones/crear" element={<CrearSolicitudVacaciones />} />
+        <Route path="/vacaciones/editar/:solicitudId" element={<EditarSolicitudVacaciones />} />
+        <Route path="/vacaciones/solicitudes" element={<MisSolicitudesVacaciones />} />
+        <Route path="/vacaciones/saldo" element={<MiSaldoVacaciones />} />
+        <Route path="/vacaciones/estadisticas" element={<CrearSolicitudVacaciones />} />
         <Route path="/horas-extras" element={<HorasExtras />} />
         <Route path="/horas-extras/registrar" element={<RegistrarHorasExtras />} />
         <Route path="/horas-extras/gestionar" element={<GestionarHorasExtras />} />
@@ -105,6 +121,17 @@ const AppRoutes = () => {
         <Route path="admin/empleados/crear" element={<AdminRoute><CrearEmpleado /></AdminRoute>} />
         <Route path="admin/empleados/editar" element={<AdminRoute><EditarEmpleados /></AdminRoute>} />
         <Route path="admin/empleados/eliminar" element={<AdminRoute><EliminarEmpleados /></AdminRoute>} />
+
+        {/* Rutas de Gestión de Vacaciones */}
+        <Route path="admin/vacaciones" element={<AdminRoute><GestionVacaciones /></AdminRoute>} />
+        <Route path="admin/vacaciones/pendientes" element={<AdminRoute><SolicitudesPendientes /></AdminRoute>} />
+        <Route path="admin/empleados/crear" element={<AdminRoute><CrearEmpleado /></AdminRoute>} />
+        <Route path="admin/empleados/editar" element={<AdminRoute><EditarEmpleados /></AdminRoute>} />
+        <Route path="admin/vacaciones/saldos" element={<AdminRoute><GestionarSaldos /></AdminRoute>} />
+        <Route path="admin/vacaciones/festivos" element={<AdminRoute><GestionFestivos /></AdminRoute>} />
+        <Route path="admin/vacaciones/calendario" element={<AdminRoute><CalendarioVacacionesAdmin /></AdminRoute>} />
+        <Route path="admin/vacaciones/historial" element={<AdminRoute><HistorialSolicitudes /></AdminRoute>} />
+
 
          <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
