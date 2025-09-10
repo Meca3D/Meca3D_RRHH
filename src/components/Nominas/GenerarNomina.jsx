@@ -711,46 +711,41 @@ const GenerarNomina = () => {
                                   }
                                   }}
                                 />
-                                 <TextField
-                                  label="Precio Trienio"
-                                  type="number"
-                                  value={formatCurrency(configuracionNomina.valorTrienio)}
-                                  disabled
-                                  variant="outlined" 
-                                  sx={{
-                                    bgcolor:'rgba(0,0,0,0.08)',
-                                    // Estilos para el borde cuando el TextField está deshabilitado (variante outlined)
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: 'black !important', // Borde negro
-                                    },
-                                    // Estilos para el texto de entrada cuando el TextField está deshabilitado
-                                    '& .MuiInputBase-input.Mui-disabled': {
-                                      textAlign: 'center',
-                                      color: 'black !important', // Color del texto negro
-                                      // Esto es crucial para navegadores basados en WebKit (Chrome, Safari)
-                                      // que pueden tener un estilo de texto gris predeterminado para inputs deshabilitados
-                                      WebkitTextFillColor: 'black !important', 
-                                    },
-                                    '& .MuiInputBase-input': {
-                                      textAlign: 'center', // Centra el texto horizontalmente
-                                      color: 'black !important', // Asegura que el texto siga siendo negro
-                                      WebkitTextFillColor: 'black !important', // Crucial para navegadores WebKit
-                                    },
-                                    // Estilos para la etiqueta (label) cuando el TextField está deshabilitado
-                                    '& .MuiInputLabel-root.Mui-disabled': {
-                                      textAlign: 'center',
-                                      color: 'black !important', // Color de la etiqueta negro
-                                    },
 
-                                    // Si usas la variante 'filled' o 'standard', también querrás esto para el underline
-                                     '& .MuiFilledInput-underline:before': { // Para 'filled'
-                                       borderBottomColor: 'black !important',
-                                     },
-                                     '& .MuiInput-underline:before': { // Para 'standard'
-                                       borderBottomColor: 'black !important',
-                                     },
-                                  }}
-                                />
+                        <Box sx={{
+                            position: 'relative',
+                            height: '56px', 
+                            width: '100%',
+                            bgcolor: 'rgba(0,0,0,0.08)',
+                            borderRadius: '4px',
+                            border: '1px solid black', 
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            
+                        }}>
+                            <Typography 
+                                variant="body1" 
+                                sx={{
+                                    textAlign: 'center',
+                                    color: 'black',
+                                }}>
+                                {formatCurrency(configuracionNomina?.valorTrienio || 0)}
+                            </Typography>
+                            <Typography 
+                                variant="caption" 
+                                sx={{
+                                    position: 'absolute', 
+                                    top: 0, 
+                                    left: 10,
+                                    transform: 'translateY(-50%)',
+                                    bgcolor: 'white',
+                                    px: 1,
+                                    color: 'black'
+                                }}>
+                                Precio Trienio
+                            </Typography>
+                            </Box>
                             </Box>
                             <Divider sx={{ bgcolor:'black', mt:3}} />
                             </Box>
