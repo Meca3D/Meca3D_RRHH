@@ -1,12 +1,12 @@
 // src/components/Layout/MainLayout.jsx
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   AppBar, Toolbar, Typography, IconButton, Box, 
   Avatar, Drawer, List, ListItemButton, ListItemIcon, 
   ListItemText, Divider, Container
 } from '@mui/material';
-import EuroIcon from '@mui/icons-material/Euro';
+import HomeIcon from '@mui/icons-material/Home';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
@@ -16,18 +16,20 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PaymentIcon from '@mui/icons-material/Payment';
 import WysiwygOutlinedIcon from '@mui/icons-material/WysiwygOutlined'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import UserProfile from '../UI/UserProfile';
+import OwnerProfile from '../UI/OwnerProfile';
 
 
 
 const MainLayout = () => {
   const [profileOpen, setProfileOpen] = useState(false);
-  const {user, userProfile, isAuthenticated, canManageUsers, isCocinero} = useAuthStore();
+  const {user, userProfile, isAuthenticated, canManageUsers, isCocinero, isOwner} = useAuthStore();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const drawerWidth = 280; // Aumentar un poco el ancho
+  const navigate = useNavigate();
 
   const menuItems = [
     { 
@@ -433,15 +435,29 @@ const MainLayout = () => {
         }}
       >
         <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
+          {isOwner() ? (         
+            <IconButton
+              color="inherit"
+              aria-label="home"
+              edge="start"
+              onClick={()=>navigate('/')}
+              sx={{ mr: 2, display: { sm: 'none' } }}
+            >
+            <HomeIcon sx={{fontSize:'2rem'}} />
           </IconButton>
+          
+          ):(  
+
+              <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: 'none' } }}
+            >
+            <MenuIcon />
+          </IconButton>         
+            )}
           
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {getPageTitle()}
@@ -459,12 +475,19 @@ const MainLayout = () => {
                   )}
                 </Avatar>
               </IconButton>
-              <UserProfile 
-                open={profileOpen} 
-                onClose={() => setProfileOpen(false)}
-                loading={false} 
+              {isOwner() ? (
+                <OwnerProfile
+                  open={profileOpen} 
+                  onClose={() => setProfileOpen(false)}
+                  loading={false}
+                />
+              ):(<UserProfile 
+                  open={profileOpen} 
+                  onClose={() => setProfileOpen(false)}
+                  loading={false} 
 
-              />
+              /> 
+            )}
             </>
           )}
         </Toolbar>

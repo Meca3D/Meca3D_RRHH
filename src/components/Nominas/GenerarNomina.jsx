@@ -685,6 +685,7 @@ const GenerarNomina = () => {
                                 <TextField
                                   label="Cantidad Trienios"
                                   type="number"
+                                  onWheel={(e) => e.target.blur()}
                                   value={numeroTrienios}
                                   onChange={(e) => setNumeroTrienios(parseInt(e.target.value) || 0)}
                                   fullWidth
@@ -712,7 +713,7 @@ const GenerarNomina = () => {
                                 />
                                  <TextField
                                   label="Precio Trienio"
-                                  type="string"
+                                  type="number"
                                   value={formatCurrency(configuracionNomina.valorTrienio)}
                                   disabled
                                   variant="outlined" 
@@ -818,6 +819,7 @@ const GenerarNomina = () => {
                               type="number"
                               label="Pago Extra (€)"
                               value={extraCantidad}
+                              onWheel={(e) => e.target.blur()}
                               onChange={(e)=>{setExtraCantidad(e.target.value)}}
                               fullWidth
                               slotProps={{ 
@@ -903,6 +905,7 @@ const GenerarNomina = () => {
                               type="number"
                               label="Deducción (€)"
                               value={deduccionCantidad}
+                              onWheel={(e) => e.target.blur()}
                               onChange={(e)=>{setDeduccionCantidad(e.target.value)}}
                               fullWidth
                               slotProps={{ 
@@ -955,6 +958,7 @@ const GenerarNomina = () => {
                                 select
                                 label="Año"
                                 value={añoNomina}
+                                onWheel={(e) => e.target.blur()}
                                 onChange={e => setAñoNomina(e.target.value)}
                                 fullWidth
                                 sx={{ mb: 3,
@@ -978,6 +982,7 @@ const GenerarNomina = () => {
                               <TextField
                                 type="number"
                                 label="Importe paga extra (€)"
+                                onWheel={(e) => e.target.blur()}
                                 value={importe}
                                 onChange={(e) => setImporte(e.target.value)}
                                 fullWidth
@@ -1060,6 +1065,7 @@ const GenerarNomina = () => {
                             <TextField
                               type="number"
                               label="Deducción (€)"
+                              onWheel={(e) => e.target.blur()}
                               value={deduccionCantidad}
                               onChange={(e)=>{setDeduccionCantidad(e.target.value)}}
                               fullWidth

@@ -176,6 +176,7 @@ const CrearSolicitudVacaciones = () => {
                   fullWidth
                   helperText={`Máximo ${Math.min(7, horasLibres)}h`}
                   value={horasSolicitadas}
+                  onWheel={(e) => e.target.blur()}
                   onChange={e => {
                                 const value = e.target.value;
                                 const maxHoras = Math.min(7, horasLibres);

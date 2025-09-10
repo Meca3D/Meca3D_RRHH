@@ -683,7 +683,7 @@ const CalendarioVacacionesAdmin = () => {
                     </Grid>
 
                     {/* Grid del calendario */}
-                    <Grid container spacing={0.5}>
+                    <Grid container spacing={0}>
                       {dias.map((dia, index) => {
                         const vacacionesDia = getVacacionesDia(dia);
                         return (

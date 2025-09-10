@@ -129,7 +129,6 @@ export const useAuthStore = create((set, get) => ({
       const userRef = doc(db, 'USUARIOS', userProfile.email);
       await updateDoc(userRef, {
         nombre: profileData.nombre,
-        puesto: profileData.puesto,
         nivel: profileData.nivel,
         fechaIngreso: profileData.fechaIngreso,
         photoURL: profileData.photoURL

@@ -2,6 +2,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/Layout/MainLayout';
 import Login from './components/Auth/Login';
+import RoleBasedRedirect from './components/Auth/RoleBasedRedirect';
 
 
 import Dashboard from './components/Dashboard/Dashboard';
@@ -10,6 +11,7 @@ import CreateOrder from './components/Orders/CreateOrder';
 import OrderDetail from './components/Orders/OrderDetail';
 
 import AdminRoute from './components/AdminRoute';
+import NoOwnerRoute from './components/NoOwnerRoute';
 import CocineroRoute from './components/CocineroRoute';
 import AdminDashboard from './components/Admin/AdminDashBoard';
 
@@ -30,6 +32,8 @@ import GestionFestivos from './components/Admin/Vacaciones/GestionFestivos';
 import SolicitudesPendientes from './components/Admin/Vacaciones/SolicitudesPendientes';
 import CalendarioVacacionesAdmin from './components/Admin/Vacaciones/CalendarioVacacionesAdmin';
 import HistorialSolicitudes from './components/Admin/Vacaciones/HistorialSolicitudes';
+import EstadisticasVacasAdmin from './components/Admin/Vacaciones/EstadisticasVacasAdmin';
+import ConfiguracionVacacionesAdmin from './components/Admin/Vacaciones/ConfiguracionVacacionesAdmin';
 
 import Nominas from './components/Nominas/Nominas';
 import ConfigurarDatosSalariales from './components/Nominas/ConfigurarDatosSalariales';
@@ -77,6 +81,8 @@ const AppRoutes = () => {
           <MainLayout />
         </ProtectedRoute>
       }>
+        <Route index element={<RoleBasedRedirect />} />
+
         {/* Rutas anidadas - se renderizan dentro de MainLayout */}
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
@@ -87,23 +93,23 @@ const AppRoutes = () => {
         <Route path="desayunos/orders/:orderId" element={<OrderDetail />} />
 
         {/* Rutas de RRHH */}
-        <Route path="/nominas" element={<Nominas />} />
-        <Route path="/nominas/configurar" element={<ConfigurarDatosSalariales />} />
-        <Route path="/nominas/generar" element={<GenerarNomina />} />
-        <Route path="/nominas/generar/:id" element={<GenerarNomina />} />
-        <Route path="/nominas/gestionar" element={<GestionarNominas />} />
-        <Route path="/nominas/estadisticas" element={<EstadisticasNominas />} />
-        <Route path="/vacaciones" element={<Vacaciones />} />
-        <Route path="/vacaciones/crear" element={<CrearSolicitudVacaciones />} />
-        <Route path="/vacaciones/editar/:solicitudId" element={<EditarSolicitudVacaciones />} />
-        <Route path="/vacaciones/solicitudes" element={<MisSolicitudesVacaciones />} />
-        <Route path="/vacaciones/saldo" element={<MiSaldoVacaciones />} />
-        <Route path="/vacaciones/estadisticas" element={<CrearSolicitudVacaciones />} />
-        <Route path="/horas-extras" element={<HorasExtras />} />
-        <Route path="/horas-extras/registrar" element={<RegistrarHorasExtras />} />
-        <Route path="/horas-extras/gestionar" element={<GestionarHorasExtras />} />
-        <Route path="/horas-extras/estadisticas" element={<EstadisticasHorasExtras />} />
-        <Route path="/horas-extras/configurar" element={<ConfiguracionHorasExtras />} /> 
+        <Route path="/nominas" element={<NoOwnerRoute><Nominas /></NoOwnerRoute>} />
+        <Route path="/nominas/configurar" element={<NoOwnerRoute><ConfigurarDatosSalariales /></NoOwnerRoute>} />
+        <Route path="/nominas/generar" element={<NoOwnerRoute><GenerarNomina /></NoOwnerRoute>} />
+        <Route path="/nominas/generar/:id" element={<NoOwnerRoute><GenerarNomina /></NoOwnerRoute>} />
+        <Route path="/nominas/gestionar" element={<NoOwnerRoute><GestionarNominas /></NoOwnerRoute>} />
+        <Route path="/nominas/estadisticas" element={<NoOwnerRoute><EstadisticasNominas /></NoOwnerRoute>} />
+        <Route path="/vacaciones" element={<NoOwnerRoute><Vacaciones /></NoOwnerRoute>} />
+        <Route path="/vacaciones/crear" element={<NoOwnerRoute><CrearSolicitudVacaciones /></NoOwnerRoute>} />
+        <Route path="/vacaciones/editar/:solicitudId" element={<NoOwnerRoute><EditarSolicitudVacaciones /></NoOwnerRoute>} />
+        <Route path="/vacaciones/solicitudes" element={<NoOwnerRoute><MisSolicitudesVacaciones /></NoOwnerRoute>} />
+        <Route path="/vacaciones/saldo" element={<NoOwnerRoute><MiSaldoVacaciones /></NoOwnerRoute>} />
+        <Route path="/vacaciones/estadisticas" element={<NoOwnerRoute><CrearSolicitudVacaciones /></NoOwnerRoute>} />
+        <Route path="/horas-extras" element={<NoOwnerRoute><HorasExtras /></NoOwnerRoute>} />
+        <Route path="/horas-extras/registrar" element={<NoOwnerRoute><RegistrarHorasExtras /></NoOwnerRoute>} />
+        <Route path="/horas-extras/gestionar" element={<NoOwnerRoute><GestionarHorasExtras /></NoOwnerRoute>} />
+        <Route path="/horas-extras/estadisticas" element={<NoOwnerRoute><EstadisticasHorasExtras /></NoOwnerRoute>} />
+        <Route path="/horas-extras/configurar" element={<NoOwnerRoute><ConfiguracionHorasExtras /></NoOwnerRoute>} /> 
 
 
         {/* Rutas de Administración */}
@@ -125,15 +131,15 @@ const AppRoutes = () => {
         {/* Rutas de Gestión de Vacaciones */}
         <Route path="admin/vacaciones" element={<AdminRoute><GestionVacaciones /></AdminRoute>} />
         <Route path="admin/vacaciones/pendientes" element={<AdminRoute><SolicitudesPendientes /></AdminRoute>} />
-        <Route path="admin/empleados/crear" element={<AdminRoute><CrearEmpleado /></AdminRoute>} />
-        <Route path="admin/empleados/editar" element={<AdminRoute><EditarEmpleados /></AdminRoute>} />
         <Route path="admin/vacaciones/saldos" element={<AdminRoute><GestionarSaldos /></AdminRoute>} />
         <Route path="admin/vacaciones/festivos" element={<AdminRoute><GestionFestivos /></AdminRoute>} />
         <Route path="admin/vacaciones/calendario" element={<AdminRoute><CalendarioVacacionesAdmin /></AdminRoute>} />
         <Route path="admin/vacaciones/historial" element={<AdminRoute><HistorialSolicitudes /></AdminRoute>} />
+        <Route path="admin/vacaciones/estadisticas" element={<AdminRoute><EstadisticasVacasAdmin /></AdminRoute>} />
+        <Route path="admin/vacaciones/configuracion" element={<AdminRoute><ConfiguracionVacacionesAdmin /></AdminRoute>} />
 
 
-         <Route path="*" element={<Navigate to="/dashboard" replace />} />
+         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

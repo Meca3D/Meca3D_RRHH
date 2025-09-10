@@ -27,7 +27,17 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import axios from 'axios';
 
-const UserProfile = ({ open, onClose }) => {
+const opcionesPuesto = [
+  'Fresador',
+  'Tornero', 
+  'Operario CNC',
+  'Administrativo',
+  'Diseñador',
+  'Montador',
+  'Ayudante de Taller'
+];
+
+const OwnerProfile = ({ open, onClose }) => {
   const navigate = useNavigate();
   const { userProfile, updateUserProfile, changePassword, logout } = useAuthStore();
   const { showSuccess, showError } = useUIStore();
@@ -41,9 +51,10 @@ const UserProfile = ({ open, onClose }) => {
 
   const [formData, setFormData] = useState({
     nombre: '',
-    nivel: '',
-    fechaIngreso: '',
-    photoURL: ''
+    photoURL: '',
+    puesto:'',
+    nivel:'',
+    fechaIngreso:''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -60,9 +71,10 @@ const UserProfile = ({ open, onClose }) => {
     if (userProfile) {
       setFormData({
         nombre: userProfile.nombre || '',
-        nivel: userProfile.nivel || '',
-        fechaIngreso: userProfile.fechaIngreso || '',
-        photoURL: userProfile.photoURL || ''
+        photoURL: userProfile.photoURL || '',
+        puesto:'',
+        nivel:'',
+        fechaIngreso:''
       });
       setPreviewUrl(userProfile.photoURL || '');
     }
@@ -196,8 +208,6 @@ const UserProfile = ({ open, onClose }) => {
     setPreviewUrl(userProfile?.photoURL || '');
     setFormData({
       nombre: userProfile?.nombre || '',
-      nivel: userProfile?.nivel || '',
-      fechaIngreso: userProfile?.fechaIngreso || '',
       photoURL: userProfile?.photoURL || ''
     });
     setPasswordData({
@@ -259,8 +269,8 @@ const UserProfile = ({ open, onClose }) => {
               <Typography sx={{mt:2}} textAlign="center" variant="h6" fontWeight={600}>
                 {userProfile.nombre}
               </Typography>
-              <Typography sx={{mt:0.5}} textAlign="center" variant="body1" color="text.secondary">
-                {userProfile.email}
+              <Typography sx={{mt:0.5}} textAlign="center" variant="body1" color="error" fontStyle='italic'>
+                Jefe
               </Typography>
             </Box>
           <Box sx={{ display: 'flex', justifyContent:'center', alignItems: 'center'}}>
@@ -376,47 +386,6 @@ const UserProfile = ({ open, onClose }) => {
                 }}
               />
                 )}
-
-              <TextField
-                label="Nivel salarial"
-                value={formData.nivel}
-                onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}
-                fullWidth
-                type="number"
-                slotProps={{
-                  input:{
-                  readOnly: !editMode,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <BadgeIcon color={editMode?"primary":"action"} />
-                    </InputAdornment>
-                  )},
-                  htmlInput: { 
-                    min: 1, max: 15 }
-                }}
-              />
-
-              <TextField
-                label="Fecha de ingreso"
-                value={formData.fechaIngreso}
-                onChange={(e) => setFormData({ ...formData, fechaIngreso: e.target.value })}
-                fullWidth
-                type="date"
-                slotProps={{
-                  input:{
-                  readOnly: !editMode,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CalendarIcon color={editMode?"primary":"action"} />
-                    </InputAdornment>
-                  )
-                  },
-                  inputLabel:{
-                    shrink: true
-                  }
-                }}
-              />
-              
               
             </Stack>
           ) : (
@@ -554,4 +523,4 @@ const UserProfile = ({ open, onClose }) => {
   );
 };
 
-export default UserProfile;
+export default OwnerProfile;

@@ -157,7 +157,7 @@ const EditarSolicitudVacaciones = () => {
   ? fechasSeleccionadas.length * 8 
   : horasSolicitadas;
 
-    // ✅ NUEVA función para manejar cambio de tipo con preservación
+
   const handleTipoChange = (nuevoTipo) => {
     // Guardar valores actuales en temporal
     const valoresActuales = {

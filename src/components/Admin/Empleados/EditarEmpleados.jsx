@@ -52,7 +52,8 @@ const EditarEmpleados = () => {
     'Administrativo',
     'Diseñador',
     'Montador',
-    'Ayudante de Taller'
+    'Ayudante de Taller',
+    'Jefe'
   ];
 
   useEffect(() => {
@@ -73,8 +74,6 @@ const EditarEmpleados = () => {
           fechaIngreso: empleadoCompleto.fechaIngreso || '',
           nivel: empleadoCompleto.nivel || '',
           puesto: empleadoCompleto.puesto || '',
-          vacaDias: empleadoCompleto.vacaDias || '',
-          vacaHoras: empleadoCompleto.vacaHoras || '',
           rol: empleadoCompleto.rol || 'user'
         });
         setModalOpen(true);
@@ -101,8 +100,6 @@ const EditarEmpleados = () => {
         fechaIngreso: formData.fechaIngreso,
         nivel: parseInt(formData.nivel) || null,
         puesto: formData.puesto,
-        vacaDias: parseInt(formData.vacaDias) || 0,
-        vacaHoras: parseInt(formData.vacaHoras) || 0,
         rol: formData.rol
       };
 
@@ -515,6 +512,7 @@ const EditarEmpleados = () => {
                     <MenuItem value="user">Empleado</MenuItem>
                     <MenuItem value="admin">Administrador</MenuItem>
                     <MenuItem value="cocinero">Cocinero</MenuItem>
+                    <MenuItem value="owner">Jefe</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -591,78 +589,6 @@ const EditarEmpleados = () => {
                 >
                   {changingPassword ? 'Cambiando...' : 'Cambiar Contraseña'}
                 </Button>
-              </Grid>
-
-              {/* Sección Vacaciones */}
-              <Grid size={{ xs: 12 }}>
-                <Typography 
-                  variant="h6" 
-                  textAlign='center'
-                  sx={{ 
-                    mb: 1, 
-                    color: 'azul.main', 
-                    fontWeight: 600,
-                    fontSize: '1.1rem'
-                  }}
-                >
-                  Vacaciones
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  {/* Días de vacaciones */}
-                  <Grid size={{ xs: 6 }}>
-                    <TextField
-                      label="Días"
-                      type="number"
-                      value={formData.vacaDias || ''}
-                      onChange={handleChange('vacaDias')}
-                      fullWidth
-                      inputProps={{ min: 0 }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'azul.main'
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'azul.main'
-                          }
-                        },
-                        '& .MuiInputLabel-root.Mui-focused': {
-                          color: 'azul.main'
-                        }
-                      }}
-                    />
-                  </Grid>
-
-                  {/* Horas de vacaciones */}
-                  <Grid size={{ xs: 6 }}>
-                    <TextField
-                      label="Horas"
-                      type="number"
-                      value={formData.vacaHoras || ''}
-                      onChange={handleChange('vacaHoras')}
-                      fullWidth
-                      slotProps={{ 
-                        htmlInput:{
-                          min: 0 
-                        }
-                      }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'azul.main'
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'azul.main'
-                          }
-                        },
-                        '& .MuiInputLabel-root.Mui-focused': {
-                          color: 'azul.main'
-                        }
-                      }}
-                    />
-                  </Grid>
-                </Grid>
               </Grid>
             </Grid>
           )}

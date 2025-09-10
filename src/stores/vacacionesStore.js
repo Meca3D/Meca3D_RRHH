@@ -4,10 +4,13 @@ import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where
 import { db } from '../firebase/config';
 import { useAuthStore } from './authStore';
 import { formatYMD, esFinDeSemana, esFechaPasadaOHoy, formatearFechaCorta } from '../utils/dateUtils';
+import { formatearNombre } from '../components/Helpers';
 
 export const useVacacionesStore = create((set, get) => {
+  
   let unsubscribeSolicitudes = null;
   let unsubscribeFestivos = null;
+  let unsubscribeConfig = null;
 
   return {
     // Estado principal
@@ -16,6 +19,43 @@ export const useVacacionesStore = create((set, get) => {
     festivos: [],
     loading: false,
     error: null,
+    configVacaciones: null,
+
+    loadConfigVacaciones: () => {
+      try {
+        if (unsubscribeConfig) { unsubscribeConfig(); unsubscribeConfig = null; }
+        const ref = doc(db, 'CONFIG', 'VACACIONES_CONFIG');
+        unsubscribeConfig = onSnapshot(ref, (snap) => {
+          set({ configVacaciones: snap.exists() ? snap.data() : null });
+        }, (error) => {
+          console.error('Error cargando config:', error);
+          set({ configVacaciones: null });
+        });
+        return () => { if (unsubscribeConfig) { unsubscribeConfig(); unsubscribeConfig = null; } };
+      } catch (e) {
+        console.error('Error init config:', e);
+        set({ configVacaciones: null });
+        return () => {};
+      }
+    },
+
+    updateConfigVacaciones: async (nuevo) => {
+      try {
+        const ref = doc(db, 'CONFIG', 'VACACIONES_CONFIG');
+        const payload = {
+          ...nuevo,
+          meta: {
+            updatedBy: useAuthStore.getState().user?.email || 'system',
+            updatedAt: new Date()
+          }
+        };
+        await setDoc(ref, payload, { merge: true });
+        return true;
+      } catch (e) {
+        set({ error: e.message });
+        throw e;
+      }
+    },
 
     // Cargar solicitudes de vacaciones
     loadSolicitudesVacaciones: (userEmail) => {
@@ -124,21 +164,25 @@ export const useVacacionesStore = create((set, get) => {
     },
 
     // Cargar días festivos
-    loadFestivos: (año = new Date().getFullYear()) => {
+    loadFestivos: () => {
       if (unsubscribeFestivos) {
         unsubscribeFestivos();
         unsubscribeFestivos = null;
       }
 
       unsubscribeFestivos = onSnapshot(
-        doc(db, 'DIAS_FESTIVOS', año.toString()),
-        (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            set({ festivos: data.festivos || [] });
-          } else {
-            set({ festivos: [] });
-          }
+        collection(db, 'DIAS_FESTIVOS'),
+        (snapshot) => {
+      // Aplana todos los festivos de todos los documentos (años)
+      const festivosFlatten = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const lista = Array.isArray(data?.festivos) ? data.festivos : [];
+        for (const f of lista) {
+          festivosFlatten.push(f);
+        }
+      });
+      set({ festivos: festivosFlatten });
         },
         (error) => {
           console.error('Error cargando festivos:', error);
@@ -178,7 +222,14 @@ export const useVacacionesStore = create((set, get) => {
           'vacaciones.pendientes': userProfile.vacaciones.pendientes + solicitudData.horasSolicitadas
         });
 
+        try {
+          const creada = { id: docRef.id, ...nuevaSolicitud };
+          await get().autoAprobarSiCorresponde(creada);
+        } catch (e) {
+          console.warn('Auto-aprobación no aplicada:', e?.message);
+        }
         return docRef.id;
+        
       } catch (error) {
         set({ error: error.message });
         throw error;
@@ -295,7 +346,7 @@ export const useVacacionesStore = create((set, get) => {
         await updateDoc(doc(db, 'VACACIONES', solicitud.id), {
           estado: 'cancelado',
           fechaCancelacion: formatYMD(new Date()),
-          motivoCancelacion: motivoCancelacion.trim(), // ✅ Nuevo campo
+          motivoCancelacion: motivoCancelacion.trim(), 
           comentariosAdmin: solicitud.comentariosAdmin || '',
           updatedAt: new Date()
         });
@@ -713,7 +764,6 @@ export const useVacacionesStore = create((set, get) => {
           };
         }
         
-        //  Usar obtenerDatosUsuarios en lugar de getDoc individuales
         const emailsEmpleados = solicitudesEnFecha.map(s => s.solicitante);
         const datosUsuarios = await get().obtenerDatosUsuarios(emailsEmpleados);
         
@@ -758,23 +808,21 @@ export const useVacacionesStore = create((set, get) => {
     // Detectar conflictos de cobertura
     detectarConflictos: async (fecha, umbralMinimo = {}) => {
       try {
+        const { configVacaciones } = get();
+        const umbralesConfig = (configVacaciones?.cobertura?.umbrales) || null;
         const disponibilidad = await get().calcularDisponibilidadPorFecha(fecha);
 
       if (!disponibilidad || !disponibilidad.porPuesto || typeof disponibilidad.porPuesto !== 'object') {
       return [];
     }
-        const conflictos = [];
+        const conflictos = []
         
-        // Umbrales por defecto (se puede configurar)
-        const umbrales = {
-          'Fresador': 4,
-          'Tornero': 3,
-          'Operario CNC': 3,
-          'Montador': 2,
-          'Administrativo': 2,
-          'Diseñador': 2,
-          'Ayudante de Taller': 2
+        const umbralesBase = {
+          'Fresador': 4, 'Tornero': 3, 'Operario CNC': 3,
+          'Montador': 2, 'Administrativo': 2, 'Diseñador': 2, 'Ayudante de Taller': 2
         };
+      const umbrales = umbralesConfig ? umbralesConfig : umbralesBase;;
+        
         
         // ✅ VALIDACIÓN: Solo iterar si porPuesto es un objeto válido
             const porPuesto = disponibilidad.porPuesto || {};
@@ -806,6 +854,45 @@ export const useVacacionesStore = create((set, get) => {
             return [];
           }
         },
+
+        evaluarAutoAprobacion: async (solicitud) => {
+          const { configVacaciones, detectarConflictos } = get();
+
+          if (!configVacaciones?.autoAprobar?.habilitado) return { aplicar: false, motivo: 'flag off' };
+
+          const modo = configVacaciones.autoAprobar.modo || 'todas';
+          const maxHoras = parseInt(configVacaciones.autoAprobar.maxHoras || 0, 10);
+
+          const cumpleHoras = (modo === 'porHoras' || modo === 'porHorasYsinConflictos')
+            ? (solicitud.horasSolicitadas || 0) <= maxHoras
+            : true;
+
+          const cumpleConflictos = (modo === 'sinConflictos' || modo === 'porHorasYsinConflictos')
+            ? await (async () => {
+                // Si alguna fecha tiene conflictos, no cumple
+                const conflictosPorDia = await Promise.all(
+                  (solicitud.fechas || []).map(f => get().detectarConflictos(f))
+                );
+                return conflictosPorDia.every(arr => !arr || arr.length === 0);
+              })()
+            : true;
+
+          const aplicar = (modo === 'todas') ? true : (cumpleHoras && cumpleConflictos);
+
+          return { aplicar, motivo: aplicar ? 'ok' : 'reglas no cumplidas' };
+        },
+
+        autoAprobarSiCorresponde: async (solicitud) => {
+          const { evaluarAutoAprobacion, cambiarEstadoSolicitud, configVacaciones } = get();
+          const res = await evaluarAutoAprobacion(solicitud);
+          if (!res.aplicar) return { aplicado: false, motivo: res.motivo };
+
+          const mensaje = (configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.');
+          await cambiarEstadoSolicitud(solicitud.id, 'aprobada', mensaje, solicitud);
+
+          return { aplicado: true };
+        },
+
 
     // Cargar directamente solicitudes aprobadas desde Firestore
     loadVacacionesAprobadas: async (año = new Date().getFullYear()) => {
@@ -1031,8 +1118,447 @@ export const useVacacionesStore = create((set, get) => {
     }
   },
 
+  // Obtener todos los empleados con sus saldos actuales
+  obtenerEmpleadosConSaldos: async () => {
+    try {
+      const { isAdminOrOwner } = useAuthStore.getState();
+      
+      if (!isAdminOrOwner()) {
+        throw new Error('Sin permisos para acceder a los saldos');
+      }
 
+      const usuariosQuery = query(collection(db, 'USUARIOS'));
+      const querySnapshot = await getDocs(usuariosQuery);
+      
+      const empleados = querySnapshot.docs.map(doc => ({
+        email: doc.id,
+        ...doc.data(),
+        saldoActual: doc.data().vacaciones || {
+          disponibles: 0,
+          pendientes: 0
+        }
+      }));
 
+      return empleados.filter(empleado=>empleado.rol!="owner").sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email));
+    } catch (error) {
+      console.error('Error obteniendo empleados con saldos:', error);
+      throw error;
+    }
+  },
+
+  // Ajustar saldo individual
+  ajustarSaldoIndividual: async (empleadoEmail, tipoAjuste, horas, razonAjuste) => {
+    try {
+      const { user, userProfile } = useAuthStore.getState();
+      
+      if (!razonAjuste || razonAjuste.trim() === '') {
+        throw new Error('Debes especificar una razón para el ajuste');
+      }
+
+      // Obtener datos actuales del empleado
+      const userDocRef = doc(db, 'USUARIOS', empleadoEmail);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error('Empleado no encontrado');
+      }
+
+      const datosEmpleado = userDoc.data();
+      const saldoActual = datosEmpleado.vacaciones || { disponibles: 0, pendientes: 0 };
+      
+      // Calcular nuevo saldo
+      let nuevoSaldo = { ...saldoActual };
+      
+      switch (tipoAjuste) {
+        case 'añadir':
+          nuevoSaldo.disponibles += horas;
+          break;
+        case 'reducir':
+          if (saldoActual.disponibles < horas) {
+            throw new Error(`No se pueden reducir ${horas}h. Saldo disponible: ${saldoActual.disponibles}h`);
+          }
+          nuevoSaldo.disponibles -= horas;
+          break;
+        case 'establecer':
+
+          nuevoSaldo.disponibles = horas
+          break;
+        default:
+          throw new Error('Tipo de ajuste no válido');
+      }
+
+      // Validar que el nuevo saldo no sea negativo
+      if (nuevoSaldo.disponibles < 0 ) {
+        throw new Error('El ajuste resultaría en un saldo negativo');
+      }
+
+      // 1. Actualizar saldo del empleado
+      await updateDoc(userDocRef, {
+        'vacaciones': nuevoSaldo,
+        updatedAt: new Date()
+      });
+
+      // 2. Crear solicitud auto-aprobada para trazabilidad
+      const solicitudAjuste = {
+        solicitante: empleadoEmail,
+        fechas: [], // Sin fechas específicas
+        horasSolicitadas: Math.abs(horas),
+        horasDisponiblesAntesSolicitud: saldoActual.disponibles,
+        horasDisponiblesTrasAprobacion: nuevoSaldo.disponibles,
+        fechaSolicitud: formatYMD(new Date()),
+        fechaSolicitudOriginal: formatYMD(new Date()),
+        estado: 'aprobada',
+        fechaAprobacionDenegacion: formatYMD(new Date()),
+        tipoSolicitud: 'ajuste_saldo',
+        tipoAjuste: tipoAjuste,
+        comentariosSolicitante: `Ajuste de saldo realizado por ${userProfile?.nombre || user?.email}`,
+        comentariosAdmin: `AJUSTE DE SALDO: ${tipoAjuste.toUpperCase()} ${horas}h. Razón: ${razonAjuste.trim()}`,
+        motivoAjuste: razonAjuste.trim(),
+        realizadoPor: user?.email,
+        esAjusteSaldo: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      await addDoc(collection(db, 'VACACIONES'), solicitudAjuste);
+
+      return {
+        exito: true,
+        saldoAnterior: saldoActual,
+        saldoNuevo: nuevoSaldo,
+        horasAjustadas: horas,
+        tipoAjuste: tipoAjuste
+      };
+
+    } catch (error) {
+      console.error('Error en ajuste individual:', error);
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  // Ajustar saldos masivamente
+  ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjuste) => {
+    try {
+      const { user, userProfile } = useAuthStore.getState();
+      
+      if (!razonAjuste || razonAjuste.trim() === '') {
+        throw new Error('Debes especificar una razón para el ajuste masivo');
+      }
+
+      if (!empleadosSeleccionados || empleadosSeleccionados.length === 0) {
+        throw new Error('Debes seleccionar al menos un empleado');
+      }
+
+      let procesados = 0;
+      let errores = [];
+      const resultados = [];
+
+      for (const empleadoEmail of empleadosSeleccionados) {
+        try {
+          const resultado = await get().ajustarSaldoIndividual(
+            empleadoEmail, 
+            tipoAjuste, 
+            horas, 
+            `AJUSTE MASIVO: ${razonAjuste.trim()}`
+          );
+          
+          resultados.push({
+            empleado: empleadoEmail,
+            exito: true,
+            ...resultado
+          });
+          procesados++;
+        } catch (error) {
+          errores.push({
+            empleado: empleadoEmail,
+            error: error.message
+          });
+        }
+      }
+
+      return {
+        procesados,
+        errores,
+        total: empleadosSeleccionados.length,
+        exito: errores.length === 0,
+        resultados
+      };
+
+    } catch (error) {
+      console.error('Error en ajuste masivo:', error);
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  // Obtener historial de ajustes de saldo
+  obtenerHistorialAjustes: async (empleadoEmail = null) => {
+    try {
+      let historialQuery;
+      
+      if (empleadoEmail) {
+        // Historial de un empleado específico
+        historialQuery = query(
+          collection(db, 'VACACIONES'),
+          where('solicitante', '==', empleadoEmail),
+          where('esAjusteSaldo', '==', true),
+          orderBy('fechaSolicitud', 'desc')
+        );
+      } else {
+        // Historial completo de ajustes
+        historialQuery = query(
+          collection(db, 'VACACIONES'),
+          where('esAjusteSaldo', '==', true),
+          orderBy('fechaSolicitud', 'desc')
+        );
+      }
+
+      const querySnapshot = await getDocs(historialQuery);
+      const ajustes = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      const emails = [...new Set(ajustes.map(a => a.solicitante))];
+
+      // 2) resolver datos de usuario (nombre, puesto, etc.)
+      // Usa la util existente en la store
+      const datosUsuarios = await get().obtenerDatosUsuarios(emails);
+
+      // 3) devolver ajustes enriquecidos con 'solicitanteNombre'
+      const ajustesConNombre = ajustes.map(a => ({
+        ...a,
+        solicitanteNombre: (datosUsuarios[a.solicitante]?.nombre || a.solicitante),
+        realizadoPorNombre: (datosUsuarios[a.realizadoPor]?.nombre || a.realizadoPor)
+      }));
+
+      return ajustesConNombre;
+
+    } catch (error) {
+      console.error('Error obteniendo historial de ajustes:', error);
+      throw error;
+    }
+  },
+
+  // Obtener datos analíticos generales
+  obtenerDatosAnaliticos: async (año = new Date().getFullYear()) => {
+    try {
+      const { isAdminOrOwner } = useAuthStore.getState();
+      
+      if (!isAdminOrOwner()) {
+        throw new Error('Sin permisos para acceder a analíticas');
+      }
+
+      // Obtener todas las solicitudes del año
+      const solicitudesQuery = query(
+        collection(db, 'VACACIONES'),
+        orderBy('fechaSolicitud', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(solicitudesQuery);
+      const todasSolicitudes = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Filtrar por año
+      const solicitudesAño = todasSolicitudes.filter(s => {
+        const fechaSolicitud = new Date(s.fechaSolicitud);
+        return fechaSolicitud.getFullYear() === año;
+      });
+
+      // Obtener datos de empleados
+      const emails = [...new Set(solicitudesAño.map(s => s.solicitante))];
+      const datosUsuarios = await get().obtenerDatosUsuarios(emails);
+
+      return {
+        solicitudes: solicitudesAño,
+        usuarios: datosUsuarios
+      };
+    } catch (error) {
+      console.error('Error obteniendo datos analíticos:', error);
+      throw error;
+    }
+  },
+
+  // Calcular distribución mensual de vacaciones
+  calcularDistribucionMensual: async (año) => {
+    try {
+      const { solicitudes } = await get().obtenerDatosAnaliticos(año);
+      const solicitudesAprobadas = solicitudes.filter(s => s.estado === 'aprobada');
+
+      const distribucionMensual = Array.from({ length: 12 }, (_, index) => ({
+        mes: new Date(2000, index).toLocaleDateString('es-ES', { month: 'short' }),
+        mesNumero: index + 1,
+        solicitudes: 0,
+        diasTotales: 0,
+        horasTotales: 0
+      }));
+
+      solicitudesAprobadas.forEach(solicitud => {
+        if (solicitud.fechas && solicitud.fechas.length > 0) {
+          solicitud.fechas.forEach(fecha => {
+            const fechaObj = new Date(fecha);
+            if (fechaObj.getFullYear() === año) {
+              const mes = fechaObj.getMonth();
+              distribucionMensual[mes].diasTotales++;
+              distribucionMensual[mes].horasTotales += 8; // 8 horas por día
+            }
+          });
+        }
+      });
+
+      // Contar solicitudes únicas por mes
+      solicitudesAprobadas.forEach(solicitud => {
+        const fechaSolicitud = new Date(solicitud.fechaSolicitud);
+        if (fechaSolicitud.getFullYear() === año) {
+          const mes = fechaSolicitud.getMonth();
+          distribucionMensual[mes].solicitudes++;
+        }
+      });
+
+      return distribucionMensual;
+    } catch (error) {
+      console.error('Error calculando distribución mensual:', error);
+      throw error;
+    }
+  },
+
+  // Calcular KPIs de aprobación
+  calcularKPIsAprobacion: async (año) => {
+    try {
+      const { solicitudes } = await get().obtenerDatosAnaliticos(año);
+
+      const stats = {
+        total: solicitudes.length,
+        aprobadas: 0,
+        denegadas: 0,
+        canceladas: 0,
+        pendientes: 0,
+        tasaAprobacion: 0,
+        tiempoMedioAprobacion: 0
+      };
+
+      let tiemposAprobacion = [];
+
+      solicitudes.forEach(s => {
+        if (s.estado === 'aprobada') stats.aprobadas++;
+        else if (s.estado === 'denegada') stats.denegadas++;
+        else if (s.estado === 'cancelado') stats.canceladas++;
+        else if (s.estado === 'pendiente') stats.pendientes++;
+
+        // Calcular tiempo de aprobación/denegación
+        if (s.fechaAprobacionDenegacion) {
+          const fechaSolicitud = new Date(s.fechaSolicitud);
+          const fechaResolucion = new Date(s.fechaAprobacionDenegacion);
+          const diasTranscurridos = Math.floor((fechaResolucion - fechaSolicitud) / (1000 * 60 * 60 * 24));
+          tiemposAprobacion.push(diasTranscurridos);
+        }
+      });
+
+      const solicitudesResueltas = stats.aprobadas + stats.denegadas;
+      stats.tasaAprobacion = solicitudesResueltas > 0 ? 
+        Math.round((stats.aprobadas / solicitudesResueltas) * 100) : 0;
+
+      stats.tiempoMedioAprobacion = tiemposAprobacion.length > 0 ?
+        Math.round(tiemposAprobacion.reduce((a, b) => a + b, 0) / tiemposAprobacion.length) : 0;
+
+      return stats;
+    } catch (error) {
+      console.error('Error calculando KPIs de aprobación:', error);
+      throw error;
+    }
+  },
+
+  // Calcular uso de vacaciones por empleado
+  calcularUsoPorEmpleado: async (año) => {
+    try {
+      const { solicitudes, usuarios } = await get().obtenerDatosAnaliticos(año);
+      const solicitudesAprobadas = solicitudes.filter(s => s.estado === 'aprobada');
+
+      // Obtener saldos actuales
+      const empleadosConSaldos = await get().obtenerEmpleadosConSaldos();
+      const saldosMap = {};
+      empleadosConSaldos.forEach(emp => {
+        saldosMap[emp.email] = emp.saldoActual;
+      });
+
+      const usoEmpleados = {};
+
+      solicitudesAprobadas.forEach(solicitud => {
+        const email = solicitud.solicitante;
+        const usuario = usuarios[email] || {};
+        
+        if (!usoEmpleados[email]) {
+          const saldo = saldosMap[email] || { asignadas: 0, disponibles: 0 };
+          usoEmpleados[email] = {
+            email,
+            nombre: formatearNombre(usuario.nombre) || email,
+            puesto: usuario.puesto || 'Sin definir',
+            horasUsadas: 0,
+            horasAsignadas: saldo.asignadas || 0,
+            solicitudes: 0,
+            porcentajeUso: 0
+          };
+        }
+
+        usoEmpleados[email].horasUsadas += solicitud.horasSolicitadas || 0;
+        usoEmpleados[email].solicitudes++;
+      });
+
+      // Calcular porcentajes
+      Object.values(usoEmpleados).forEach(emp => {
+        if (emp.horasAsignadas > 0) {
+          emp.porcentajeUso = Math.round((emp.horasUsadas / emp.horasAsignadas) * 100);
+        }
+      });
+
+      return Object.values(usoEmpleados)
+        .sort((a, b) => b.horasUsadas - a.horasUsadas);
+    } catch (error) {
+      console.error('Error calculando uso por empleado:', error);
+      throw error;
+    }
+  },
+
+  // Calcular distribución por puestos
+  calcularDistribucionPorPuestos: async (año) => {
+    try {
+      const { solicitudes, usuarios } = await get().obtenerDatosAnaliticos(año);
+      const solicitudesAprobadas = solicitudes.filter(s => s.estado === 'aprobada');
+
+      const distribucionPuestos = {};
+
+      solicitudesAprobadas.forEach(solicitud => {
+        const usuario = usuarios[solicitud.solicitante] || {};
+        const puesto = usuario.puesto || 'Sin definir';
+
+        if (!distribucionPuestos[puesto]) {
+          distribucionPuestos[puesto] = {
+            puesto,
+            solicitudes: 0,
+            horasTotales: 0,
+            empleadosUnicos: new Set()
+          };
+        }
+
+        distribucionPuestos[puesto].solicitudes++;
+        distribucionPuestos[puesto].horasTotales += solicitud.horasSolicitadas || 0;
+        distribucionPuestos[puesto].empleadosUnicos.add(solicitud.solicitante);
+      });
+
+      return Object.values(distribucionPuestos).map(d => ({
+        ...d,
+        empleadosUnicos: d.empleadosUnicos.size,
+        promedioPorEmpleado: d.empleadosUnicos.size > 0 ? 
+          Math.round(d.horasTotales / d.empleadosUnicos.size) : 0
+      })).sort((a, b) => b.horasTotales - a.horasTotales);
+    } catch (error) {
+      console.error('Error calculando distribución por puestos:', error);
+      throw error;
+    }
+  },
 
     // Cleanup
     cleanup: () => {

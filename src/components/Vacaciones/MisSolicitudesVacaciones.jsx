@@ -90,7 +90,8 @@ const MisSolicitudesVacaciones = () => {
       );
       
       // Ajustar las horas a cancelar si hay cancelaciones parciales previas
-      const horasAjustadas = diasRestantes.length * 8;
+      const horasAjustadas = diasYaCancelados.length===0 ? solicitudACancelar.horasSolicitadas : (diasRestantes.length * 8);
+      
       
       // Crear una solicitud ajustada para la cancelación
       const solicitudAjustada = {
@@ -163,12 +164,12 @@ const MisSolicitudesVacaciones = () => {
   };
 
   const puedeSerCanceladaParcialmente = (solicitud) => {
-    if (solicitud.estado !== 'aprobada') return false;
+    if (solicitud.estado !== 'aprobada' || solicitud.horasSolicitadas<=8) return false;
     
     const diasDisponibles = solicitud.fechas.filter(fecha => {
       const esFechaPasada = esFechaPasadaOHoy(fecha);
       const yaFueCancelado = (solicitud.diasCancelados || []).includes(fecha);
-      return !esFechaPasada && !yaFueCancelado;
+      return !esFechaPasada && !yaFueCancelado ;
     });
 
     return diasDisponibles.length > 0;
@@ -194,7 +195,7 @@ const MisSolicitudesVacaciones = () => {
     
     return {
       puedeEditar: solicitud.estado === 'pendiente' && esFechaFutura,
-      puedeCancelar: (solicitud.estado === 'pendiente' || solicitud.estado === 'aprobada') && esFechaFutura,
+      puedeCancelar: (solicitud.estado === 'pendiente' || solicitud.estado === 'aprobada') && esFechaFutura && !solicitud.esAjusteSaldo,
       puedeCancelarParcialmente: puedeSerCanceladaParcialmente(solicitud) 
     };
   };

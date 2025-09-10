@@ -49,6 +49,12 @@ export const standarTheme = createTheme({
         fondoFuerte: alpha('#6D3B07',0.3)
     },
 
+        rosa: {
+        main:'#f508ed',
+        fondo: alpha('#f508ed',0.1),
+        fondoFuerte: alpha('#f508ed',0.3)
+    },
+
     comida: {
       main: '#fbc02d', 
     },

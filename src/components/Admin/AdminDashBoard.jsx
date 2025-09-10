@@ -1,14 +1,16 @@
 // components/Admin/AdminDashboard.jsx
-import React from 'react';
+import { useState } from 'react';
 import { 
-  Grid, Card, CardContent, Typography, Box, Container, 
+  Grid, Card, CardContent, Typography, Box, Container, AppBar,Toolbar,
   Avatar, Paper, IconButton, Chip, CircularProgress
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useGlobalData } from '../../hooks/useGlobalData';
+import OwnerProfile from '../UI/OwnerProfile';
 
 // Iconos
+import MenuIcon from '@mui/icons-material/Menu';
 import PeopleIcon from '@mui/icons-material/People';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import PaymentIcon from '@mui/icons-material/Payment';
@@ -21,7 +23,7 @@ import { useAdminStats } from '../../hooks/useAdminStats';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, userProfile } = useAuthStore();
+  const { user, userProfile, isAuthenticated, isOwner } = useAuthStore();
   const { dataLoaded, loading, ordersCount } = useGlobalData();
     const {
     empleadosCount,
@@ -29,6 +31,7 @@ const AdminDashboard = () => {
     solicitudesPendientes,
     loading: adminLoading
   } = useAdminStats();
+  const [profileOpen,setProfileOpen]=useState(false)
 
     if (loading) {
       return (
@@ -237,8 +240,9 @@ const AdminDashboard = () => {
     </Card>
   );
 
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+    <Container maxWidth="lg" sx={{mb: 4,mt:2 }}>
       {/* Grid de estadísticas administrativas */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
         {adminStats.map((stat, index) => (

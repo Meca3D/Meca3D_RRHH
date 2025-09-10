@@ -36,7 +36,7 @@ export const useEmpleadosStore = create((set, get) => {
           }));
 
           set({ 
-            empleados: empleadosData.sort((a, b) => a.nombre.localeCompare(b.nombre)),
+            empleados: empleadosData.filter(empleado=>empleado.rol!="owner").sort((a, b) => a.nombre.localeCompare(b.nombre)),
             loading: false,
             error: null
           });

@@ -12,17 +12,19 @@ import {
   VisibilityOff,
   PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
+import { useUIStore } from '../../../stores/uiStore';
+import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 
 const CrearEmpleado = () => {
   const navigate = useNavigate();
+  const {showSuccess,showError}=useUIStore
   
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
     photoURL: '',
-    vacaDias: '',
-    vacaHoras: '',
+    vacaDisponibles: '',
     rol: 'user',
     fechaIngreso: new Date().toISOString().split('T')[0],
     nivel: '',
@@ -30,8 +32,6 @@ const CrearEmpleado = () => {
   });
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const opcionesPuesto = [
@@ -41,14 +41,14 @@ const CrearEmpleado = () => {
     'Administrativo',
     'Diseñador',
     'Montador',
-    'Ayudante de Taller'
+    'Ayudante de Taller',
+    'Jefe'
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setMessage('');
+
 
     try {
       const response = await fetch('/api/create-employee', {
@@ -60,14 +60,13 @@ const CrearEmpleado = () => {
       const result = await response.json();
 
       if (response.ok) {
-        setMessage(result.message);
+        showSuccess(result.message);
         setFormData({ 
           nombre: '', 
           email: '', 
           password: '', 
           photoURL: '',
-          vacaDias: '',
-          vacaHoras: '', 
+          vacaDisponibles: '', 
           rol: 'user',
           fechaIngreso: new Date().toISOString().split('T')[0],
           nivel: '',
@@ -77,10 +76,10 @@ const CrearEmpleado = () => {
           navigate('/admin/empleados');
         }, 2000);
       } else {
-        setError(result.error);
+        showError(result.error);
       }
     } catch (error) {
-      setError(`Error de conexión: ${error}`);
+      showError(`Error de conexión: ${error}`);
     } finally {
       setLoading(false);
     }
@@ -166,17 +165,6 @@ const CrearEmpleado = () => {
       <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
         <Card elevation={0} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
           <CardContent sx={{ p: 4 }}>
-            {message && (
-              <Alert severity="success" sx={{ mb: 3 }}>
-                {message}
-              </Alert>
-            )}
-            
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
 
             <Box component="form" onSubmit={handleSubmit}>
               <Grid container spacing={3}>
@@ -297,6 +285,7 @@ const CrearEmpleado = () => {
                     label="Nivel Salarial (1-21)"
                     value={formData.nivel}
                     onChange={handleChange('nivel')}
+                    onWheel={(e) => e.target.blur()}
                     slotProps={{ 
                       htmlInput:{
                         min: 1, max: 21
@@ -365,49 +354,30 @@ const CrearEmpleado = () => {
                   
                   <Grid container spacing={2}>
                     {/* Días de vacaciones */}
-                    <Grid size={{ xs: 6 }}>
-                      <TextField
-                        label="Días"
-                        type="number"
-                        value={formData.vacaDias}
-                        onChange={handleChange('vacaDias')}
-                        required
-                        fullWidth
-                        slotProps={{ 
-                          htmlInput:{
-                            min: 0 
-                         }
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'azul.main'
-                            },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'azul.main'
-                            }
-                          },
-                          '& .MuiInputLabel-root.Mui-focused': {
-                            color: 'azul.main'
-                          }
-                        }}
-                      />
-                    </Grid>
-
-                    {/* Horas de vacaciones */}
-                    <Grid size={{ xs: 6 }}>
+                    <Grid size={{ xs: 12 }}>
                       <TextField
                         label="Horas"
                         type="number"
-                        value={formData.vacaHoras}
-                        onChange={handleChange('vacaHoras')}
+                        value={formData.vacaDisponibles}
+                        onChange={handleChange('vacaDisponibles')}
                         required
                         fullWidth
-                        slotrops={{
-                          htmlInput:{
-                             min: 0, max:7
+                        onWheel={(e) => e.target.blur()}
+                        slotProps={{
+                          input: {
+                            endAdornment: <InputAdornment position="end">horas</InputAdornment>,
+                          },
+                          htmlInput:{ 
+                            min: 0, step: 1 
                           }
                         }}
+                        helperText={
+                          <Typography component="span" fontSize='1rem' sx={{fontWeight:700 }}>
+                          {formData.vacaDisponibles 
+                          ? `${formatearTiempoVacasLargo(formData.vacaDisponibles)}`
+                          : 'Especifica la cantidad de horas'}
+                          </Typography>
+                        }
                         sx={{
                           '& .MuiOutlinedInput-root': {
                             '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -448,6 +418,7 @@ const CrearEmpleado = () => {
                       <MenuItem value="user">Empleado</MenuItem>
                       <MenuItem value="admin">Administrador</MenuItem>
                       <MenuItem value="cocinero">Cocinero</MenuItem>
+                      <MenuItem value="owner">Jefe</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -481,17 +452,6 @@ const CrearEmpleado = () => {
               >
                 {loading ? 'Creando Empleado...' : 'Crear Empleado'}
               </Button>
-              {message && (
-              <Alert severity="success" sx={{ mb: 3 }}>
-                {message}
-              </Alert>
-            )}
-            
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
             </Box>
           </CardContent>
         </Card>

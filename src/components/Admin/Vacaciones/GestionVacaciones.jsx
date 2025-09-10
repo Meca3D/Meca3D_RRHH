@@ -9,6 +9,8 @@ import MarkEmailUnreadOutlinedIcon from '@mui/icons-material/MarkEmailUnreadOutl
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
+import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
 
 const GestionVacaciones = () => {
   const navigate = useNavigate();
@@ -55,10 +57,28 @@ const GestionVacaciones = () => {
         id: 'saldo',
         title: 'Gestión de saldo',
         description: 'Ajustar los días de vacaciones de los empleados',
-        icon: BeachAccessOutlinedIcon,
-        route: '/admin/vacaciones/saldos', // Nueva ruta para gestionar saldos
+        icon: AccountBalanceOutlinedIcon,
+        route: '/admin/vacaciones/saldos', 
         color: 'dorado.main',
         bgColor: 'dorado.fondo',
+    },
+        {
+      id: 'analytics',
+      title: 'Estadisticas',
+      description: 'Analisis y Estadisticas de Vacaciones',
+      icon: AssessmentOutlined,
+      route: '/admin/vacaciones/estadisticas',
+      color: 'rosa.main',
+      bgColor: 'rosa.fondo',
+    },
+        {
+      id: 'configuracion',
+      title: 'Configuración',
+      description: 'Configura las opciones de vacaciones',
+      icon: SettingsOutlined,
+      route: '/admin/vacaciones/configuracion',
+      color: 'purpura.main',
+      bgColor: 'purpura.fondo',
     }
   ];
 

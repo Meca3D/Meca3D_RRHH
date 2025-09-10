@@ -358,7 +358,7 @@ const HistorialSolicitudes = () => {
     <>
       {/* AppBar */}
       <AppBar
-        sx={{ background: 'linear-gradient(135deg,#673AB7 0%,#512DA8 100%)',
+        sx={{ background: 'linear-gradient(135deg, #42a5f5 0%, #1976d2 50%, #1565c0 100%)',
               boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)',
               zIndex: 1100
             }}>

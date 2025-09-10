@@ -1,6 +1,6 @@
 // src/stores/ordersStore.js
 import { create } from 'zustand';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuthStore } from './authStore';
 
@@ -28,8 +28,15 @@ export const useOrdersStore = create((set, get) => {
       }
     set({loading: true, initialized: true, error: null });
 
-    unsubscribe = onSnapshot(
+    const cutoff = new Date(Date.now() - 30 * 60 * 1000); // ahora - 30 minutos
+    const q = query(
       collection(db, 'PEDIDOS'),
+      where('fechaReserva', '>=', cutoff),
+      orderBy('fechaReserva', 'asc') // ordenar por la misma clave del filtro
+    );
+
+    unsubscribe = onSnapshot(
+      q,
       (snapshot) => {
         const orders = snapshot.docs.map(doc => ({
           id: doc.id,
