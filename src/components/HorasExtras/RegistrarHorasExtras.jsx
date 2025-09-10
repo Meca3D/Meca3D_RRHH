@@ -253,6 +253,7 @@ const RegistrarHorasExtras = () => {
                     type="number"
                     label="Horas"
                     value={formData.horas}
+                    onWheel={(e) => e.target.blur()}
                     onChange={(e) => setFormData({ 
                       ...formData, 
                       horas: Math.max(0, parseInt(e.target.value) || 0)
@@ -285,6 +286,7 @@ const RegistrarHorasExtras = () => {
                     type="number"
                     label="Minutos"
                     value={formData.minutos}
+                    onWheel={(e) => e.target.blur()}
                     onChange={(e) => setFormData({ 
                       ...formData, 
                       minutos: Math.max(0, Math.min(59, parseInt(e.target.value) || 0))
@@ -317,6 +319,7 @@ const RegistrarHorasExtras = () => {
                     type="number"
                     label="Precio / Hora Extra (€)"
                     value={formData.tarifa}
+                    onWheel={(e) => e.target.blur()}
                     onChange={(e) => setFormData({ ...formData, tarifa: e.target.value })}
                     slotProps={{
                       htmlInput:{

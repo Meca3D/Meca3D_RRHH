@@ -51,23 +51,25 @@ export const useGlobalData = () => {
     if (user?.email) {
       loadConfiguracionUsuario(user.email);
       const now = new Date();
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]; // End of current month
+      let lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]; // End of current month
 
-        let calculatedFirstDay;
-        // Check for previous month's nomina
+      let calculatedFirstDay;
         const periodoAnterior = await obtenerPeriodoHorasExtras(user.email, 1); // 1 month back
-
+        const periodoActual = await obtenerPeriodoHorasExtras(user.email,0)
         if (periodoAnterior.encontrada) {
-          // Start one day after the end of the previous period
           const inicioNuevo = new Date(periodoAnterior.fechaFin);
           inicioNuevo.setDate(inicioNuevo.getDate() + 1);
           calculatedFirstDay = inicioNuevo.toISOString().split('T')[0];
         } else {
-          // Default logic: 7 days before the end of the current month
-          const defaultFirstDay = new Date(now.getFullYear(), now.getMonth(),-7);
+          // Default logic: 7 days before the current date if no previous nomina
+          const defaultFirstDay = new Date(now.getFullYear(), now.getMonth(), - 7);
           calculatedFirstDay = defaultFirstDay.toISOString().split('T')[0];
         }
-
+        if (periodoActual.encontrada) {
+          calculatedFirstDay = new Date(periodoActual.fechaInicio).toISOString().split('T')[0];;
+          lastDay = new Date(periodoActual.fechaFin).toISOString().split('T')[0];;
+        } 
+        
         fetchHorasExtra(user.email, calculatedFirstDay, lastDay);
       }
       setInitialLoadComplete(true);
