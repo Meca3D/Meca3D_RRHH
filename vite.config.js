@@ -1,9 +1,36 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // En tu vite.config.js, agregar optimizaciones PWA
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'none',
+      includeAssets: ['icons/favicon.svg', 'robots.txt'],
+      manifest: {
+        name: 'Mecaformas 3D RRHH',
+        short_name: 'Meca3D',
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#1976d2',
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-192-maskable.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ]
+      },
+      workbox: {
+        navigateFallback: '/index.html'
+      },
+      devOptions: {
+        enabled: false
+      }
+    })
+  ],
   build: {
     rollupOptions: {
       output: {
@@ -16,4 +43,5 @@ export default defineConfig({
     }
   }
 })
+
 

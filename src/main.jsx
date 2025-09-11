@@ -2,12 +2,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-// import './index.css';
+import { initPWA } from './pwa.js'
 
-// Agregar Tailwind si quieres usarlo (opcional)
-// npm install -D tailwindcss postcss autoprefixer
-// npx tailwindcss init -p
-// Luego configura tailwind.config.js y crea el index.css con @tailwind
+initPWA()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

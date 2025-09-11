@@ -20,10 +20,14 @@ import { Link, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import UserProfile from '../UI/UserProfile';
 import OwnerProfile from '../UI/OwnerProfile';
-
+import { useBeforeInstallPrompt } from '../../hooks/useBeforeInstallPrompt';
+import InstallFAB from '../UI/InstallFAB'
 
 
 const MainLayout = () => {
+
+  useBeforeInstallPrompt()
+
   const [profileOpen, setProfileOpen] = useState(false);
   const {user, userProfile, isAuthenticated, canManageUsers, isCocinero, isOwner} = useAuthStore();
   const location = useLocation();
@@ -532,6 +536,7 @@ const MainLayout = () => {
       >
         <Outlet />
       </Box>
+      <InstallFAB />
     </Box>
   );
 };
