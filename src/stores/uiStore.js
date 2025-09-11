@@ -6,7 +6,10 @@ export const useUIStore = create((set, get) => ({
   snackbar: {
     open: false,
     message: '',
-    severity: 'info'
+    severity: 'info',
+    actionText: null,        
+    onAction: null,          
+    persist: false  
   },
   drawer: {
     open: false
@@ -17,13 +20,13 @@ export const useUIStore = create((set, get) => ({
   // Acciones
   setLoading: (loading) => set({ loading }),
   
-  showSnackbar: (message, severity = 'info') => set({
-    snackbar: { open: true, message, severity }
-  }),
-  
-  hideSnackbar: () => set(state => ({
-    snackbar: { ...state.snackbar, open: false }
-  })),
+  showSnackbar: (message, severity = 'info') =>
+    set({ snackbar: { open: true, message, severity, actionText: null, onAction: null, persist: false } }),
+  showActionSnackbar: (message, actionText, onAction, severity = 'info', persist = true) =>
+    set({ snackbar: { open: true, message, severity, actionText, onAction, persist } }),
+   hideSnackbar: () => set((state) => ({
+   snackbar: { ...state.snackbar, open: false }
+   })),
   
   toggleDrawer: () => set(state => ({
     drawer: { open: !state.drawer.open }

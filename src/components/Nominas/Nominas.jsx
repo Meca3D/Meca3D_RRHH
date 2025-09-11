@@ -124,7 +124,7 @@ const Nominas = () => {
                     }}
                   />
                 ) : (
-                  <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{px:5}}>
+                  <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{px:2}}>
                   <Typography  color="verde.main" variant="h6" fontSize=" 1rem" textAlign="center" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                     Estimado {userSalaryInfo.mesNomina || 'Mes Actual'}   
                   </Typography>

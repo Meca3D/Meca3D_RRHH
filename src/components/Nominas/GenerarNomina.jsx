@@ -736,11 +736,12 @@ const GenerarNomina = () => {
                                 variant="caption" 
                                 sx={{
                                     position: 'absolute', 
-                                    top: 0, 
+                                    top: -1, 
                                     left: 10,
                                     transform: 'translateY(-50%)',
                                     bgcolor: 'white',
-                                    px: 1,
+                                    px: 0.5,
+                                    py:0,
                                     color: 'black'
                                 }}>
                                 Precio Trienio
