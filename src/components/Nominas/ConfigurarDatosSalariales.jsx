@@ -390,12 +390,12 @@ const ConfigurarDatosSalariales = () => {
                     <Grid sx={{mt:2}} container spacing={2}>
                       <Alert severity={userProfile?.fechaIngreso ? "info" : "error"} sx={{ mb: 2 }}>
                        {userProfile?.fechaIngreso ? 
-                       <Typography textAlign="center" variant='body2'>
+                       <Typography  variant='body1'>
                         Segun tu fecha de ingreso: <strong>{formatDate(userProfile?.fechaIngreso)}</strong>, cobras ahora mismo <strong>{Math.floor(calcularAñosServicio(userProfile.fechaIngreso)/3)} Trienios</strong>
                         </Typography> 
                        : 
-                       <Typography textAlign="center" variant='body2'>
-                        Configura en tu perfil, la fecha de ingreso en la empresa para calcular automaticamente tus trienios.
+                       <Typography  variant='body1'>
+                        Configura en tu perfil la fecha de ingreso en la empresa para calcular automaticamente tus trienios.
                        </Typography>
                        }
                       </Alert>

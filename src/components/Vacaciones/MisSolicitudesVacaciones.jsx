@@ -84,20 +84,24 @@ const MisSolicitudesVacaciones = () => {
     setCancelando(true);
     try {
       // Calcular días no cancelados si la solicitud tiene cancelaciones parciales
-      const diasYaCancelados = solicitudACancelar?.diasCancelados || [];
-      const diasRestantes = solicitudACancelar.fechas.filter(
-        fecha => !diasYaCancelados.includes(fecha)
-      );
+
+          const diasYaCancelados = solicitudACancelar?.diasCancelados || [];
+          const diasDisponibles = solicitudACancelar.fechas.filter(fecha => {
+              const esFechaPasada = esFechaPasadaOHoy(fecha);
+              const yaFueCancelado = diasYaCancelados.includes(fecha);
+              return !esFechaPasada && !yaFueCancelado ;
+            });
       
       // Ajustar las horas a cancelar si hay cancelaciones parciales previas
-      const horasAjustadas = diasYaCancelados.length===0 ? solicitudACancelar.horasSolicitadas : (diasRestantes.length * 8);
+      console.log('cancelados'+diasYaCancelados.length, 'disponibles'+diasDisponibles)
+      const horasAjustadas = diasYaCancelados.length===0 ? solicitudACancelar.horasSolicitadas : (diasDisponibles.length * 8);
       
       
       // Crear una solicitud ajustada para la cancelación
       const solicitudAjustada = {
         ...solicitudACancelar,
         horasSolicitadas: horasAjustadas,
-        fechas: diasRestantes
+        fechas: diasDisponibles
       };
       
       await cancelarSolicitudVacaciones(solicitudAjustada, motivoCancelacion);
@@ -167,8 +171,8 @@ const MisSolicitudesVacaciones = () => {
     if (solicitud.estado !== 'aprobada' || solicitud.horasSolicitadas<=8) return false;
     
     const diasDisponibles = solicitud.fechas.filter(fecha => {
-      const esFechaPasada = esFechaPasadaOHoy(fecha);
       const yaFueCancelado = (solicitud.diasCancelados || []).includes(fecha);
+      const esFechaPasada = esFechaPasadaOHoy(fecha);
       return !esFechaPasada && !yaFueCancelado ;
     });
 
@@ -192,10 +196,15 @@ const MisSolicitudesVacaciones = () => {
   const puedeGestionarSolicitud = (solicitud) => {
     const primeraFecha = solicitud.fechas[0];
     const esFechaFutura = !esFechaPasadaOHoy(primeraFecha);
-    
+    const diasYaCancelados = solicitud?.diasCancelados || [];
+    const diasDisponibles = solicitud.fechas.filter(fecha => {
+              const yaFueCancelado = diasYaCancelados.includes(fecha);
+              const esFechaPasada = esFechaPasadaOHoy(fecha);
+              return !esFechaPasada && !yaFueCancelado ;
+            });
     return {
       puedeEditar: solicitud.estado === 'pendiente' && esFechaFutura,
-      puedeCancelar: (solicitud.estado === 'pendiente' || solicitud.estado === 'aprobada') && esFechaFutura && !solicitud.esAjusteSaldo,
+      puedeCancelar: (solicitud.estado === 'pendiente' || solicitud.estado === 'aprobada') && diasDisponibles.length>=1 && !solicitud.esAjusteSaldo,
       puedeCancelarParcialmente: puedeSerCanceladaParcialmente(solicitud) 
     };
   };
@@ -221,7 +230,7 @@ const MisSolicitudesVacaciones = () => {
           return fechaYaDisfrutada && !fechaYaCancelada;
         });
   
-        return fechasDisfrutadas.length;
+        return fechasDisfrutadas;
       };
 
   const SolicitudCard = ({ solicitud }) => {
@@ -317,8 +326,8 @@ const MisSolicitudesVacaciones = () => {
                         >
                             <Typography variant="h6" fontWeight={600} sx={{ flexGrow: 1 }}>
                               {solicitud.estado==='cancelado'
-                              ? `Fechas (${solicitud.fechas.length-(solicitud.diasCancelados?.length||0)}) canceladas`
-                              : `Fechas (${solicitud.fechas.length-(solicitud.diasCancelados?.length||0)})`
+                              ? `Fechas (${solicitud.fechas.length-(solicitud.diasCancelados?.length||0)-diasDisfrutados(solicitud).length}) canceladas`
+                              : `Fechas (${solicitud.fechas.length-(solicitud.diasCancelados?.length||0)-diasDisfrutados(solicitud).length})`
                               }
                             </Typography>
                             {solicitudExpandida === solicitud.id 
@@ -329,16 +338,20 @@ const MisSolicitudesVacaciones = () => {
                         <Collapse in={solicitudExpandida === solicitud.id}>
                             <Box sx={{ mt: 1 }}>
                                 {ordenarFechas(solicitud.fechas).map(f => (
-                                  !solicitud.diasCancelados?.includes(f) ? (
-                                    <Typography textAlign='center' key={f} variant="h6" display="block" sx={{ }}>
-                                        • {formatearFechaCorta(f)}
-                                    </Typography>
-                                  ) : (
+                                  solicitud.diasCancelados?.includes(f) ? (
                                     <Typography textAlign='center' key={f} variant="h6" display="block" sx={{ textDecoration: 'line-through', color: 'grey.600' }}>
                                         • {formatearFechaCorta(f)}
                                     </Typography>
+                                  ):(esFechaPasadaOHoy(f) ? (
+                                    <Typography textAlign='center' key={f} variant="h6" display="block" sx={{fontStyle:'italic' , color: 'grey.500' }}>
+                                        • {formatearFechaCorta(f)}
+                                    </Typography>
+                                  ) : (
+                                    <Typography textAlign='center' key={f} variant="h6" display="block" sx={{  }}>
+                                        • {formatearFechaCorta(f)}
+                                    </Typography>
                                   )
-                                ))}
+                                )))}
                             </Box>
                         </Collapse>
                     </Box>
@@ -361,6 +374,24 @@ const MisSolicitudesVacaciones = () => {
                   </Typography>
                 </Alert>
               )}
+
+              {diasDisfrutados(solicitud).length > 0 && (
+                  <Alert 
+                    severity="info" 
+                    sx={{ mt: 1 }}
+                  >
+                    <Typography variant="div">
+                      <strong>Días disfrutados:</strong>
+                      <br/>
+                      {diasDisfrutados(solicitud).map((fecha, index) => (
+                        <div key={index}>
+                          {formatearFechaCorta(fecha)}
+                        </div>
+                      ))}
+                    </Typography>
+                  </Alert>
+                )}
+
 
                  {/* Dias Cancelados */}
                 {solicitud.diasCancelados && solicitud.diasCancelados.length > 0 && (
@@ -638,9 +669,11 @@ const MisSolicitudesVacaciones = () => {
               <Typography variant='div' sx={{fontSize:'1.1rem'}}>
                 <strong>•{formatearTiempoVacasLargo(solicitudACancelar.horasSolicitadas)} </strong>solicitados
                 <Divider sx={{bgcolor:'black', mb: 1 }} />
+                <strong>•{formatearTiempoVacasLargo(diasDisfrutados(solicitudACancelar).length*8)} </strong>disfrutados
+                <br/>
                 <strong>•{formatearTiempoVacasLargo(solicitudACancelar.diasCancelados.length*8)} </strong>cancelados previamente
                 <br/>
-                <strong>•{formatearTiempoVacasLargo((solicitudACancelar.horasSolicitadas - (solicitudACancelar.diasCancelados.length*8)))} </strong>restantes por cancelar
+                <strong>•{formatearTiempoVacasLargo((solicitudACancelar.horasSolicitadas - (solicitudACancelar.diasCancelados.length*8)-(diasDisfrutados(solicitudACancelar).length*8)))} </strong>restantes por cancelar
 
               </Typography>
             </Box>
@@ -709,9 +742,9 @@ const MisSolicitudesVacaciones = () => {
               <Typography textAlign='center' fontSize='1.3rem' fontWeight='bold' >
                 Solicitud original: {formatearTiempoVacasLargo(solicitudParaCancelarParcial.horasSolicitadas)}
               </Typography>
-              {diasDisfrutados(solicitudParaCancelarParcial) > 0 && (
+              {diasDisfrutados(solicitudParaCancelarParcial).length > 0 && (
             <Typography variant="body1" color="success.main" textAlign='center'  sx={{ }}>
-              {diasDisfrutados(solicitudParaCancelarParcial)}{diasDisfrutados(solicitudParaCancelarParcial)==1?" dia disfrutado ":" dias disfrutados "}
+              {diasDisfrutados(solicitudParaCancelarParcial).length}{diasDisfrutados(solicitudParaCancelarParcial).length==1?" dia disfrutado ":" dias disfrutados "}
             </Typography>
             )}           
               {solicitudParaCancelarParcial.diasCancelados && solicitudParaCancelarParcial.diasCancelados.length > 0 && (
