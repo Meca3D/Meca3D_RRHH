@@ -177,7 +177,7 @@ const Dashboard = () => {
           {title}
         </Typography >
         {subtitle && (
-          <Typography sx={{whiteSpace:'nowrap',}} textAlign="center" variant="body2" color="gray.600">
+          <Typography sx={{whiteSpace:'nowrap',}} textAlign="center" variant="subtitle2" color="gray.600">
             {subtitle}
           </Typography>
         )}
@@ -189,7 +189,7 @@ const Dashboard = () => {
   // Componente QuickAction con estilo MD3
   const QuickAction = ({ label, icon: Icon, color, bgColor, onClick }) => (
     <Card
-      elevation={0}
+      elevation={5}
       onClick={onClick}
       sx={{ 
         cursor: 'pointer',
@@ -248,6 +248,7 @@ const Dashboard = () => {
           transition: 'all 0.3s ease',
             '&:hover': {
             boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+            transform: 'translateY(-2px)'
         }}}
       >
         {/* Decoración de fondo */}
@@ -316,18 +317,6 @@ const Dashboard = () => {
              </Box>
         </Box>
       </Paper>
-      <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
-      <Tooltip title={isVisible ? 'Ocultar datos' : 'Mostrar datos'} enterTouchDelay={0}>
-        <IconButton
-          aria-label="alternar visibilidad de datos"
-          edge="end"
-          size="medium"
-          onClick={toggleVisibility}
-        >
-          {isVisible ? <VisibilityOffOutlinedIcon /> : <VisibilityOutlinedIcon />}
-        </IconButton>
-      </Tooltip>
-    </Box>
 
       {/* Grid de estadísticas MD3 */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
