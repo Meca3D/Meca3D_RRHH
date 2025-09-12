@@ -175,6 +175,22 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+    setVisibility: async (visible) => {
+      const { userProfile } = get();
+      if (!userProfile?.email) throw new Error('No hay usuario autenticado');
+      const userRef = doc(db, 'USUARIOS', userProfile.email);
+      await updateDoc(userRef, { visible });
+      set({ userProfile: { ...userProfile, visible } });
+      return { success: true };
+    },
+
+    toggleVisibility: async () => {
+      const current = get().userProfile?.visible;
+      const next = current === false ? true : false;
+      await get().setVisibility(next);
+      return { success: true, visible: next };
+    },
+
 logout: async () => {
 
     await signOut(auth);
@@ -241,6 +257,7 @@ const loadUserProfileFunction = (userEmail, set) => {
             },
             configuracionNomina: userData.configuracionNomina,
             tarifasHorasExtra: userData.tarifasHorasExtra,
+            visible: userData.visible !== false
           },
           userRole: userData.rol,
           loading: false
@@ -251,7 +268,8 @@ const loadUserProfileFunction = (userEmail, set) => {
             email: userEmail,
             nombre: 'Usuario',
             rol: 'user',
-            favoritos: []
+            favoritos: [],
+            visible: true
           },
           userRole: 'user',
           loading: false
@@ -265,7 +283,8 @@ const loadUserProfileFunction = (userEmail, set) => {
           email: userEmail,
           nombre: 'Usuario',
           rol: 'user',
-          favoritos: []
+          favoritos: [],
+          visible: true
         },
         userRole: 'user',
         loading: false

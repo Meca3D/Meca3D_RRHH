@@ -28,6 +28,8 @@ const HorasExtras = () => {
     const minutosFormateados = Math.round((totalHorasEsteMes % 1) * 60);
     const { userSalaryInfo } = useGlobalData();
     const { userProfile } = useAuthStore();
+    const isVisible = userProfile?.visible !== false;
+    const mask = (val) => (isVisible ? val : '--');
 
   // ✅ Configuración de las 4 cards principales
   const quickActions = [
@@ -116,13 +118,13 @@ const HorasExtras = () => {
                   }}
                 />
               ) : (
-            <Box display="flex" flexDirection="column" alignContent="center" flexWrap="nowrap" sx={{mr:8}}>
+            <Box display="flex" flexDirection="column" alignContent="center" flexWrap="nowrap" sx={{mr:7}}>
             <Typography   color="naranja.main" variant="h6" fontSize="1rem" textAlign='center' lineHeight={1.2} fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
               Estimado {userSalaryInfo.mesNomina || 'Mes Actual'} 
             </Typography>
-              <Typography textAlign="center" color="naranja.main"><strong>{formatearTiempo(horasFormateadas, minutosFormateados)}</strong></Typography>
+              <Typography textAlign="center" color="naranja.main"><strong>{mask(formatearTiempo(horasFormateadas, minutosFormateados))}</strong></Typography>
               
-              <Typography textAlign="center" color="naranja.main"><strong>{formatCurrency(totalImporteEsteMes)}</strong></Typography>
+              <Typography textAlign="center" color="naranja.main"><strong>{mask(formatCurrency(totalImporteEsteMes))}</strong></Typography>
 
             </Box>
               )}

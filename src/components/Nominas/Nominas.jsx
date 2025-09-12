@@ -24,6 +24,8 @@ const Nominas = () => {
   const { configuracionNomina }= useNominaStore()
   const navigate = useNavigate();
   const { userSalaryInfo } = useGlobalData();
+  const isVisible = userProfile?.visible !== false;
+  const mask = (val) => (isVisible ? val : '--');
 
 
   // ✅ 5 opciones del menú principal
@@ -124,11 +126,11 @@ const Nominas = () => {
                     }}
                   />
                 ) : (
-                  <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{px:2}}>
+                  <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{}}>
                   <Typography  color="verde.main" variant="h6" fontSize=" 1rem" textAlign="center" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                     Estimado {userSalaryInfo.mesNomina || 'Mes Actual'}   
                   </Typography>
-                  <Typography textAlign="center" color="verde.main"><strong>{formatCurrency(userSalaryInfo.salarioCompletoEstimado)}</strong></Typography>
+                  <Typography textAlign="center" color="verde.main"><strong>{mask(formatCurrency(userSalaryInfo.salarioCompletoEstimado))}</strong></Typography>
                   </Box>
                 )}
                 </>
