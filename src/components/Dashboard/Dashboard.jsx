@@ -1,7 +1,7 @@
 
 import {
   Grid, Card, CardContent, Typography, Box, Container, 
-  Avatar, CircularProgress, Paper, IconButton, Chip
+  Avatar, CircularProgress, Paper, IconButton, Tooltip
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -16,7 +16,8 @@ import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PeopleIcon from '@mui/icons-material/People';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
-import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import { formatearNombre } from '../Helpers';
 import { formatCurrency } from '../../utils/nominaUtils';
@@ -24,7 +25,7 @@ import { formatCurrency } from '../../utils/nominaUtils';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { loading, userSalaryInfo  } = useGlobalData();
-  const { user, userProfile } = useAuthStore();
+  const { user, userProfile, toggleVisibility } = useAuthStore();
 
   if (loading) {
     return (
@@ -39,13 +40,17 @@ const Dashboard = () => {
     );
   }
 
+  const isVisible = userProfile?.visible !== false;
+
+  const mask = (val) => (isVisible ? val : '--');
+
   // Estadísticas principales con colores MD3
   const stats = [
     {
       title: 'Nómina',
-      value: userSalaryInfo?.salarioCompletoEstimado 
+      value:mask( userSalaryInfo?.salarioCompletoEstimado 
         ? formatCurrency(userSalaryInfo.salarioCompletoEstimado)
-        : '0€',
+        : '0€'),
       subtitle: userSalaryInfo?.salarioCompletoEstimado 
         ? `estimado ${userSalaryInfo.mesNomina}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: EuroIcon,
@@ -57,7 +62,7 @@ const Dashboard = () => {
     },
     {
       title: 'Horas Extras',
-      value: formatCurrency(userSalaryInfo.totalImporteHorasMesActual),
+      value: mask(formatCurrency(userSalaryInfo.totalImporteHorasMesActual)),
       subtitle:  (userProfile?.tarifasHorasExtra)
         ? `estimado ${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: EuroIcon,
@@ -78,7 +83,7 @@ const Dashboard = () => {
     },
     {
       title: 'Horas Extras',
-      value: userSalaryInfo?.totalTiempoMesActual,
+      value: mask(userSalaryInfo?.totalTiempoMesActual),
       subtitle: (userProfile?.tarifasHorasExtra)
         ? `estimado ${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: AccessTimeIcon,
@@ -243,7 +248,6 @@ const Dashboard = () => {
           transition: 'all 0.3s ease',
             '&:hover': {
             boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
-            transform: 'translateY(-2px)'
         }}}
       >
         {/* Decoración de fondo */}
@@ -299,8 +303,31 @@ const Dashboard = () => {
               Nv {userProfile?.nivel||'?'} 
             </Typography>
           </Box>
+              <Box sx={{ position: 'absolute', bottom: -10, right: -8 }}>
+               <Tooltip title={isVisible ? 'Ocultar datos' : 'Mostrar datos'} enterTouchDelay={0}>
+                 <IconButton
+                   aria-label="alternar visibilidad de datos"
+                   onClick={toggleVisibility}
+                   sx={{color: isVisible? 'rojo.main':'primary.main'}}
+                 >
+                   {isVisible ? <VisibilityOffOutlinedIcon sx={{fontSize:'1.75rem'}} /> : <VisibilityOutlinedIcon sx={{fontSize:'1.75rem'}} />}
+                 </IconButton>
+               </Tooltip>
+             </Box>
         </Box>
       </Paper>
+      <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
+      <Tooltip title={isVisible ? 'Ocultar datos' : 'Mostrar datos'} enterTouchDelay={0}>
+        <IconButton
+          aria-label="alternar visibilidad de datos"
+          edge="end"
+          size="medium"
+          onClick={toggleVisibility}
+        >
+          {isVisible ? <VisibilityOffOutlinedIcon /> : <VisibilityOutlinedIcon />}
+        </IconButton>
+      </Tooltip>
+    </Box>
 
       {/* Grid de estadísticas MD3 */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
