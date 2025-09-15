@@ -343,18 +343,6 @@ const Dashboard = () => {
              </Box>
         </Box>
       </Paper>
-      <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
-      <Tooltip title={isVisible ? 'Ocultar datos' : 'Mostrar datos'} enterTouchDelay={0}>
-        <IconButton
-          aria-label="alternar visibilidad de datos"
-          edge="end"
-          size="medium"
-          onClick={toggleVisibility}
-        >
-          {isVisible ? <VisibilityOffOutlinedIcon /> : <VisibilityOutlinedIcon />}
-        </IconButton>
-      </Tooltip>
-    </Box>
 
       {/* Grid de estadísticas MD3 */}
       <Grid container spacing={2} sx={{ mb: 4 }}>

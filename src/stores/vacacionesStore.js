@@ -57,6 +57,91 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
+    loadSolicitudesConCancelaciones: async (userEmail) => {
+      try {
+        const { isAuthenticated, user, isAdminOrOwner } = useAuthStore.getState();
+        if (!isAuthenticated || !user) {
+          return [];
+        }
+
+        let solicitudesQuery;
+        if (isAdminOrOwner()) {
+          solicitudesQuery = query(
+            collection(db, 'VACACIONES'),
+            orderBy('fechaSolicitud', 'desc')
+          );
+        } else {
+          solicitudesQuery = query(
+            collection(db, 'VACACIONES'),
+            where('solicitante', '==', userEmail),
+            orderBy('fechaSolicitud', 'desc')
+          );
+        }
+
+        const snapshot = await getDocs(solicitudesQuery);
+        const solicitudes = [];
+
+        // ✅ OBTENER cancelaciones parciales para cada solicitud
+        for (const docSnap of snapshot.docs) {
+          const solicitudData = { id: docSnap.id, ...docSnap.data() };
+          const cancelacionesParciales = await get().obtenerCancelacionesParciales(docSnap.id);
+          
+          solicitudes.push({
+            ...solicitudData,
+            cancelacionesParciales
+          });
+        }
+
+        return solicitudes;
+      } catch (error) {
+        console.error('Error cargando solicitudes con cancelaciones:', error);
+        return [];
+      }
+    },
+
+    // Obtener días cancelados totales de todas las subcolecciones
+    obtenerDiasCancelados: (cancelacionesParciales) => {
+      if (!Array.isArray(cancelacionesParciales)) return [];
+      
+      return cancelacionesParciales.reduce((acc, cancelacion) => {
+        return [...acc, ...cancelacion.fechasCanceladas];
+      }, []);
+    },
+
+    // Obtener días disfrutados (pasados y no cancelados)
+    obtenerDiasDisfrutados: (solicitud) => {
+      if (!solicitud.fechas) return [];
+      
+      const diasCancelados = get().obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
+      
+      return solicitud.fechas.filter(fecha => {
+        const esFechaPasada = esFechaPasadaOHoy(fecha);
+        const yaFueCancelado = diasCancelados.includes(fecha);
+        return esFechaPasada && !yaFueCancelado;
+      });
+    },
+
+    // Verificar si puede cancelarse parcialmente
+    puedeCancelarParcialmente: (solicitud, esAdmin = false) => {
+      if (solicitud.estado !== 'aprobada') return false;
+      
+      // ✅ NO permitir para horas sueltas
+      const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
+      if (esHorasSueltas) return false;
+      
+      const diasCancelados = get().obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
+      
+      const diasDisponibles = solicitud.fechas.filter(fecha => {
+        const yaFueCancelado = diasCancelados.includes(fecha);
+        const esFechaPasada = esFechaPasadaOHoy(fecha);
+        
+        // ✅ Admin puede cancelar días pasados, usuario no
+        return !yaFueCancelado && (esAdmin || !esFechaPasada);
+      });
+      
+      return diasDisponibles.length > 1; // Debe quedar al menos 1 día
+    },
+
     // Cargar solicitudes de vacaciones
     loadSolicitudesVacaciones: (userEmail) => {
       const { isAuthenticated, user, isAdminOrOwner } = useAuthStore.getState();
@@ -312,6 +397,42 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
+    obtenerCancelacionesParciales: async (solicitudId) => {
+      try {
+        const cancelacionesQuery = query(
+          collection(db, 'VACACIONES', solicitudId, 'cancelaciones_parciales'),
+          orderBy('fechaCancelacion', 'desc')
+        );
+        const snapshot = await getDocs(cancelacionesQuery);
+        return snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } catch (error) {
+        console.error('Error obteniendo cancelaciones parciales:', error);
+        return [];
+      }
+    },
+
+    obtenerSolicitudCompleta: async (solicitudId) => {
+      try {
+        const solicitudDoc = await getDoc(doc(db, 'VACACIONES', solicitudId));
+        if (!solicitudDoc.exists()) {
+          throw new Error('Solicitud no encontrada');
+        }
+        
+        const cancelacionesParciales = await get().obtenerCancelacionesParciales(solicitudId);
+        
+        return {
+          id: solicitudDoc.id,
+          ...solicitudDoc.data(),
+          cancelacionesParciales
+        };
+      } catch (error) {
+        console.error('Error obteniendo solicitud completa:', error);
+      }
+    },
+
 
     eliminarSolicitudVacaciones: async (solicitudId, horasSolicitadas, solicitanteEmail) => {
       try {
@@ -331,47 +452,70 @@ export const useVacacionesStore = create((set, get) => {
     },
 
     cancelarSolicitudVacaciones: async (solicitud, motivoCancelacion) => {
-      try {
-        const { userProfile } = useAuthStore.getState();
-        
-        if (!userProfile) {
-          throw new Error('Datos de usuario no disponibles');
-        }
+  try {
+    if (!motivoCancelacion || motivoCancelacion.trim() === '') {
+      throw new Error('Debes proporcionar un motivo para la cancelación');
+    }
 
-        if (!motivoCancelacion || motivoCancelacion.trim() === '') {
-          throw new Error('Debes proporcionar un motivo para la cancelación');
-        }
+    // ✅ OBTENER cancelaciones parciales previas
+    const cancelacionesPrevias = await get().obtenerCancelacionesParciales(solicitud.id);
+    const diasYaCancelados = cancelacionesPrevias.reduce((acc, c) => {
+      return [...acc, ...c.fechasCanceladas];
+    }, []);
 
-        // Actualizar estado a "cancelado", añadir fecha y motivo
-        await updateDoc(doc(db, 'VACACIONES', solicitud.id), {
-          estado: 'cancelado',
-          fechaCancelacion: formatYMD(new Date()),
-          motivoCancelacion: motivoCancelacion.trim(), 
-          comentariosAdmin: solicitud.comentariosAdmin || '',
-          updatedAt: new Date()
-        });
+    // ✅ CALCULAR días restantes no cancelados y no disfrutados
+    const diasDisponibles = solicitud.fechas.filter(fecha => {
+      const yaFueCancelado = diasYaCancelados.includes(fecha);
+      const esFechaPasada = esFechaPasadaOHoy(fecha);
+      return !yaFueCancelado && !esFechaPasada;
+    });
 
-        // Restaurar las horas según el estado previo
-        const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
+    // ✅ CORREGIDO: Calcular horas correctamente
+    let horasADevolver;
+    if (solicitud.estado === 'pendiente') {
+      // Para pendientes: devolver las horas solicitadas originalmente (menos las ya canceladas)
+      const horasYaCanceladas = diasYaCancelados.length * 8;
+      horasADevolver = solicitud.horasSolicitadas - horasYaCanceladas;
+    } else {
+      // Para aprobadas: calcular por días disponibles
+      horasADevolver = diasDisponibles.length * 8;
+    }
+
+    // ✅ ACTUALIZAR estado a "cancelado"
+    await updateDoc(doc(db, 'VACACIONES', solicitud.id), {
+      estado: 'cancelado',
+      fechaCancelacion: formatYMD(new Date()),
+      motivoCancelacion: motivoCancelacion.trim(),
+      updatedAt: new Date()
+    });
+
+    if (horasADevolver > 0) {
+      const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
+      
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const vacacionesActuales = userData.vacaciones || { disponibles: 0, pendientes: 0 };
         
         if (solicitud.estado === 'pendiente') {
-          // Si era pendiente: restar de pendientes
           await updateDoc(userDocRef, {
-            'vacaciones.pendientes': userProfile.vacaciones.pendientes - solicitud.horasSolicitadas
+            'vacaciones.pendientes': vacacionesActuales.pendientes - horasADevolver
           });
         } else if (solicitud.estado === 'aprobada') {
-          // Si era aprobada: sumar a disponibles
           await updateDoc(userDocRef, {
-            'vacaciones.disponibles': userProfile.vacaciones.disponibles + solicitud.horasSolicitadas
+            'vacaciones.disponibles': vacacionesActuales.disponibles + horasADevolver
           });
         }
-
-        return true;
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
       }
-    },
+    }
+
+    return true;
+  } catch (error) {
+    set({ error: error.message });
+    throw error;
+  }
+},
+
 
     // Cambiar estado solicitud (admin)
     cambiarEstadoSolicitud: async (solicitudId, nuevoEstado, comentariosAdmin, solicitud) => {
@@ -381,41 +525,41 @@ export const useVacacionesStore = create((set, get) => {
         if (!isAdminOrOwner()) {
           throw new Error('Sin permisos para cambiar estado de solicitudes');
         }
+      // Obtener saldo actual del empleado ANTES del cambio
+        const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
+        const userDoc = await getDoc(userDocRef);
+        const userData = userDoc.data();
+        const saldoAntes = userData.vacaciones || { disponibles: 0, pendientes: 0 };
+
+        let saldoDespues = { ...saldoAntes };
+
+            
+        if (nuevoEstado === 'aprobada') {
+          saldoDespues.disponibles = saldoAntes.disponibles - solicitud.horasSolicitadas;
+          saldoDespues.pendientes = saldoAntes.pendientes - solicitud.horasSolicitadas;
+          
+          await updateDoc(userDocRef, {
+            'vacaciones.disponibles': saldoDespues.disponibles,
+            'vacaciones.pendientes': saldoDespues.pendientes
+          });
+        } else if (nuevoEstado === 'denegada') {
+          saldoDespues.pendientes = saldoAntes.pendientes - solicitud.horasSolicitadas;
+          
+          await updateDoc(userDocRef, {
+            'vacaciones.pendientes': saldoDespues.pendientes
+          });
+        }
 
         await updateDoc(doc(db, 'VACACIONES', solicitudId), {
           estado: nuevoEstado,
           comentariosAdmin: comentariosAdmin || '',
           fechaAprobacionDenegacion: formatYMD(new Date()),
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          horasDisponiblesAntesCambio: saldoAntes.disponibles,           
+          horasDisponiblesDespuesCambio: saldoDespues.disponibles,       
+          horasPendientesAntesCambio: saldoAntes.pendientes,            
+          horasPendientesDespuesCambio: saldoDespues.pendientes,  
         });
-
-        if (nuevoEstado === 'aprobada') {
-          const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
-          const userDoc = await getDoc(userDocRef);
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const nuevasDisponibles = userData.vacaciones.disponibles - solicitud.horasSolicitadas;
-            const nuevasPendientes = userData.vacaciones.pendientes - solicitud.horasSolicitadas;
-            
-            await updateDoc(userDocRef, {
-              'vacaciones.disponibles': nuevasDisponibles,
-              'vacaciones.pendientes': nuevasPendientes
-            });
-          }
-        } else if (nuevoEstado === 'denegada') {
-          const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
-          const userDoc = await getDoc(userDocRef);
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const nuevasPendientes = userData.vacaciones.pendientes - solicitud.horasSolicitadas;
-            
-            await updateDoc(userDocRef, {
-              'vacaciones.pendientes': nuevasPendientes
-            });
-          }
-        }
 
         return true;
       } catch (error) {
@@ -1046,9 +1190,9 @@ export const useVacacionesStore = create((set, get) => {
     },
 
 
-  cancelarSolicitudParcial: async (solicitudOriginal, diasACancelar, motivoCancelacion) => {
+  cancelarSolicitudParcial: async (solicitud, diasACancelar, motivoCancelacion, esAdmin = false) => {
     try {
-      const { userProfile } = useAuthStore.getState();
+      const { user } = useAuthStore.getState();
       
       if (!motivoCancelacion || motivoCancelacion.trim() === '') {
         throw new Error('Debes proporcionar un motivo para la cancelación parcial');
@@ -1058,57 +1202,83 @@ export const useVacacionesStore = create((set, get) => {
         throw new Error('Debes seleccionar al menos un día para cancelar');
       }
 
-      if (diasACancelar.length >= solicitudOriginal.fechas.length) {
-        throw new Error('No puedes cancelar todos los días. Para eso usa cancelación completa');
+      // ✅ VALIDACIÓN: Solo para solicitudes de días completos
+      const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
+      if (esHorasSueltas) {
+        throw new Error('No se pueden cancelar parcialmente solicitudes de horas sueltas');
       }
 
-      // Calcular horas a devolver (8 horas por día cancelado)
+      // ✅ OBTENER cancelaciones previas para validar
+      const cancelacionesPrevias = await get().obtenerCancelacionesParciales(solicitud.id);
+      const diasYaCancelados = cancelacionesPrevias.reduce((acc, c) => {
+        return [...acc, ...c.fechasCanceladas];
+      }, []);
+
+      // ✅ VALIDACIÓN: No cancelar días ya cancelados
+      const diasDuplicados = diasACancelar.filter(dia => diasYaCancelados.includes(dia));
+      if (diasDuplicados.length > 0) {
+        throw new Error(`Los siguientes días ya fueron cancelados: ${diasDuplicados.join(', ')}`);
+      }
+
+      // ✅ VALIDACIÓN: No cancelar todos los días (debe quedar al menos 1)
+      const diasTotalesDisponibles = solicitud.fechas.filter(f => !diasYaCancelados.includes(f));
+      if (diasACancelar.length >= diasTotalesDisponibles.length) {
+        throw new Error('No puedes cancelar todos los días restantes. Para eso usa cancelación completa');
+      }
+
+      // ✅ VALIDACIÓN: Solo admin puede cancelar días pasados
+      if (!esAdmin) {
+        const diasPasados = diasACancelar.filter(fecha => esFechaPasadaOHoy(fecha));
+        if (diasPasados.length > 0) {
+          throw new Error('No puedes cancelar días que ya han pasado');
+        }
+      }
+
       const horasADevolver = diasACancelar.length * 8;
+      //  Obtener saldo actual del empleado ANTES de la cancelación
+      const empleadoActual = esAdmin ? solicitud.solicitante : user?.email;
+      const userDocRef = doc(db, 'USUARIOS', empleadoActual);
+      const userDoc = await getDoc(userDocRef);
       
-      // 1. Crear nueva solicitud de cancelación parcial
-      const solicitudCancelacion = {
-        solicitante: solicitudOriginal.solicitante,
-        fechas: diasACancelar.sort(),
-        horasSolicitadas: horasADevolver,
-        horasDisponiblesAntesSolicitud: userProfile.vacaciones.disponibles,
-        horasDisponiblesTrasAprobacion: userProfile.vacaciones.disponibles + horasADevolver,
-        fechaSolicitud: formatYMD(new Date()),
-        fechaSolicitudOriginal: formatYMD(new Date()),
-        estado: 'cancelado',
+      if (!userDoc.exists()) {
+        throw new Error('Empleado no encontrado');
+      }
+
+      const userData = userDoc.data();
+      const saldoAntes = userData.vacaciones?.disponibles || 0;
+      const saldoDespues = saldoAntes + horasADevolver;
+
+      // ✅ CREAR subcolección de cancelación parcial
+      const cancelacionData = {
+        fechasCanceladas: diasACancelar.sort(),
+        horasDevueltas: horasADevolver,
+        motivoCancelacion: motivoCancelacion.trim(),
         fechaCancelacion: formatYMD(new Date()),
-        motivoCancelacion: `CANCELACIÓN PARCIAL: ${motivoCancelacion.trim()}`,
-        comentariosSolicitante: `Cancelación parcial de solicitud original. Días cancelados: ${diasACancelar.map(fecha => formatearFechaCorta(fecha)).join(', ')}`,
-        comentariosAdmin: `Cancelación parcial procesada el ${formatearFechaCorta(formatYMD(new Date()))}.`,
-        esCancelacionParcial: true, // Marcador para identificar este tipo de solicitud
-        createdAt: new Date(),
-        updatedAt: new Date()
+        horasDisponiblesAntesCancelacion: saldoAntes,         
+        horasDisponiblesDespuesCancelacion: saldoDespues,
+        procesadaPor: user?.email,
+        esAdmin: esAdmin,
+        createdAt: new Date()
       };
 
-      // 2. Crear la nueva solicitud de cancelación
-      const docRefCancelacion = await addDoc(collection(db, 'VACACIONES'), solicitudCancelacion);
-      const diasYaCancelados = solicitudOriginal.diasCancelados || [];
-      const diasCanceladosActualizados = [...diasYaCancelados, ...diasACancelar].sort();
-
-      await updateDoc(doc(db, 'VACACIONES', solicitudOriginal.id), {
-        diasCancelados: diasCanceladosActualizados,
-        comentariosAdmin: (solicitudOriginal.comentariosAdmin || '') + 
-          `\n\n*CANCELACIÓN PARCIAL (${formatearFechaCorta(formatYMD(new Date()))}): Se cancelaron ${diasACancelar.length} días de esta solicitud: ${diasACancelar.map(fecha => formatearFechaCorta(fecha)).join(', ')}. \nMotivo: ${motivoCancelacion.trim()}`,
-        updatedAt: new Date()
-      });
-
-      // 4. Devolver horas al saldo del empleado
-      const userDocRef = doc(db, 'USUARIOS', solicitudOriginal.solicitante);
+      const cancelacionRef = await addDoc(
+        collection(db, 'VACACIONES', solicitud.id, 'cancelaciones_parciales'),
+        cancelacionData
+      );
+        
+      // ✅ ACTUALIZAR saldo del empleado
       await updateDoc(userDocRef, {
-        'vacaciones.disponibles': userProfile.vacaciones.disponibles + horasADevolver
+        'vacaciones.disponibles': saldoDespues,
+        updatedAt: new Date()
       });
 
       return {
         exito: true,
-        solicitudCancelacionId: docRefCancelacion.id,
+        cancelacionId: cancelacionRef.id,
         horasDevueltas: horasADevolver,
         diasCancelados: diasACancelar.length,
-        diasOriginales: solicitudOriginal.fechas.length,
-        totalDiasCancelados: diasCanceladosActualizados.length 
+        saldoAntes,                                           
+        saldoDespues 
       };
 
     } catch (error) {
