@@ -25,7 +25,6 @@ import {
   formatDate, 
   formatearTiempo 
 } from '../../utils/nominaUtils';
-
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
@@ -34,6 +33,7 @@ import 'dayjs/locale/es'
 import es from 'dayjs/locale/es';
 import { capitalizeFirstLetter } from '../Helpers';
 import { obtenerNumeroMes } from '../Helpers';
+
 
 
 const GenerarNomina = () => {
@@ -49,7 +49,8 @@ const GenerarNomina = () => {
     actualizarNomina,
     getNominaById,
     calcularAñosServicio,
-    checkDuplicateNomina
+    checkDuplicateNomina,
+    obtenerPeriodoHorasExtras
   } = useNominaStore();
 
   
@@ -60,7 +61,8 @@ const GenerarNomina = () => {
     loading: loadingHorasExtra,
     calcularTotalHorasDecimales,
     calcularTotalHorasExtra,
-    getEstadisticasPeriodo
+    getEstadisticasPeriodo,
+    
   } = useHorasExtraStore();
 
   const { showSuccess, showError } = useUIStore();
@@ -102,6 +104,42 @@ const GenerarNomina = () => {
       setImporte(configuracionNomina.pagaExtra);
     }
   }, [configuracionNomina]);
+
+   useEffect(() => {
+      //const now = new Date();
+      //const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
+      //const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
+      
+      //setFechaInicio(firstDay);
+      //setFechaFin(lastDay);
+  
+       const setDefaultPeriod = async () => {
+        const now = new Date();
+        let lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -6).toISOString().split('T')[0]
+  
+        let calculatedFirstDay;
+          const periodoAnterior = await obtenerPeriodoHorasExtras(user.email, 1); // 1 month back
+          const periodoActual = await obtenerPeriodoHorasExtras(user.email,0)
+          if (periodoAnterior.encontrada) {
+            const inicioNuevo = new Date(periodoAnterior.fechaFin);
+            inicioNuevo.setDate(inicioNuevo.getDate() + 1);
+            calculatedFirstDay = inicioNuevo.toISOString().split('T')[0];
+          } else {
+            // Default logic: 7 days before the current date if no previous nomina
+            const defaultFirstDay = new Date(now.getFullYear(), now.getMonth(), - 7);
+            calculatedFirstDay = defaultFirstDay.toISOString().split('T')[0];
+          }
+          if (periodoActual.encontrada) {
+            calculatedFirstDay = new Date(periodoActual.fechaInicio).toISOString().split('T')[0];;
+            lastDay = new Date(periodoActual.fechaFin).toISOString().split('T')[0];;
+          } 
+        
+        setFechaInicio(calculatedFirstDay);
+        setFechaFin(lastDay);
+      };
+  
+      setDefaultPeriod();
+    }, []);
 
   useEffect(() => {
        if (nominaId && user?.email && !loadingConfiguracion && configuracionNomina) {
@@ -154,8 +192,6 @@ const GenerarNomina = () => {
       setExtraConcepto('');
       setExtraCantidad(0);
       setTipoNomina('mensual');
-      setFechaInicio(dayjs(selectedDate).startOf('month').subtract(9,'days').format('YYYY-MM-DD'));
-      setFechaFin(dayjs(selectedDate).endOf('month').subtract(7,'days').format('YYYY-MM-DD'));
   }
   }, [nominaId, user?.email, getNominaById, navigate,loadingConfiguracion,loadConfiguracionUsuario]);
 
@@ -756,7 +792,7 @@ const GenerarNomina = () => {
 
 
 
-                        <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', mt:3,}}>
+                        <Box sx={{display:'flex', justifyContent:'space-between', gap:4, alignItems:'center', mt:3,}}>
                         <Typography  variant="h5"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
                           Pago Extra
                         </Typography>
@@ -841,8 +877,8 @@ const GenerarNomina = () => {
                             </Box>
                             )}
 
-                        <Divider sx={{ bgcolor:'black', mt:4 }} />
-                        <Box sx={{display:'flex', justifyContent:'center', gap:4, alignItems:'center', mt:3,}}>
+                        <Divider sx={{ bgcolor:'black', mt:3 }} />
+                        <Box sx={{display:'flex', justifyContent:'space-between', gap:4, alignItems:'center', mt:3,}}>
                         <Typography  variant="h5"  color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
                           Deducciones
                         </Typography>
@@ -869,7 +905,7 @@ const GenerarNomina = () => {
                         </Box>
                         <Box sx={{display:'flex', flexDirection:'column', p:2, mt:-1}}>
                           <Typography variant="body1" fontWeight={600} textAlign={'center'}>
-                            {tieneDeduccion? 'Tengo una deduccion' : 'No tengo deducción'}
+                            {tieneDeduccion? 'Tengo una deducción este més' : 'No tengo una deducción este més '}
                           </Typography>
                           <Typography variant="body2" color="text.secondary" textAlign={'center'}>
                             {tieneDeduccion && 'La deducción se restará al total de la nómina. Por ej. si has estado de baja.'}
