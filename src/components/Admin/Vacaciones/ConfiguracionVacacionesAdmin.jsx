@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Container, AppBar, Toolbar, IconButton, Box, Typography, Card, CardContent,
   Grid, Paper, Switch, FormControlLabel, RadioGroup, Radio, TextField, Button,
-  Table, TableHead, TableRow, TableCell, TableBody, Chip, Divider, Alert, FormControl
+  Table, TableHead, TableRow, TableCell, TableBody, Chip, Divider, Alert, FormControl,
+  InputAdornment
 } from '@mui/material';
 import {
   ArrowBackIosNew,
@@ -15,6 +16,7 @@ import {
 } from '@mui/icons-material';
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 
 const ConfiguracionVacaciones = () => {
   const navigate = useNavigate();
@@ -23,6 +25,8 @@ const ConfiguracionVacaciones = () => {
 
   const [localCfg, setLocalCfg] = useState(null);
   const [saving, setSaving] = useState(false);
+  const isEnabledByMode = ['porHoras','porHorasYsinConflictos'].includes(localCfg.autoAprobar?.modo);
+
 
   useEffect(() => {
     const unsub = loadConfigVacaciones();
@@ -127,7 +131,7 @@ const ConfiguracionVacaciones = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
                 }}
             >
-                Reglas de auto-aprobación y cobertura
+                Auto-aprobación y Cobertura
             </Typography>
             </Box>
             <IconButton
@@ -183,10 +187,31 @@ const ConfiguracionVacaciones = () => {
                       type="number"
                       label="X horas (límite)"
                       fullWidth
+                      onWheel={(e) => e.target.blur()}
+                      slotProps={{
+                        input: {
+                          endAdornment: <InputAdornment position="end">horas</InputAdornment>,
+                        },
+                        htmlInput:{ 
+                          min: 0, step: 1 
+                        }
+                      }}
                       value={localCfg.autoAprobar?.maxHoras || 8}
                       onChange={(e) => setAuto('maxHoras', Math.max(1, parseInt(e.target.value || 1, 10)))}
-                      helperText="Usado en modos por horas"
-                      disabled={['porHoras','porHorasYsinConflictos'].includes(localCfg.autoAprobar?.modo) === false}
+                      helperText={
+                        isEnabledByMode
+                            ? (
+                                localCfg.autoAprobar?.maxHoras
+                                    // Si está habilitado Y tiene valor, muestra el tiempo formateado
+                                    ? <Typography component="span" fontSize='0.9rem' sx={{fontWeight:500, color:'black' }}>
+                                          {formatearTiempoVacasLargo(localCfg.autoAprobar?.maxHoras)}
+                                      </Typography>
+                                    // Si está habilitado y NO tiene valor, muestra el mensaje de ayuda.
+                                    : <Typography component="span" fontSize='0.9rem'>Especifica la cantidad de horas</Typography>
+                            )
+                            : null // Muestra NADA si está deshabilitado
+                    }
+                      disabled={!isEnabledByMode}
                     />
                   </Grid>
                   <Grid size={{ xs: 12 }}>
@@ -198,6 +223,7 @@ const ConfiguracionVacaciones = () => {
                       value={localCfg.autoAprobar?.mensaje || ''}
                       onChange={(e) => setAuto('mensaje', e.target.value)}
                       placeholder="Ej: Aprobado automáticamente según política activa sin conflictos."
+                      sx={{mt:1}}
                     />
                   </Grid>
                 </Grid>

@@ -1,5 +1,5 @@
 // components/Admin/CrearEmpleado.jsx - CORREGIDO
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Box, TextField, Button, Typography, Alert,
@@ -11,14 +11,18 @@ import {
   Visibility,
   VisibilityOff,
   PersonAdd as PersonAddIcon,
+  GroupOutlined
 } from '@mui/icons-material';
 import { useUIStore } from '../../../stores/uiStore';
-import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
+import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
+import { useEmpleadosStore } from '../../../stores/empleadosStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 const CrearEmpleado = () => {
   const navigate = useNavigate();
-  const {showSuccess,showError}=useUIStore
-  
+  const {showSuccess,showError}=useUIStore()
+  const {getRol}=useAuthStore()
+  const {fetchEmpleados, empleados} = useEmpleadosStore()
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
@@ -30,9 +34,14 @@ const CrearEmpleado = () => {
     nivel: '',
     puesto: ''
   });
-
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+      if (empleados.length === 0) {
+      fetchEmpleados();
+      }
+    }, [empleados.length]);
 
   const opcionesPuesto = [
     'Fresador',
@@ -72,9 +81,7 @@ const CrearEmpleado = () => {
           nivel: '',
           puesto: ''
         });
-        setTimeout(() => {
-          navigate('/admin/empleados');
-        }, 2000);
+
       } else {
         showError(result.error);
       }
@@ -95,6 +102,14 @@ const CrearEmpleado = () => {
       [field]: e.target.value
     }));
   };
+
+      if (loading && empleados.length === 0) {
+        return (
+          <Container sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+            <CircularProgress />
+          </Container>
+        );
+      }
 
   return (
     <>
@@ -144,7 +159,7 @@ const CrearEmpleado = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Registro de empleado
+              Registro y Lista de empleados
             </Typography>
           </Box>
 
@@ -163,9 +178,11 @@ const CrearEmpleado = () => {
 
       {/* Contenido principal */}
       <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
-        <Card elevation={0} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
-          <CardContent sx={{ p: 4 }}>
-
+        <Card elevation={5} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography fontWeight="bold" textAlign='center' color='primary.main' sx={{mb:2, fontSize:'1.85rem'}}>
+                Nuevo Trabajador
+            </Typography>
             <Box component="form" onSubmit={handleSubmit}>
               <Grid container spacing={3}>
                 {/* Nombre */}
@@ -344,7 +361,7 @@ const CrearEmpleado = () => {
                     sx={{ 
                       textAlign:'center',
                       mb: 1, 
-                      color: 'azul.main', 
+                      color: 'primary.main', 
                       fontWeight: 600,
                       fontSize: '1.1rem'
                     }}
@@ -371,12 +388,11 @@ const CrearEmpleado = () => {
                             min: 0, step: 1 
                           }
                         }}
-                        helperText={
-                          <Typography component="span" fontSize='1rem' sx={{fontWeight:700 }}>
+                        helperText=
                           {formData.vacaDisponibles 
-                          ? `${formatearTiempoVacasLargo(formData.vacaDisponibles)}`
-                          : 'Especifica la cantidad de horas'}
-                          </Typography>
+                          ?  <Typography component="span" fontSize='1rem' sx={{fontWeight:700, color:'black' }}>{formatearTiempoVacasLargo(formData.vacaDisponibles)}</Typography>
+                          : <Typography component="span" fontSize='0.9rem'>Especifica la cantidad de horas</Typography>
+                          
                         }
                         sx={{
                           '& .MuiOutlinedInput-root': {
@@ -417,6 +433,7 @@ const CrearEmpleado = () => {
                     >
                       <MenuItem value="user">Empleado</MenuItem>
                       <MenuItem value="admin">Administrador</MenuItem>
+                      <MenuItem value="leaveAdmin">Administrador de Ausencias</MenuItem>
                       <MenuItem value="cocinero">Cocinero</MenuItem>
                       <MenuItem value="owner">Jefe</MenuItem>
                     </Select>
@@ -453,6 +470,60 @@ const CrearEmpleado = () => {
                 {loading ? 'Creando Empleado...' : 'Crear Empleado'}
               </Button>
             </Box>
+          </CardContent>
+        </Card>
+        <Card 
+          elevation={5} 
+          sx={{ 
+            mt:2,
+            borderRadius: 4,
+            border: '1px solid rgba(0,0,0,0.08)'
+          }}
+        >
+          <CardContent sx={{   }}>
+              <Box display='flex' justifyContent="center" gap={2} sx={{ width: '100%', py: 1, bgcolor:'dorado.fondo' }}>
+                <GroupOutlined sx={{fontSize:'2rem'}} />
+                <Typography variant="h5" textAlign="center" fontWeight="bold">Empleados</Typography>
+              </Box>
+            
+            {/* Filas de datos */}
+            {empleados.map((empleado) => (
+              <Box 
+                key={empleado.id} 
+                sx={{ 
+                  px:1,
+                  py:2,
+                  display: 'flex', 
+                  justifyContent:'space-between',
+                  alignItems:'center',
+                  borderTop: '1px solid rgba(0, 0, 0, 0.5)',
+                  '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.06)' }
+                }}
+              >   
+              <Box sx={{                   
+                  display: 'flex', 
+                  flexDirection:'column',
+                  justifyContent:'center'
+              }}
+              >
+                  <Typography sx={{fontWeight:'bold'}} fontSize="1.1rem">{empleado.nombre}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">{empleado.puesto}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">Fecha Ingreso:{empleado.fechaIngreso}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">Nivel Salarial:{empleado.nivel}</Typography>
+              </Box>
+              <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection:'column',
+                  alignItems:'center',
+                  justifyContent:'center'
+              }}
+              >
+                <Typography sx={{}} fontSize="1rem">Vacaciones</Typography>
+                <Typography sx={{}} fontSize="1.2rem">{formatearTiempoVacas(empleado.vacaciones.disponibles)}</Typography>
+                <Typography sx={{mt:1}} fontSize="0.75rem">{getRol(empleado.rol)}</Typography>
+              </Box>
+              </Box>
+            ))}
           </CardContent>
         </Card>
       </Container>

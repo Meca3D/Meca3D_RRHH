@@ -106,13 +106,6 @@ const GenerarNomina = () => {
   }, [configuracionNomina]);
 
    useEffect(() => {
-      //const now = new Date();
-      //const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
-      //const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
-      
-      //setFechaInicio(firstDay);
-      //setFechaFin(lastDay);
-  
        const setDefaultPeriod = async () => {
         const now = new Date();
         let lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -6).toISOString().split('T')[0]

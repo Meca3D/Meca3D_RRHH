@@ -1,157 +1,194 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
-  IconButton, Grid, Chip, List, ListItem, ListItemText, 
-  ListItemIcon, Divider, Alert, LinearProgress, Stack,
-  FormControl, InputLabel, Select, MenuItem, Collapse // ✅ Añadidos
+  AppBar, Toolbar, Typography, Container, Box, Grid, Card, CardContent, CardHeader, Collapse,
+  IconButton, Chip, Divider, Button, CircularProgress, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'; // ✅ Nuevo
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'; // ✅ Nuevo
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'; // ✅ Nuevo
-import { es } from 'date-fns/locale'; // ✅ Nuevo para español
-import {
-  ArrowBackIosNew as ArrowBackIosNewIcon,
-  BeachAccessOutlined as BeachIcon,
-  TrendingDown as TrendingDownIcon,
-  CheckCircle as CheckCircleIcon,
-  CalendarMonth as CalendarIcon,
-  Timeline as TimelineIcon
-} from '@mui/icons-material';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
+ import { format, parse, isValid, addMonths, startOfYear  } from 'date-fns'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { es } from 'date-fns/locale';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import BeachIcon from '@mui/icons-material/BeachAccessOutlined';
+
 import { useAuthStore } from '../../stores/authStore';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
+import { formatearFechaCorta } from '../../utils/dateUtils';
 import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../utils/vacacionesUtils';
-import { formatearFechaCorta, esFechaPasadaOHoy } from '../../utils/dateUtils';
 
-const MiSaldoVacaciones = () => {
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable'
+
+const toYMD = (d) => {
+  if (!d) return '';
+  // Date válida
+  if (d instanceof Date && isValid(d)) return format(d, 'yyyy-MM-dd');
+  // Firestore Timestamp u objeto con toDate()
+  if (d && typeof d.toDate === 'function') {
+    const dd = d.toDate();
+    return isValid(dd) ? format(dd, 'yyyy-MM-dd') : '';
+  }
+  // String 'yyyy-MM-dd'
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  // String 'dd/MM/yyyy'
+  if (typeof d === 'string') {
+    const parsed = parse(d, 'dd/MM/yyyy', new Date());
+    return isValid(parsed) ? format(parsed, 'yyyy-MM-dd') : '';
+  }
+  return '';
+};
+
+export default function MiSaldoVacaciones() {
   const navigate = useNavigate();
-  const { user, userProfile } = useAuthStore();
-  const { solicitudesVacaciones, loadMisSolicitudesVacaciones } = useVacacionesStore();
+  const user = useAuthStore(s => s.user);
+  const {userProfile}=useAuthStore()
+  const getEventosSaldoUsuarioPeriodo = useVacacionesStore(s => s.getEventosSaldoUsuarioPeriodo);
+  const [expanded, setExpanded] = useState({});
+  const [fechasExpandidas,setFechasExpandidas]=useState(null)
 
-  // Estados para filtros
-  const [periodoSeleccionado, setPeriodoSeleccionado] = useState('año');
-  const [fechaPersonalizada, setFechaPersonalizada] = useState(null);
+  const [periodo, setPeriodo] = useState('3m'); // '3m' | '6m' | 'year' | 'custom'
+  const [inicio, setInicio] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); d.setHours(0,0,0,0); return d; });
+  const [fin, setFin] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
+  const [loading, setLoading] = useState(false);
+  const [eventos, setEventos] = useState([]);
+  const [saldoInicial, setSaldoInicial] = useState(null);
 
-  const vacacionesDisponibles = userProfile?.vacaciones?.disponibles || 0;
-  const vacacionesPendientes = userProfile?.vacaciones?.pendientes || 0;
-
+  // Ajuste de fechas cuando cambia el periodo
   useEffect(() => {
-    const unsubscribe = loadMisSolicitudesVacaciones(user?.email);
-    return () => unsubscribe && unsubscribe();
-  }, [user?.email, loadMisSolicitudesVacaciones]);
+    if (periodo === '3m') { const hoy = new Date(); setInicio(addMonths(hoy, -3)); setFin(hoy); 
+    } else if (periodo === '6m') { const hoy = new Date(); setInicio(addMonths(hoy, -6)); setFin(hoy); 
+    } else if (periodo === 'year') { setInicio(startOfYear(new Date())); setFin(new Date()); }
+  }, [periodo]);
 
-  // ✅ NUEVO: Calcular solicitudes aprobadas futuras
-  const solicitudesAprobadasFuturas = useMemo(() => {
-    return solicitudesVacaciones.filter(s => 
-      s.estado === 'aprobada' && !esFechaPasadaOHoy(s.fechas[0])
-    );
-  }, [solicitudesVacaciones]);
+  const cargar = useCallback(async () => {
+    if (!user?.email) return;
+    setLoading(true);
+    try {
+      const { eventos, saldoInicial } = await getEventosSaldoUsuarioPeriodo(user.email, toYMD(inicio), toYMD(fin))
+      setEventos(eventos);
+      setSaldoInicial(saldoInicial);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.email, inicio, fin, getEventosSaldoUsuarioPeriodo]);
 
-  // ✅ NUEVO: Calcular horas comprometidas totales
-  const horasComprometidasFuturas = solicitudesAprobadasFuturas.reduce(
-    (total, s) => total + s.horasSolicitadas, 0
-  );
-  
-  const horasTotalComprometidas = vacacionesPendientes + horasComprometidasFuturas;
-  const horasRealmenteLibres = vacacionesDisponibles - horasTotalComprometidas;
-  
-  const porcentajeComprometido = vacacionesDisponibles > 0 
-    ? Math.round((horasTotalComprometidas / vacacionesDisponibles) * 100) 
-    : 0;
+  useEffect(() => { cargar(); }, [cargar]);
 
-  const solicitudesAprobadas = useMemo(() => {
-    const ahora = new Date();
-    
-    let fechaLimite;
-    switch (periodoSeleccionado) {
-      case '3m':
-        fechaLimite = new Date();
-        fechaLimite.setMonth(fechaLimite.getMonth() - 3);
-        break;
-      case '6m':
-        fechaLimite = new Date();
-        fechaLimite.setMonth(fechaLimite.getMonth() - 6);
-        break;
-      case 'personalizado':
-        fechaLimite = fechaPersonalizada || new Date(ahora.getFullYear(), 0, 1);
-        break;
-      case 'año':
-      default:
-        fechaLimite = new Date(ahora.getFullYear(), 0, 1);
-        break;
+  const resumen = useMemo(() => {
+    if (!eventos || eventos.length === 0) {
+      return { saldoInicial: saldoInicial, saldoFinal: saldoInicial, variacion: 0 };
+    }
+    const saldoFinal = eventos[eventos.length - 1].saldoDespues ?? saldoInicial ?? 0;
+    const inicial = saldoInicial ?? saldoFinal;
+    return { saldoInicial: inicial, saldoFinal, variacion: (saldoFinal - inicial) };
+  }, [eventos, saldoInicial]);
+
+    const colorChip = (tipo, delta) => {
+      if (tipo === 'denegada') return 'default';
+      if (tipo === 'ajuste') return delta >= 0 ? 'success' : 'error';
+      return delta >= 0 ? 'success' : 'error';
+    };
+    const IconoDelta = ({ delta }) => delta >= 0 ? <TrendingUpIcon fontSize="small" /> : <TrendingDownIcon fontSize="small" />;
+
+    const loadLogo = (src) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL('image/png');
+      resolve({ dataUrl, w: img.naturalWidth, h: img.naturalHeight });
+    };
+    img.onerror = () => resolve(null)
+    img.src = src;
+  });
+
+  const exportarPDF = async () =>  {
+    const nbDate = (s) => String(s).replace(/(\d{1,2})\s+([A-Za-zÁÉÍÓÚáéíóúñ]+)\s+(\d{4})/g, '$1\u00A0$2\u00A0$3');
+    const chunk = (arr, size) => arr.reduce((acc, _, i) => (i % size ? acc : [...acc, arr.slice(i, i + size)]), []);
+    const formatFechasBloques = (fechas, porLinea = 4) => {
+    if (!Array.isArray(fechas) || fechas.length === 0) return '-';
+    const fmt = fechas.map(d => nbDate(formatearFechaCorta(d)));
+    return chunk(fmt, porLinea).map(gr => gr.join(', ')).join('\n'); // saltos explícitos entre bloques
+  };
+    const MARGIN = { right: 8, left: 8 };
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const logoInfo = await loadLogo('/logo.png');
+    let yStart = 34; // valor por defecto si no hay logo
+    if (logoInfo) {
+      const { dataUrl, w, h } = logoInfo;
+      const logoW = 30;
+      const logoH = (h / w) * logoW;
+      const xLogo = pageW - MARGIN.right - logoW;
+      const yLogo = 2;
+      doc.addImage(dataUrl, 'PNG', xLogo, yLogo, logoW, logoH);
+      yStart = Math.max(yStart, yLogo + logoH + 2); 
     }
 
-    return solicitudesVacaciones
-      .filter(s => s.estado === 'aprobada' && new Date(s.fechaSolicitudOriginal || s.fechaSolicitud) >= fechaLimite)
-      .sort((a, b) => new Date(a.fechaSolicitudOriginal || a.fechaSolicitud) - new Date(b.fechaSolicitudOriginal || b.fechaSolicitud));
-  }, [solicitudesVacaciones, periodoSeleccionado, fechaPersonalizada]);
+    doc.setFontSize(14);
+    doc.text('Evolución del saldo de vacaciones', 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Periodo: ${formatearFechaCorta(toYMD(inicio))} a ${formatearFechaCorta(toYMD(fin))}`, 14, 22);
+    doc.text(`Saldo inicial: ${formatearTiempoVacasLargo(resumen.saldoInicial) ?? '-'}  |  Saldo final: ${formatearTiempoVacasLargo(resumen.saldoFinal) ?? '-'}  |  Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(resumen.variacion))} `, 14, 28);
 
-    const handlePeriodoChange = (event) => {
-      const nuevoPeriodo = event.target.value;
-      setPeriodoSeleccionado(nuevoPeriodo);
-      
-      // Si no es personalizado, limpiar fecha personalizada
-      if (nuevoPeriodo !== 'personalizado') {
-        setFechaPersonalizada(null);
-      }
-    };
+    const rows = (eventos || []).map(e => {
+    const adminShort = e.comentariosAdmin ? String(e.comentariosAdmin).trim() : '-';
+    const fechasSolicFmt = formatFechasBloques(e.fechasSolicitadas, 4);
+    const fechasCancFmt  = formatFechasBloques(e.fechasCanceladas, 4);
 
-    // ✅ NUEVO: Handler para fecha personalizada
-    const handleFechaPersonalizadaChange = (nuevaFecha) => {
-      setFechaPersonalizada(nuevaFecha);
-    };
-  // ✅ NUEVO: Calcular evolución del saldo
-  const evolucionSaldo = useMemo(() => {
-    const inicioAño = new Date(new Date().getFullYear(), 0, 1);
-    
-    // Calcular saldo inicial del período (asumiendo que tenías las mismas horas al inicio)
-    const horasUsadasEnPeriodo = solicitudesAprobadas.reduce((total, s) => total + s.horasSolicitadas, 0);
-    const saldoInicial = vacacionesDisponibles + horasUsadasEnPeriodo;
-    
-    let saldoActual = saldoInicial;
-    const evoluciones = [{
-      fecha: inicioAño,
-      concepto: 'Saldo inicial del período',
-      horasSolicitadas: 0,
-      saldoAntes: saldoInicial,
-      saldoDespues: saldoInicial,
-      tipo: 'inicial'
-    }];
+    const detalle = e.tipo === 'ajuste'
+      ? (adminShort || '-')
+      : (['aprobacion','denegada'].includes(e.tipo) ? fechasSolicFmt : fechasCancFmt);
 
-    solicitudesAprobadas.forEach(solicitud => {
-      const saldoAntes = saldoActual;
-      saldoActual -= solicitud.horasSolicitadas;
-      
-      evoluciones.push({
-        fecha: new Date(solicitud.fechaSolicitudOriginal || solicitud.fechaSolicitud),
-        concepto: solicitud.fechas.length === 1 ? `${solicitud.fechas}` : `${solicitud.fechas.length} días`,
-        horasSolicitadas: solicitud.horasSolicitadas,
-        saldoAntes,
-        saldoDespues: saldoActual,
-        tipo: 'solicitud',
-        esFuturo: !esFechaPasadaOHoy(solicitud.fechas[0])
-      });
-    });
+    const saldoAntesTxt   = typeof e.saldoAntes === 'number'   ? formatearTiempoVacas(e.saldoAntes)   : '-';
+    const saldoDespuesTxt = typeof e.saldoDespues === 'number' ? formatearTiempoVacas(e.saldoDespues) : '-';
 
-    return evoluciones;
-  }, [solicitudesAprobadas, vacacionesDisponibles]);
 
-  // ✅ NUEVO: Próximas vacaciones planificadas
-  const proximasVacaciones = solicitudesAprobadasFuturas
-    .sort((a, b) => new Date(a.fechas) - new Date(b.fechas))
-    .slice(0, 3);
+  return [
+    formatearFechaCorta(e.fecha),
+    e.concepto || '',
+    formatearTiempoVacas(Math.abs(e.deltaHoras===0?e.horasSolicitadas:e.deltaHoras)),
+    detalle,
+    saldoAntesTxt,
+    saldoDespuesTxt,
+  ];
+});
 
-    
-    const periodos = [
-      { value: '3m', label: 'Últimos 3 meses' },
-      { value: '6m', label: 'Últimos 6 meses' },
-      { value: 'año', label: 'Año actual' },
-      { value: 'personalizado', label: 'Período personalizado' }
-    ];
+autoTable(doc, {
+  startY: yStart,
+  margin: MARGIN,
+  head: [['Fecha', 'Concepto', 'Pedido', 'Fechas/Detalle', 'Saldo antes', 'Saldo después']],
+  headStyles: { halign: 'center', valign: 'middle', fillColor: [33, 150, 243]  }, 
+  body: rows,
+  styles: { fontSize: 9, overflow: 'linebreak',valign: 'middle' }, // respeta '\n' y corta por espacios
+  columnStyles: {
+    0: { cellWidth: 20, halign: 'center'},  // Fecha
+    1: { cellWidth: 36, halign: 'center' },  // Concepto
+    2: { cellWidth: 15, halign: 'center'},  // Delta
+    3: { cellWidth: 91, halign: 'center'},  // Fechas/Detalle (más ancho -> caben 4 fechas por línea)
+    4: { cellWidth: 15, halign: 'center' }, // Saldo antes
+    5: { cellWidth: 17, halign: 'center' }, // Saldo después
+  },
+});
+
+    doc.save(`saldo_vacaciones_${formatearFechaCorta(toYMD(inicio))}_${formatearFechaCorta(toYMD(fin))}.pdf`);
+  };
+
+  const toggle = (k) => setExpanded((s) => ({ ...s, [k]: !s[k] }));
 
   return (
-    <>
-<AppBar  
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+      <AppBar  
         sx={{ 
           overflow:'hidden',
           background: 'linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%)',
@@ -210,205 +247,342 @@ const MiSaldoVacaciones = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ pb: 4 }}>
-        {/* ✅ NUEVO: Resumen principal mejorado */}
-        <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #E8F5E8 0%, #F1F8E9 100%)' }}>
-          <CardContent sx={{ p: 4 }}>
-            <Grid container spacing={3}>
-              <Grid xs={12} sm={5}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h3" fontWeight={700} color="success.main" gutterBottom>
-                    {formatearTiempoVacas(horasRealmenteLibres)}
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Realmente disponibles
-                  </Typography>
-                </Box>
-              </Grid>
+      <Container maxWidth="sm" sx={{ pb: 3 }}>
+        <Box sx={{ mt: 2 }}>
+          <Card sx={{p:2, my:2}}>
+            <Typography variant='h6' sx={{mb:2, mt:1, textAlign:'center', fontWeight:'bold'}}>
+              Seleccione Periodo a Visualizar
 
-              <Grid xs={12} sm={7}>
-                <Typography variant="h6" gutterBottom>Estado de tu saldo {new Date().getFullYear()}</Typography>
-                
-                {/* ✅ NUEVO: Barra de progreso mejorada */}
-                <Box sx={{ mb: 2 }}>
-                  <LinearProgress
-                    variant="determinate"
-                    value={porcentajeComprometido}
-                    sx={{
-                      height: 12,
-                      borderRadius: 6,
-                      bgcolor: 'success.100',
-                      '& .MuiLinearProgress-bar': {
-                        bgcolor: porcentajeComprometido > 80 ? 'error.main' : 
-                                porcentajeComprometido > 60 ? 'warning.main' : 'success.main'
-                      }
-                    }}
-                  />
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                    {porcentajeComprometido}% comprometido (usado + planificado + pendiente)
-                  </Typography>
-                </Box>
-
-                <Grid container spacing={2}>
-                  <Grid xs={4}>
-                    <Typography variant="body2" color="text.secondary">Total anual</Typography>
-                    <Typography variant="h6" fontWeight={600}>
-                      {formatearTiempoVacas(vacacionesDisponibles)}
-                    </Typography>
-                  </Grid>
-                  <Grid xs={4}>
-                    <Typography variant="body2" color="text.secondary">Pendientes</Typography>
-                    <Typography variant="h6" fontWeight={600} color="warning.main">
-                      {formatearTiempoVacas(vacacionesPendientes)}
-                    </Typography>
-                  </Grid>
-                  <Grid xs={4}>
-                    <Typography variant="body2" color="text.secondary">Planificadas</Typography>
-                    <Typography variant="h6" fontWeight={600} color="info.main">
-                      {formatearTiempoVacas(horasComprometidasFuturas)}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-
-            {/* ✅ NUEVO: Próximas vacaciones */}
-            {proximasVacaciones.length > 0 && (
-              <Alert severity="info" sx={{ mt: 3 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  📅 Próximas vacaciones planificadas:
-                </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {proximasVacaciones.map((solicitud, index) => (
-                    <Chip 
-                      key={index}
-                      label={`${formatearTiempoVacas(solicitud.horasSolicitadas)} - ${solicitud.fechas}`}
-                      size="small"
-                      color="info"
-                    />
-                  ))}
-                </Stack>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Box sx={{ display: 'flex', flexDirection:'column', justifyContent: 'center', mb: 3 }}>
-              <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TimelineIcon />
-                Evolución del saldo
-              </Typography>
-              
-              {/* ✅ NUEVO: Select en lugar de ButtonGroup */}
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Período a visualizar</InputLabel>
+            </Typography>
+            <Grid size={{ xs: 12 }}>
+              <FormControl sx={{mb:2}} fullWidth>
+                <InputLabel>Periodo</InputLabel>
                 <Select
-                  value={periodoSeleccionado}
-                  label="Período a visualizar"
-                  onChange={handlePeriodoChange}
+                  label="Periodo"
+                  value={periodo}
+                  onChange={(e) => setPeriodo(e.target.value)}
                 >
-                  {periodos.map(periodo => (
-                    <MenuItem key={periodo.value} value={periodo.value}>
-                      {periodo.label}
-                    </MenuItem>
-                  ))}
+                  <MenuItem value="3m">Últimos 3 meses</MenuItem>
+                  <MenuItem value="6m">Últimos 6 meses</MenuItem>
+                  <MenuItem value="year">Año actual</MenuItem>
+                  <MenuItem value="custom">Personalizado</MenuItem>
                 </Select>
               </FormControl>
-            </Box>
+            </Grid>
 
-            {/* ✅ NUEVO: DatePicker condicional */}
-            <Collapse in={periodoSeleccionado === 'personalizado'}>
-              <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+            {periodo === 'custom' && (
+              <>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <DatePicker
-                    label="Desde qué fecha"
-                    value={fechaPersonalizada}
-                    onChange={handleFechaPersonalizadaChange}
-                    maxDate={new Date()}
-                    slotProps={{
-                      textField: {
-                        size: 'small',
-                        fullWidth: true,
-                        helperText: 'Selecciona desde qué fecha quieres ver el historial'
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
-                
-                {fechaPersonalizada && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                    Mostrando historial desde {fechaPersonalizada.toLocaleDateString('es-ES', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </Typography>
-                )}
-              </Box>
-            </Collapse>
-            
-            {evolucionSaldo.length <= 1 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                No hay movimientos registrados en este período
-              </Typography>
-            ) : (
-              <List sx={{ maxHeight: 400, overflow: 'auto' }}>
-                {evolucionSaldo.map((item, index) => (
-                  <Box key={index}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemIcon sx={{ minWidth: 40 }}>
-                        {item.tipo === 'inicial' ? (
-                          <CalendarIcon color="action" />
-                        ) : (
-                          <TrendingDownIcon color={item.esFuturo ? 'info' : 'success'} />
-                        )}
-                      </ListItemIcon>
-                      
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body1" fontWeight={500}>
-                              {item.concepto}
-                            </Typography>
-                            {item.tipo === 'solicitud' && (
-                              <Chip
-                                label={formatearTiempoVacas(item.horasSolicitadas)}
-                                size="small"
-                                color={item.esFuturo ? 'info' : 'success'}
-                              />
-                            )}
-                            {item.esFuturo && (
-                              <Chip label="Planificada" size="small" variant="outlined" />
-                            )}
-                          </Box>
-                        }
-                        secondary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {formatearFechaCorta(item.fecha)}
-                            </Typography>
-                            {item.tipo === 'solicitud' && (
-                              <Typography variant="caption" color="text.secondary">
-                                Saldo: {formatearTiempoVacas(item.saldoAntes)} → {formatearTiempoVacas(item.saldoDespues)}
-                              </Typography>
-                            )}
-                          </Box>
-                        }
-                      />
-                    </ListItem>
+                    label="Desde"
+                    value={inicio} 
+                    onChange={(v) => v && setInicio(v)} 
+                    format="dd/MM/yyyy"
+                    sx={{width:'100%'}}
                     
-                    {index < evolucionSaldo.length - 1 && <Divider />}
-                  </Box>
-                ))}
-              </List>
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <DatePicker
+                    label="Hasta"
+                    value={fin} 
+                    onChange={(v) => v && setFin(v)} 
+                    format="dd/MM/yyyy"
+                    sx={{width:'100%'}}
+                    
+                  />
+                </Grid>
+              </>
             )}
-          </CardContent>
-        </Card>
-      </Container>
-    </>
-  );
-};
+           {eventos.length === 0 ? (
 
-export default MiSaldoVacaciones;
+            <Chip sx={{fontSize:'1rem'}} label={`Vacaciones Disponibles: ${formatearTiempoVacasLargo(userProfile.vacaciones.disponibles)}`} />
+           ):(
+            <Grid size={{ xs: 12 }}>
+              <Box display="flex" gap={1} justifyContent='space-between' alignItems="center" flexWrap="wrap" sx={{mb:2}}>
+                <Box display='flex' flexDirection='column' alignItems='center'>
+                <Typography fontSize='1.2rem'>Saldo Inicial</Typography> 
+                <Typography fontSize='1.2rem' fontWeight={600}>{formatearTiempoVacasLargo(resumen.saldoInicial)}</Typography>
+                </Box>
+                <Box display='flex' flexDirection='column' alignItems='center'>
+                <Typography fontSize='1.2rem'>Saldo Final</Typography> 
+                <Typography fontSize='1.2rem' fontWeight={600}>{formatearTiempoVacasLargo(resumen.saldoFinal)}</Typography>
+                </Box>
+              </Box>
+              <Box display="flex" gap={1} justifyContent='space-between' alignItems="center" flexWrap="wrap">
+                <Chip
+                  sx={{fontSize:'1.2rem'}}
+                  color={resumen.variacion >= 0 ? 'success' : 'error'}
+                  label={`Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(resumen.variacion))}`}
+                />
+                <Box flexGrow={1} />
+                <Button sx={{p:1}} variant="outlined" size="small" startIcon={<PictureAsPdfIcon />} onClick={exportarPDF}>
+                  <Typography fontSize={'1.2rem'}>
+                    PDF
+                  </Typography>
+                </Button>
+              </Box>
+            </Grid>
+           )}
+          </Card>
+        </Box>
+
+        <Box sx={{ mt: 2 }}>
+{loading ? (
+  <Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>
+) : (
+  <Box display="flex" flexDirection="column" gap={1.5}>
+    {eventos.length === 0 && (
+      <Typography variant="body2">No hay eventos en este periodo</Typography>
+    )}
+    {eventos.map((e, idx) => {
+      const esHorasSueltas=(e.horasSolicitadas<8 || Math.abs(e.deltaHoras)<8)
+      const horasSolicitadas=e.horasSolicitadas
+      const delta=Math.abs(e.deltaHoras)
+      const key = `${e.fecha}-${e.tipo}-${idx}`;
+      const abierto = !!expanded[key];
+      const deltaTxt = `${e.deltaHoras >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(e.deltaHoras))}`;
+      const chipColor = e.tipo === 'denegada' ? 'default' : (e.deltaHoras >= 0 ? 'success' : 'error');
+      return (
+        <Card key={key} variant="outlined">
+          <CardHeader
+            title={
+              <>
+              <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap">
+                <Typography variant="h6">
+                  {formatearFechaCorta(e.fecha)}
+                </Typography>
+                <Typography variant="h6">
+                   {formatearTiempoVacas(e.saldoAntes )?? '-'} → {formatearTiempoVacas(e.saldoDespues) ?? '-'}
+                </Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap">
+                <Typography variant="h6">
+                  {e.concepto}
+                </Typography>
+                <Chip color={chipColor} size="small" label={<Typography fontSize='1rem'>{deltaTxt}</Typography>} />
+                
+              </Box>
+            <Box display='flex' sx={{}}>
+              <IconButton onClick={() => toggle(key)} aria-label={abierto ? 'Contraer' : 'Expandir'}>
+                {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
+              </IconButton>
+              </Box>
+              </>
+            }           
+          />
+          <Collapse in={abierto} timeout="auto" unmountOnExit>
+            <CardContent>
+              {e.tipo === 'aprobacion' && (
+                <>
+                  {Array.isArray(e.fechasSolicitadas) && e.fechasSolicitadas.length > 0 && (
+                    <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'azul.fondo', p:1}}>
+                    
+                    <Box
+                    onClick={() => setFechasExpandidas(fechasExpandidas === e.solicitudId+idx ? null : e.solicitudId+idx)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent:'space-between',
+                      cursor: 'pointer',                    
+                    }}
+                  >
+                  <Typography fontWeight={600} variant="body1">Fechas Solicitadas: </Typography>                    
+                    {fechasExpandidas === e.solicitudId+idx ? <ExpandLess /> : <ExpandMore />}
+                  </Box>
+                    <Collapse in={fechasExpandidas === e.solicitudId+idx}>
+                      <Box sx={{ ml: 2 }}>
+                      {e.fechasSolicitadas.map(fecha=>{
+                        return (
+                          <Typography 
+                            key={fecha} 
+                            variant='body1' 
+                            sx={{ 
+                              mb: 0.5,
+                            }}
+                          >
+                            • {formatearFechaCorta(fecha)} {esHorasSueltas &&`(${horasSolicitadas} ${horasSolicitadas===1?'hora':'horas'})`}
+                          </Typography>)
+                      })}
+                      </Box>
+                      </Collapse>
+                    </Box>
+                  )}
+                  {e.comentariosSolicitante && (
+                  <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'verde.fondo', p:1, mt:1}}>
+                    <Typography variant="body1"><strong>Comentario trabajador:</strong> {e.comentariosSolicitante}</Typography>
+                    </Box>
+                  )}
+                  {e.comentariosAdmin && (
+                    <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'azul.fondo', p:1, mt:1}}>
+                    <Typography variant="body1"><strong>Comentario admin:</strong> {e.comentariosAdmin}</Typography>
+                    </Box>
+                  )}
+                </>
+              )}
+              {e.tipo === 'cancelacion_parcial' && (
+                <>
+                  {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
+                     <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'naranja.fondo', p:1}}>
+                    
+                    <Box
+                    onClick={() => setFechasExpandidas(fechasExpandidas === e.solicitudId+idx ? null : e.solicitudId+idx)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent:'space-between',
+                      cursor: 'pointer',                    
+                    }}
+                  >
+                  <Typography fontWeight={600} variant="body1">Fechas Canceladas: </Typography>                    
+                    {fechasExpandidas === e.solicitudId+idx ? <ExpandLess /> : <ExpandMore />}
+                  </Box>
+                    <Collapse in={fechasExpandidas === e.solicitudId+idx}>
+                      <Box sx={{ ml: 2 }}>
+                      {e.fechasCanceladas.map(fecha=>{
+                        return (
+                          <Typography 
+                            key={fecha} 
+                            variant='body1' 
+                            sx={{ 
+                              mb: 0.5,
+                            }}
+                          >
+                            • {formatearFechaCorta(fecha)} 
+                          </Typography>)
+                      })}
+                      </Box>
+                      </Collapse>
+                    </Box>
+                  )}
+                  {e.motivoCancelacion && (
+                    <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'naranja.fondo', p:1, mt:1}}>
+                    <Typography variant="body1"><strong>Motivo cancelación:</strong> {e.motivoCancelacion}</Typography>
+                    </Box>
+                  )}
+                </>
+              )}
+              {e.tipo === 'cancelacion_total' && (
+                <>
+                  {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
+                    <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'rojo.fondo', p:1}}>
+                    
+                    <Box
+                    onClick={() => setFechasExpandidas(fechasExpandidas === e.solicitudId+idx ? null : e.solicitudId+idx)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent:'space-between',
+                      cursor: 'pointer',                    
+                    }}
+                  >
+                  <Typography fontWeight={600} variant="body1">Fechas Canceladas: </Typography>                    
+                    {fechasExpandidas === e.solicitudId+idx ? <ExpandLess /> : <ExpandMore />}
+                  </Box>
+                    <Collapse in={fechasExpandidas === e.solicitudId+idx}>
+                      <Box sx={{ ml: 2 }}>
+                      {e.fechasCanceladas.map(fecha=>{
+                        return (
+                          <Typography 
+                            key={fecha} 
+                            variant='body1' 
+                            sx={{ 
+                              mb: 0.5,
+                            }}
+                          >
+                            • {formatearFechaCorta(fecha)} {esHorasSueltas &&`(${delta} ${delta===1?'hora':'horas'})`}
+                          </Typography>)
+                      })}
+                      </Box>
+                      </Collapse>
+                    </Box>
+                  )}
+                  {e.motivoCancelacion && (
+                    <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'rojo.fondo', p:1, mt:1}}>
+                    <Typography variant="body1"><strong>Motivo cancelación:</strong> {e.motivoCancelacion}</Typography>
+                    </Box>
+                  )}
+                </>
+              )}
+              {e.tipo === 'ajuste' && (
+                <>
+                <Box sx={{border:'1px solid black', borderRadius:3, p:1, bgcolor:e.tipoAjuste==="añadir"
+                                                                            ?'verde.fondo'
+                                                                            :e.tipoAjuste==="reducir"
+                                                                              ?'rojo.fondo'
+                                                                              :'azul.fondo'
+                  }}>
+                  {e.comentariosSolicitante && (
+                    <Typography variant="body1">{e.comentariosSolicitante}</Typography>
+                  )}
+                  </Box>
+                  <Box sx={{border:'1px solid black', borderRadius:3, p:1, mt:1, bgcolor:e.tipoAjuste==="añadir"
+                                                                            ?'verde.fondo'
+                                                                            :e.tipoAjuste==="reducir"
+                                                                              ?'rojo.fondo'
+                                                                              :'azul.fondo'}}>
+                  {e.comentariosAdmin && (
+                    <Typography variant="body1" sx={{whiteSpace:'pre-wrap'}}>{e.comentariosAdmin}</Typography>
+                  )}
+                </Box>
+                </>
+              )}
+              {e.tipo === 'denegada' && (
+                <>
+                  {Array.isArray(e.fechasSolicitadas) && e.fechasSolicitadas.length > 0 && (
+                    <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'azul.fondo', p:1}}>
+                    
+                    <Box
+                    onClick={() => setFechasExpandidas(fechasExpandidas === e.solicitudId+idx ? null : e.solicitudId+idx)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent:'space-between',
+                      cursor: 'pointer',                    
+                    }}
+                  >
+                  <Typography fontWeight={600} variant="body1">Fechas Denegadas: </Typography>                    
+                    {fechasExpandidas === e.solicitudId+idx ? <ExpandLess /> : <ExpandMore />}
+                  </Box>
+                    <Collapse in={fechasExpandidas === e.solicitudId+idx}>
+                      <Box sx={{ ml: 2 }}>
+                      {e.fechasSolicitadas.map(fecha=>{
+                        return (
+                          <Typography 
+                            key={fecha} 
+                            variant='body1' 
+                            sx={{ 
+                              mb: 0.5,
+                            }}
+                          >
+                            • {formatearFechaCorta(fecha)} {esHorasSueltas &&`(${horasSolicitadas} ${horasSolicitadas===1?'hora':'horas'})`}
+                          </Typography>)
+                      })}
+                      </Box>
+                      </Collapse>
+                    </Box>
+                  )}
+                  {e.comentariosSolicitante && (
+                    <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'verde.fondo', p:1, mt:1}}>
+                    <Typography variant="body1"><strong>Comentario trabajador:</strong> {e.comentariosSolicitante}</Typography>
+                    </Box>
+                  )}
+                  {e.comentariosAdmin && (
+                    <Box sx={{border:'1px solid black', borderRadius:3, bgcolor:'rojo.fondo', p:1, mt:1}}>
+                    <Typography variant="body1"><strong>Comentario admin:</strong> {e.comentariosAdmin}</Typography>
+                    </Box>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Collapse>
+        </Card>
+      );
+    })}
+  </Box>
+)}
+        </Box>
+      </Container>
+    </LocalizationProvider>
+  );
+}

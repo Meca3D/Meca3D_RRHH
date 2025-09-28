@@ -13,6 +13,7 @@ import OrderDetail from './components/Orders/OrderDetail';
 import AdminRoute from './components/AdminRoute';
 import NoOwnerRoute from './components/NoOwnerRoute';
 import CocineroRoute from './components/CocineroRoute';
+import AusenciasRoute from './components/AusenciasRoute';
 import AdminDashboard from './components/Admin/AdminDashBoard';
 
 import GestionDesayunos from './components/Admin/Desayunos/GestionDesayunos';
@@ -129,14 +130,14 @@ const AppRoutes = () => {
         <Route path="admin/empleados/eliminar" element={<AdminRoute><EliminarEmpleados /></AdminRoute>} />
 
         {/* Rutas de Gestión de Vacaciones */}
-        <Route path="admin/vacaciones" element={<AdminRoute><GestionVacaciones /></AdminRoute>} />
-        <Route path="admin/vacaciones/pendientes" element={<AdminRoute><SolicitudesPendientes /></AdminRoute>} />
-        <Route path="admin/vacaciones/saldos" element={<AdminRoute><GestionarSaldos /></AdminRoute>} />
-        <Route path="admin/vacaciones/festivos" element={<AdminRoute><GestionFestivos /></AdminRoute>} />
-        <Route path="admin/vacaciones/calendario" element={<AdminRoute><CalendarioVacacionesAdmin /></AdminRoute>} />
-        <Route path="admin/vacaciones/historial" element={<AdminRoute><HistorialSolicitudes /></AdminRoute>} />
-        <Route path="admin/vacaciones/estadisticas" element={<AdminRoute><EstadisticasVacasAdmin /></AdminRoute>} />
-        <Route path="admin/vacaciones/configuracion" element={<AdminRoute><ConfiguracionVacacionesAdmin /></AdminRoute>} />
+        <Route path="admin/vacaciones" element={<AusenciasRoute><GestionVacaciones /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/pendientes" element={<AusenciasRoute><SolicitudesPendientes /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/saldos" element={<AusenciasRoute><GestionarSaldos /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/festivos" element={<AusenciasRoute><GestionFestivos /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/calendario" element={<AusenciasRoute><CalendarioVacacionesAdmin /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/historial" element={<AusenciasRoute><HistorialSolicitudes /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/estadisticas" element={<AusenciasRoute><EstadisticasVacasAdmin /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/configuracion" element={<AusenciasRoute><ConfiguracionVacacionesAdmin /></AusenciasRoute>} />
 
 
          <Route path="*" element={<Navigate to="/" replace />} />

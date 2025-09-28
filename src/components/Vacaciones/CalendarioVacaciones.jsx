@@ -117,15 +117,15 @@ const alternarDia = (dia) => {
         mb: 2
       }}>
         <IconButton size="small" onClick={() => cambiarMes(-1)}>
-          <ChevronLeft />
+          <ChevronLeft sx={{fontSize:'2rem'}}/>
         </IconButton>
         
-        <Typography fontWeight={600} sx={{ textTransform: 'capitalize' }}>
+        <Typography fontWeight={600} sx={{ fontSize:'1.4rem', textTransform: 'capitalize' }}>
           {formatearMesAno(mesActual)}
         </Typography>
         
         <IconButton size="small" onClick={() => cambiarMes(1)}>
-          <ChevronRight />
+          <ChevronRight sx={{fontSize:'2rem'}}/>
         </IconButton>
       </Box>
 

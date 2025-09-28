@@ -25,7 +25,7 @@ import CalendarioVacaciones from './CalendarioVacaciones';
 const CrearSolicitudVacaciones = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useAuthStore();
-  const { crearSolicitudVacaciones, loadFestivos, esFechaSeleccionable } = useVacacionesStore();
+  const { crearSolicitudVacaciones, loadFestivos, esFechaSeleccionable, configVacaciones,loadConfigVacaciones } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
 
   const [tipoSolicitud, setTipoSolicitud] = useState('dias');
@@ -38,6 +38,12 @@ const CrearSolicitudVacaciones = () => {
   const vacasDisp = userProfile?.vacaciones?.disponibles || 0;
   const vacasPend = userProfile?.vacaciones?.pendientes || 0;
   const horasLibres = vacasDisp - vacasPend;
+
+  useEffect(() => {
+    if (!configVacaciones){
+    const unsubscribe = loadConfigVacaciones();
+    return () => unsubscribe();} // Cleanup al desmontar
+  }, [loadConfigVacaciones, configVacaciones]);
 
   useEffect(() => {
     const unsub = loadFestivos();
@@ -69,7 +75,6 @@ const CrearSolicitudVacaciones = () => {
         solicitante: user.email,
         fechas: ordenarFechas(fechasSeleccionadas),
         horasSolicitadas: horasTotales,
-        horasDisponiblesAntesSolicitud: vacasDisp,
         comentariosSolicitante: comentarios.trim()
       });
 
@@ -158,7 +163,7 @@ const CrearSolicitudVacaciones = () => {
                     setFechasSeleccionadas([]);
                     setHorasSolicitadas(1);
                   }}
-                  sx={{ flexDirection: 'row', gap: 4 }}>
+                  sx={{ flexDirection: 'row', gap: 2 }}>
                   <FormControlLabel value="dias" control={<Radio />} label="Días completos" />
                   <FormControlLabel value="horas"control={<Radio disabled={horasLibres === 0} />} label="Horas sueltas" />
                 </RadioGroup>
@@ -247,10 +252,6 @@ const CrearSolicitudVacaciones = () => {
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
                 <Card sx={{p:2}}>
-                <Typography variant="body1" textAlign="center">
-                    {tipoSolicitud === 'horas' ? 'Fecha seleccionada' : 'Fechas seleccionadas'}
-                </Typography>
-
                 {tipoSolicitud === 'horas'
                     ? <Typography variant="h5" sx={{mt:1}} textAlign="center" fontWeight={600}>{formatearFechaCorta(fechasSeleccionadas[0])}</Typography>
                     : fechasSeleccionadas.length===1 
@@ -267,25 +268,27 @@ const CrearSolicitudVacaciones = () => {
                               sx={{
                                   mt: 0.5,
                                   p: 1,
-                                  px: 3,
+                                  px:2,
                                   border: '1px solid',
                                   borderColor: 'naranja.main',
                                   bgcolor: 'naranja.fondo', // Un fondo para que parezca un chip
-                                  borderRadius: 8,
+                                  borderRadius: 3,
                                   cursor: 'pointer',
                                   '&:hover': {
                                   bgcolor: 'naranja.fondoFuerte',
                                   },
                               }}
                               >
-                              <Typography variant="h5" fontWeight={600}>
-                                  {`${fechasSeleccionadas.length} día${fechasSeleccionadas.length>1 ? 's': ''}`}
+                              <Box sx={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                              <Typography fontSize='1.2rem' fontWeight={600}>
+                                  {`Fecha${fechasSeleccionadas.length>1 ? 's ': ' '}`}seleccionadas ({fechasSeleccionadas.length})
                               </Typography>
-                              <IconButton size="small" >
+                              <IconButton  >
                                   {mostrarListaFechas 
-                                  ? <ExpandLess sx={{fontSize:'1.8rem', color:'black', ml:2}}/> 
-                                  : <ExpandMore sx={{fontSize:'1.8rem', color:'black', ml:2}} />}
+                                  ? <ExpandLess sx={{fontSize:'1.8rem', color:'black'}}/> 
+                                  : <ExpandMore sx={{fontSize:'1.8rem', color:'black'}} />}
                               </IconButton>
+                              </Box>
                               </Box>
                           <Collapse in={mostrarListaFechas}>
                           <Box sx={{ mt: 1 }}>

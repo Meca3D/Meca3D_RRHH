@@ -96,6 +96,7 @@ const {
       rol = 'user', 
       vacaDisponibles,
       fechaIngreso,
+      puesto,
       nivel,
     } = requestData;
 
@@ -129,6 +130,7 @@ const {
     await admin.firestore().collection('USUARIOS').doc(email).set({
       nombre: nombre,
       rol: rol,
+      puesto: puesto,
       vacaciones:{
         disponibles: Number(vacaDisponibles) || 0,
         pendientes: 0

@@ -88,9 +88,22 @@ export const useAuthStore = create((set, get) => ({
       }
     },
 
+    
+    
     isFavorite: (productId) => {
       const { userProfile } = get();
       return userProfile?.favoritos?.includes(productId);
+    },
+    
+    getRol: (rol) => {
+      const rolEsp={
+           'user':'Empleado',
+           'admin':'Administrador',
+           'leaveAdmin':'Admin de Ausencias',
+           'cocinero':'Cocinero',
+           'owner':'Jefe'
+      }    
+      return rolEsp[rol];
     },
 
     obtenerDatosUsuarios: async (emails) => {
@@ -222,11 +235,12 @@ logout: async () => {
 
     // Getters para roles
     isCocinero: () => get().userRole === 'cocinero',
+    isLeaveAdmin: () => get().userRole === 'leaveAdmin',
     isOwner: () => get().userRole === 'owner',
     isAdmin: () => get().userRole === 'admin',
     isUser: () => get().userRole === 'user',
     canManageUsers: () => ['owner', 'admin'].includes(get().userRole),
-    isAdminOrOwner: () => ['admin', 'owner'].includes(get().userRole),
+    isAdminOrOwner: () => ['admin', 'owner', 'leaveAdmin'].includes(get().userRole),
   }));
 
 const loadUserProfileFunction = (userEmail, set) => {

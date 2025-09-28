@@ -8,7 +8,8 @@ import {
   Collapse, Chip, Grid
 } from '@mui/material';
 import {
-    
+  ExpandLess,
+  ExpandMore,  
   ArrowBackIosNew as ArrowBackIosNewIcon,
   EditCalendarOutlined as EditCalendarOutlinedIcon,
   Save as SaveIcon
@@ -28,7 +29,9 @@ const EditarSolicitudVacaciones = () => {
     actualizarSolicitudVacaciones, 
     obtenerSolicitudPorId,
     loadFestivos, 
-    esFechaSeleccionable 
+    esFechaSeleccionable,
+    configVacaciones,
+    loadConfigVacaciones
   } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
 
@@ -52,6 +55,11 @@ const EditarSolicitudVacaciones = () => {
     horas: { fechas: [], horas: 1, comentarios: '' }
   });
 
+    useEffect(() => {
+      if (!configVacaciones){
+      const unsubscribe = loadConfigVacaciones();
+      return () => unsubscribe()} // Cleanup al desmontar
+    }, [loadConfigVacaciones, configVacaciones]);
   
   // Cargar datos iniciales
   useEffect(() => {
@@ -142,7 +150,7 @@ const EditarSolicitudVacaciones = () => {
       if (!solicitudOriginal && !userProfile) return
     const vacasDisp = userProfile?.vacaciones?.disponibles || 0;
   const vacasPend = userProfile?.vacaciones?.pendientes || 0;
-  console.log(`vacasDisp: ${vacasDisp}, vacasPend: ${vacasPend}`)
+
   
   if (solicitudOriginal?.estado === 'pendiente') {
     // Si era pendiente: liberar de pendientes
@@ -213,7 +221,6 @@ const EditarSolicitudVacaciones = () => {
       const datosActualizados = {
         fechas: ordenarFechas(fechasSeleccionadas),
         horasSolicitadas: horasTotales,
-        horasDisponiblesTrasAprobacion: solicitudOriginal.horasDisponiblesAntesSolicitud - horasTotales,
         comentariosSolicitante: comentarios.trim()
       };
 
@@ -350,7 +357,6 @@ const EditarSolicitudVacaciones = () => {
                     <strong>Atención:</strong> Esta solicitud ya fue aprobada. Al editarla:
                   </Typography>
                   <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
-                    <li>Se actualizará la fecha de solicitud a hoy</li>
                     <li>Volverá a estado "pendiente"</li>
                     <li>Necesitará nueva aprobación del administrador</li>
                     <li>Las horas volverán a disponibles temporalmente</li>
@@ -378,7 +384,7 @@ const EditarSolicitudVacaciones = () => {
                 <RadioGroup
                   value={tipoSolicitud}
                   onChange={(e) => handleTipoChange(e.target.value)}
-                  sx={{ flexDirection: 'row', gap: 4 }}>
+                  sx={{ flexDirection: 'row', gap: 2 }}>
                   <FormControlLabel 
                     value="dias" 
                     control={<Radio />} 
@@ -485,53 +491,77 @@ const EditarSolicitudVacaciones = () => {
 
           {/* Resumen de cambios */}
           {fechasSeleccionadas.length > 0 && (
-            <Card sx={{ mb: 3, bgcolor: 'warning.50' }}>
+            <Card  sx={{ mb: 3, bgcolor: 'azul.fondo', border:'1px solid black' }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h5" fontWeight='bold' textAlign='center' gutterBottom>
                   Resumen de cambios
                 </Typography>
+          
+          <Grid container spacing={2} sx={{ mb: 1 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
+                {tipoSolicitud === 'horas'
+                    ? <Typography variant="h5" sx={{mt:1}} textAlign="center" fontWeight={600}>{formatearFechaCorta(fechasSeleccionadas[0])}</Typography>
+                    : fechasSeleccionadas.length===1 
+                      ? (<><Typography variant="h5" sx={{mt:1}} textAlign="center" fontWeight={600}>{formatearFechaCorta(fechasSeleccionadas[0])}</Typography></>)
+                      :(
 
-                      {/* ✅ NUEVA información sobre fecha */}
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Nueva fecha de solicitud:</strong> {formatearFechaCorta(formatYMD(new Date()))}
-                    {solicitudOriginal?.estado === 'aprobada' && (
-                      <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                        (La solicitud pasará a estado pendiente)
-                      </Typography>
-                    )}
-                  </Typography>
-                </Alert>
-                <Grid container spacing={2}>
-                  <Grid >
-                    <Typography variant="body2" color="text.secondary">
-                      {tipoSolicitud === 'horas' ? 'Fecha seleccionada' : 'Fechas seleccionadas'}
-                    </Typography>
-
-                    {tipoSolicitud === 'horas'
-                      ? <Typography fontWeight={600}>{fechasSeleccionadas[0]}</Typography>
-                      : <>
-                          <Chip
-                            label={`${fechasSeleccionadas.length} días`}
-                            clickable
-                            onClick={() => setMostrarListaFechas(!mostrarListaFechas)}
-                            sx={{ mt: 0.5 }}
-                          />
+                    
+                      <Box display="flex" sx={{mt:1}} flexDirection="column" alignItems="center">
+                          <Box
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              onClick={() => setMostrarListaFechas(!mostrarListaFechas)}
+                              sx={{
+                                  mt: 0.5,
+                                  p: 1,
+                                  px:2,
+                                  border: '1px solid',
+                                  borderColor: 'azul.main',
+                                  bgcolor: 'azul.fondo', // Un fondo para que parezca un chip
+                                  borderRadius: 3,
+                                  cursor: 'pointer',
+                                  '&:hover': {
+                                  bgcolor: 'azul.fondoFuerte',
+                                  },
+                              }}
+                              >
+                              <Box sx={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                              <Typography fontSize='1.1rem' fontWeight={600}>
+                                  {`Fecha${fechasSeleccionadas.length>1 ? 's ': ' '}`}seleccionadas ({fechasSeleccionadas.length})
+                              </Typography>
+                              <IconButton  >
+                                  {mostrarListaFechas 
+                                  ? <ExpandLess sx={{fontSize:'1.8rem', color:'black'}}/> 
+                                  : <ExpandMore sx={{fontSize:'1.8rem', color:'black'}} />}
+                              </IconButton>
+                              </Box>
+                              </Box>
                           <Collapse in={mostrarListaFechas}>
-                            <Box sx={{ mt: 1 }}>
+                          <Box sx={{ mt: 1 }}>
                               {ordenarFechas(fechasSeleccionadas).map(f => (
-                                <Typography key={f} variant="caption" display="block">• {f}</Typography>
+                              <Typography key={f} variant="h5" display="block">• {formatearFechaCorta(f)}</Typography>
                               ))}
-                            </Box>
+                          </Box>
                           </Collapse>
-                        </>
-                    }
-                  </Grid>
+                      </Box>
+                      )
+                 }
+                </Grid>
 
                   <Grid size={{ xs:12, sm:6 }}>
-                    <Typography variant="body2" color="text.secondary">Nuevas horas totales</Typography>
-                    <Typography fontWeight={600}>{formatearTiempoVacas(horasTotales)}</Typography>
+                    <Typography fontSize='1.25rem' textAlign="center" >
+                        {tipoSolicitud === 'horas' ? 'Nuevo total horas solicitadas' : 'Nuevo total días solicitados'}
+                        </Typography>
+                    <Typography variant="h6" textAlign="center" fontWeight={600} sx={{mt:0}}>
+                        {formatearTiempoVacasLargo(horasTotales)}</Typography>
                   </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography fontSize='1.25rem' textAlign="center">Vacaciones tras aprobación</Typography>
+                  <Typography variant="h6" textAlign="center" sx={{}} fontWeight={600}>
+                      {formatearTiempoVacasLargo(horasLibresParaEdicion-horasTotales)}      
+                  </Typography>         
+              </Grid>
                 </Grid>
 
                 {horasTotales > horasLibresParaEdicion && (
@@ -547,7 +577,7 @@ const EditarSolicitudVacaciones = () => {
           <Box sx={{ display: 'flex', justifyContent:"space-between" }}>
             <Button
               variant="outlined"
-              onClick={() => navigate('/vacaciones/mis-solicitudes')}
+              onClick={() => navigate('/vacaciones/solicitudes')}
               disabled={saving}
               sx={{
                 fontSize: '1.2rem',

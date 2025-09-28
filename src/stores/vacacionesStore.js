@@ -1,10 +1,11 @@
 // stores/vacacionesStore.js
 import { create } from 'zustand';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where, orderBy, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, writeBatch, query, where, orderBy, getDoc, getDocs, setDoc, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuthStore } from './authStore';
-import { formatYMD, esFinDeSemana, esFechaPasadaOHoy, formatearFechaCorta } from '../utils/dateUtils';
+import { formatYMD, esFinDeSemana, esFechaPasadaOHoy} from '../utils/dateUtils';
 import { formatearNombre } from '../components/Helpers';
+import { formatearTiempoVacasLargo } from '../utils/vacacionesUtils';
 
 export const useVacacionesStore = create((set, get) => {
   
@@ -57,6 +58,65 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
+    // Cargar solicitudes de vacaciones
+        loadSolicitudesVacaciones: (userEmail) => {
+          const { isAuthenticated, user, isAdminOrOwner } = useAuthStore.getState();
+          
+          if (!isAuthenticated || !user) {
+            set({ solicitudesVacaciones: [], error: "Sin permisos para acceder a solicitudes" });
+            return () => {};
+          }
+    
+          if (unsubscribeSolicitudes) {
+            unsubscribeSolicitudes();
+            unsubscribeSolicitudes = null;
+          }
+    
+          set({ loading: true });
+    
+          let solicitudesQuery;
+          
+          if (isAdminOrOwner()) {
+            solicitudesQuery = query(
+              collection(db, 'VACACIONES'),
+              orderBy('fechaSolicitud', 'desc')
+            );
+          } else {
+            solicitudesQuery = query(
+              collection(db, 'VACACIONES'),
+              where('solicitante', '==', userEmail),
+              orderBy('fechaSolicitud', 'desc')
+            );
+          }
+    
+          unsubscribeSolicitudes = onSnapshot(
+            solicitudesQuery,
+            (snapshot) => {
+              const solicitudes = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }));
+              
+              set({
+                solicitudesVacaciones: solicitudes,
+                loading: false,
+                error: null
+              });
+            },
+            (error) => {
+              console.error('Error en listener solicitudes:', error);
+              set({ error: error.message, loading: false });
+            }
+          );
+    
+          return () => {
+            if (unsubscribeSolicitudes) {
+              unsubscribeSolicitudes();
+              unsubscribeSolicitudes = null;
+            }
+          };
+        },
+
     loadSolicitudesConCancelaciones: async (userEmail) => {
       try {
         const { isAuthenticated, user, isAdminOrOwner } = useAuthStore.getState();
@@ -64,19 +124,23 @@ export const useVacacionesStore = create((set, get) => {
           return [];
         }
 
-        let solicitudesQuery;
-        if (isAdminOrOwner()) {
-          solicitudesQuery = query(
-            collection(db, 'VACACIONES'),
-            orderBy('fechaSolicitud', 'desc')
-          );
-        } else {
-          solicitudesQuery = query(
-            collection(db, 'VACACIONES'),
-            where('solicitante', '==', userEmail),
-            orderBy('fechaSolicitud', 'desc')
-          );
-        }
+    let solicitudesQuery;
+    if (userEmail) {
+      // Always filter by userEmail if provided (for "mis solicitudes")
+      solicitudesQuery = query(
+        collection(db, 'VACACIONES'),
+        where('solicitante', '==', userEmail),
+        orderBy('fechaSolicitud', 'desc')
+      );
+    } else if (isAdminOrOwner()) {
+      // Load all if no userEmail and is admin (for historial)
+      solicitudesQuery = query(
+        collection(db, 'VACACIONES'),
+        orderBy('fechaSolicitud', 'desc')
+      );
+    } else {
+      return [];
+    }
 
         const snapshot = await getDocs(solicitudesQuery);
         const solicitudes = [];
@@ -142,112 +206,6 @@ export const useVacacionesStore = create((set, get) => {
       return diasDisponibles.length > 1; // Debe quedar al menos 1 día
     },
 
-    // Cargar solicitudes de vacaciones
-    loadSolicitudesVacaciones: (userEmail) => {
-      const { isAuthenticated, user, isAdminOrOwner } = useAuthStore.getState();
-      
-      if (!isAuthenticated || !user) {
-        set({ solicitudesVacaciones: [], error: "Sin permisos para acceder a solicitudes" });
-        return () => {};
-      }
-
-      if (unsubscribeSolicitudes) {
-        unsubscribeSolicitudes();
-        unsubscribeSolicitudes = null;
-      }
-
-      set({ loading: true });
-
-      let solicitudesQuery;
-      
-      if (isAdminOrOwner()) {
-        solicitudesQuery = query(
-          collection(db, 'VACACIONES'),
-          orderBy('fechaSolicitud', 'desc')
-        );
-      } else {
-        solicitudesQuery = query(
-          collection(db, 'VACACIONES'),
-          where('solicitante', '==', userEmail),
-          orderBy('fechaSolicitud', 'desc')
-        );
-      }
-
-      unsubscribeSolicitudes = onSnapshot(
-        solicitudesQuery,
-        (snapshot) => {
-          const solicitudes = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          
-          set({
-            solicitudesVacaciones: solicitudes,
-            loading: false,
-            error: null
-          });
-        },
-        (error) => {
-          console.error('Error en listener solicitudes:', error);
-          set({ error: error.message, loading: false });
-        }
-      );
-
-      return () => {
-        if (unsubscribeSolicitudes) {
-          unsubscribeSolicitudes();
-          unsubscribeSolicitudes = null;
-        }
-      };
-    },
-
-        loadMisSolicitudesVacaciones: (userEmail) => {
-      if (!userEmail) {
-        set({ solicitudesVacaciones: [], error: "Email de usuario requerido" });
-        return () => {};
-      }
-
-      if (unsubscribeSolicitudes) {
-        unsubscribeSolicitudes();
-        unsubscribeSolicitudes = null;
-      }
-
-      set({ loading: true });
-
-      const solicitudesQuery = query(
-        collection(db, 'VACACIONES'),
-        where('solicitante', '==', userEmail),
-        orderBy('fechaSolicitud', 'desc')
-      );
-
-      unsubscribeSolicitudes = onSnapshot(
-        solicitudesQuery,
-        (snapshot) => {
-          const solicitudes = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          
-          set({
-            solicitudesVacaciones: solicitudes,
-            loading: false,
-            error: null
-          });
-        },
-        (error) => {
-          console.error('Error en listener mis solicitudes:', error);
-          set({ error: error.message, loading: false });
-        }
-      );
-
-      return () => {
-        if (unsubscribeSolicitudes) {
-          unsubscribeSolicitudes();
-          unsubscribeSolicitudes = null;
-        }
-      };
-    },
-
     // Cargar días festivos
     loadFestivos: () => {
       if (unsubscribeFestivos) {
@@ -284,37 +242,179 @@ export const useVacacionesStore = create((set, get) => {
     },
 
     // Crear nueva solicitud
-    crearSolicitudVacaciones: async (solicitudData) => {
+ crearSolicitudVacaciones: async (solicitudData) => {
+  try {
+    const { user } = useAuthStore.getState(); // Only for metadata if needed; don't use userProfile for saldo
+
+    // Evaluar auto-aprobación ANTES de crear (usa datos locales para evaluación)
+    const solicitudTemp = { // Objeto temporal para evaluación
+      ...solicitudData,
+      id: 'temp', // ID placeholder
+      estado: 'pendiente',
+      fechaSolicitud: formatYMD(new Date()),
+    };
+    const res = await get().evaluarAutoAprobacion(solicitudTemp);
+
+    const nuevaSolicitud = {
+      ...solicitudData,
+      fechaSolicitud: formatYMD(new Date()),
+      estado: res.aplicar ? 'aprobada' : 'pendiente',
+      comentariosAdmin: res.aplicar ? (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') : '',
+      fechaAprobacionDenegacion: res.aplicar ? formatYMD(new Date()) : '',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const userDocRef = doc(db, 'USUARIOS', solicitudData.solicitante);
+    let solicitudId;
+
+    // Transacción para crear solicitud y actualizar saldo atómicamente
+    await runTransaction(db, async (transaction) => {
+      // Obtener saldo fresco del solicitante
+      const userDoc = await transaction.get(userDocRef);
+      if (!userDoc.exists()) {
+        throw new Error('Usuario no encontrado');
+      }
+      const currentVacaciones = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
+
+      // Crear referencia para nueva solicitud (genera ID client-side)
+      const newSolicitudRef = doc(collection(db, 'VACACIONES'));
+      solicitudId = newSolicitudRef.id;
+
+      // Preparar datos con saldo antes/después si auto-aprobada
+      let solicitudFinal = { ...nuevaSolicitud };
+      if (res.aplicar) {
+        solicitudFinal.horasDisponiblesAntes = currentVacaciones.disponibles;
+        solicitudFinal.horasDisponiblesDespues = currentVacaciones.disponibles - solicitudData.horasSolicitadas;
+      }
+
+      // Escribir solicitud
+      transaction.set(newSolicitudRef, solicitudFinal);
+
+      // Actualizar saldo basado en si auto-aprobada o no
+      let newVacaciones = { ...currentVacaciones };
+      if (res.aplicar) {
+        // Auto-aprobada: solo restar de disponibles (neto cero en pendientes)
+        newVacaciones.disponibles -= solicitudData.horasSolicitadas;
+      } else {
+        // Pendiente: sumar a pendientes
+        newVacaciones.pendientes += solicitudData.horasSolicitadas;
+      }
+
+      transaction.update(userDocRef, {
+        vacaciones: newVacaciones,
+        updatedAt: new Date()
+      });
+    });
+
+    return solicitudId;
+  } catch (error) {
+    set({ error: error.message });
+    throw error;
+  }
+},
+
+    // Eliminar solicitud de vacaciones
+    eliminarSolicitudVacaciones: async (solicitudId, horasSolicitadas, solicitanteEmail) => {
+          try {
+            const solicitudRef = doc(db, 'VACACIONES', solicitudId);
+            const userDocRef = doc(db, 'USUARIOS', solicitanteEmail);
+
+            // Usar transacción para eliminar solicitud y actualizar saldo
+            await runTransaction(db, async (transaction) => {
+              // Leer saldo actual del usuario
+              const userDoc = await transaction.get(userDocRef);
+              if (!userDoc.exists()) {
+                throw new Error('Usuario no encontrado');
+              }
+              const currentVacaciones = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
+
+              // Eliminar solicitud
+              transaction.delete(solicitudRef);
+
+              // Actualizar saldo del usuario (restar de pendientes)
+              transaction.update(userDocRef, {
+                'vacaciones.pendientes': currentVacaciones.pendientes - horasSolicitadas,
+                updatedAt: new Date()
+              });
+            });
+
+            return true;
+          } catch (error) {
+            set({ error: error.message });
+            throw error;
+          }
+        },
+
+        // Cancelar Solicitudes de Vacaciones
+        cancelarSolicitudVacaciones: async (solicitud, motivoCancelacion) => {
       try {
-        const { userProfile } = useAuthStore.getState();
-        
-        const horasDisponiblesTrasAprobacion = solicitudData.horasDisponiblesAntesSolicitud - solicitudData.horasSolicitadas;
-        
-        const nuevaSolicitud = {
-          ...solicitudData,
-          horasDisponiblesTrasAprobacion,
-          fechaSolicitud: formatYMD(new Date()),
-          fechaSolicitudOriginal: formatYMD(new Date()), 
-          estado: 'pendiente',
-          comentariosAdmin: '',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
+        if (!motivoCancelacion || motivoCancelacion.trim() === '') {
+          throw new Error('Debes proporcionar un motivo para la cancelación');
+        }
+        // ✅ OBTENER cancelaciones parciales previas
+        const cancelacionesPrevias = await get().obtenerCancelacionesParciales(solicitud.id);
+        const diasYaCancelados = cancelacionesPrevias.reduce((acc, c) => {
+          return [...acc, ...c.fechasCanceladas];
+        }, []);
 
-        const docRef = await addDoc(collection(db, 'VACACIONES'), nuevaSolicitud);
-
-        await updateDoc(doc(db, 'USUARIOS', solicitudData.solicitante), {
-          'vacaciones.pendientes': userProfile.vacaciones.pendientes + solicitudData.horasSolicitadas
+        // ✅ CALCULAR días restantes no cancelados y no disfrutados
+        const diasDisponibles = solicitud.fechas.filter(fecha => {
+          const yaFueCancelado = diasYaCancelados.includes(fecha);
+          const esFechaPasada = esFechaPasadaOHoy(fecha);
+          return !yaFueCancelado && !esFechaPasada;
         });
 
-        try {
-          const creada = { id: docRef.id, ...nuevaSolicitud };
-          await get().autoAprobarSiCorresponde(creada);
-        } catch (e) {
-          console.warn('Auto-aprobación no aplicada:', e?.message);
+        // Calcular horas correctamente
+        let horasADevolver;
+        if (solicitud.estado === 'pendiente') {
+          const horasYaCanceladas = diasYaCancelados.length * 8;
+          horasADevolver = solicitud.horasSolicitadas - horasYaCanceladas;
+        } else {
+            if (solicitud.horasSolicitadas<8) {
+              horasADevolver=solicitud.horasSolicitadas}
+              else {horasADevolver = diasDisponibles.length * 8}
         }
-        return docRef.id;
-        
+
+        const solicitudRef = doc(db, 'VACACIONES', solicitud.id);
+        const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
+
+        // Usar transacción para actualizar solicitud y saldo
+        await runTransaction(db, async (transaction) => {
+          // Leer saldo actual del usuario
+          const userDoc = await transaction.get(userDocRef);
+          if (!userDoc.exists()) {
+            throw new Error('Usuario no encontrado');
+          }
+          const saldoAntes = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
+          const saldoDespues = saldoAntes.disponibles + (solicitud.estado === 'aprobada' ? horasADevolver : 0);
+
+          // ✅ ACTUALIZAR estado a "cancelado"
+          transaction.update(solicitudRef, {
+            estado: 'cancelado',
+            fechaCancelacion: formatYMD(new Date()),
+            fechasCanceladas: diasDisponibles,
+            motivoCancelacion: motivoCancelacion.trim(),
+            horasDisponiblesAntesCancelacion: saldoAntes.disponibles, 
+            horasDisponiblesDespuesCancelacion: saldoDespues,  
+            updatedAt: new Date()
+          });
+
+          if (horasADevolver > 0) {
+            const newVacaciones = { ...saldoAntes };
+            if (solicitud.estado === 'pendiente') {
+              newVacaciones.pendientes -= horasADevolver;
+            } else if (solicitud.estado === 'aprobada') {
+              newVacaciones.disponibles += horasADevolver;
+            }
+            transaction.update(userDocRef, {
+              'vacaciones': newVacaciones,
+              updatedAt: new Date()
+            });
+          }
+        });
+
+        return true;
       } catch (error) {
         set({ error: error.message });
         throw error;
@@ -322,55 +422,87 @@ export const useVacacionesStore = create((set, get) => {
     },
 
     // Actualizar solicitud
-    actualizarSolicitudVacaciones: async (solicitudId, datosActualizados, solicitudOriginal) => {
+ actualizarSolicitudVacaciones: async (solicitudId, datosActualizados, solicitudOriginal) => {
       try {
-        const { userProfile } = useAuthStore.getState();
-        
-        if (!userProfile) {
-          throw new Error('Datos de usuario no disponibles');
-        }
+        // Evaluar si se aplicará auto-aprobación después de la edición
+        const solicitudTemp = { 
+          id: solicitudId, 
+          ...datosActualizados,
+          solicitante: solicitudOriginal.solicitante,
+          estado: 'pendiente', // Asumir pendiente inicialmente
+          fechaSolicitud: solicitudOriginal.fechaSolicitud // Mantener original para evaluación
+        };
+        const resAuto = await get().evaluarAutoAprobacion(solicitudTemp);
 
-        // Preparar datos de actualización con fecha actual y cambio de estado
         const datosFinales = {
           ...datosActualizados,
-          fechaSolicitud: formatYMD(new Date()), // ✅ Actualizar fecha de solicitud
-          updatedAt: new Date()
+          fechaEdicion: formatYMD(new Date()), 
+          updatedAt: new Date(),
+          estado: resAuto.aplicar ? 'aprobada' : 'pendiente',
+          comentariosAdmin: resAuto.aplicar ? (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') : '',
+          fechaAprobacionDenegacion: resAuto.aplicar ? formatYMD(new Date()) : '',
+          horasDisponiblesAntes: '', // Se calculará en transacción si aplica
+          horasDisponiblesDespues: '' // Se calculará en transacción si aplica
         };
 
-            // Si la solicitud estaba aprobada, cambiarla a pendiente
-        if (solicitudOriginal.estado === 'aprobada') {
-          datosFinales.estado = 'pendiente';
-          datosFinales.comentariosAdmin = ''; // Limpiar comentarios del admin
-          datosFinales.fechaAprobacionDenegacion = null; // Limpiar fecha de aprobación anterior
+        // Si original era aprobada, limpiar campos de aprobación (incluso si se auto-aprueba de nuevo)
+        if (solicitudOriginal.estado === 'aprobada' && !resAuto.aplicar) {
+          datosFinales.comentariosAdmin = ''; 
+          datosFinales.horasDisponiblesAntes = '';
+          datosFinales.horasDisponiblesDespues = '';
+          datosFinales.fechaAprobacionDenegacion = '';
         }
-        await updateDoc(doc(db, 'VACACIONES', solicitudId), datosFinales);
 
-        // Manejar cambios en el saldo según el estado original
         const diferencia = datosActualizados.horasSolicitadas - solicitudOriginal.horasSolicitadas;
+        const solicitudRef = doc(db, 'VACACIONES', solicitudId);
         const userDocRef = doc(db, 'USUARIOS', solicitudOriginal.solicitante);
-        
-        if (solicitudOriginal.estado === 'pendiente') {
-          // Si era pendiente: ajustar solo pendientes
-          if (diferencia !== 0) {
-            await updateDoc(userDocRef, {
-              'vacaciones.pendientes': userProfile.vacaciones.pendientes + diferencia
-            });
+
+        // Usar transacción para actualizar solicitud y saldo
+        await runTransaction(db, async (transaction) => {
+          // Leer datos actuales del usuario
+          const userDoc = await transaction.get(userDocRef);
+          if (!userDoc.exists()) {
+            throw new Error('Usuario no encontrado');
           }
-        } else if (solicitudOriginal.estado === 'aprobada') {
-          // Si era aprobada: devolver horas a disponibles y ajustar pendientes
-          if (diferencia !== 0) {
-            await updateDoc(userDocRef, {
-              'vacaciones.disponibles': userProfile.vacaciones.disponibles - diferencia,
-              'vacaciones.pendientes': userProfile.vacaciones.pendientes + diferencia
-            });
-          } else {
-            // ✅ NUEVO: Aunque no cambien las horas, devolver las originales a disponibles y ponerlas como pendientes
-            await updateDoc(userDocRef, {
-              'vacaciones.disponibles': userProfile.vacaciones.disponibles + solicitudOriginal.horasSolicitadas,
-              'vacaciones.pendientes': userProfile.vacaciones.pendientes + solicitudOriginal.horasSolicitadas
-            });
+          const currentVacaciones = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
+
+          // Preparar datos finales con saldo si auto-aprobada
+          let solicitudFinal = { ...datosFinales };
+          if (resAuto.aplicar) {
+            solicitudFinal.horasDisponiblesAntes = currentVacaciones.disponibles;
+            solicitudFinal.horasDisponiblesDespues = currentVacaciones.disponibles - datosActualizados.horasSolicitadas;
           }
-        }
+
+          // Actualizar solicitud
+          transaction.update(solicitudRef, solicitudFinal);
+
+          // Calcular nuevo saldo
+          let newVacaciones = { ...currentVacaciones };
+
+          if (solicitudOriginal.estado === 'pendiente') {
+            // Si era pendiente: ajustar solo pendientes
+            if (diferencia !== 0) {
+              newVacaciones.pendientes += diferencia;
+            }
+          } else if (solicitudOriginal.estado === 'aprobada') {
+            // Revertir aprobación completa: + horas_originales a disponibles y pendientes
+            // Luego ajustar por diferencia en pendientes (si no auto-aprobada)
+            newVacaciones.disponibles += solicitudOriginal.horasSolicitadas;
+            newVacaciones.pendientes += solicitudOriginal.horasSolicitadas + diferencia;
+          }
+
+          if (resAuto.aplicar) {
+            // Si se auto-aprueba: restar horas_nuevas de disponibles y pendientes
+            newVacaciones.disponibles -= datosActualizados.horasSolicitadas;
+            newVacaciones.pendientes -= datosActualizados.horasSolicitadas;
+          }
+
+          // Actualizar saldo del usuario
+          transaction.update(userDocRef, {
+            'vacaciones': newVacaciones,
+            updatedAt: new Date()
+          });
+        });
 
         return true;
       } catch (error) {
@@ -433,91 +565,7 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
-
-    eliminarSolicitudVacaciones: async (solicitudId, horasSolicitadas, solicitanteEmail) => {
-      try {
-        const { userProfile } = useAuthStore.getState();
-        
-        await deleteDoc(doc(db, 'VACACIONES', solicitudId));
-
-        await updateDoc(doc(db, 'USUARIOS', solicitanteEmail), {
-          'vacaciones.pendientes': userProfile.vacaciones.pendientes - horasSolicitadas
-        });
-
-        return true;
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
-      }
-    },
-
-    cancelarSolicitudVacaciones: async (solicitud, motivoCancelacion) => {
-  try {
-    if (!motivoCancelacion || motivoCancelacion.trim() === '') {
-      throw new Error('Debes proporcionar un motivo para la cancelación');
-    }
-
-    // ✅ OBTENER cancelaciones parciales previas
-    const cancelacionesPrevias = await get().obtenerCancelacionesParciales(solicitud.id);
-    const diasYaCancelados = cancelacionesPrevias.reduce((acc, c) => {
-      return [...acc, ...c.fechasCanceladas];
-    }, []);
-
-    // ✅ CALCULAR días restantes no cancelados y no disfrutados
-    const diasDisponibles = solicitud.fechas.filter(fecha => {
-      const yaFueCancelado = diasYaCancelados.includes(fecha);
-      const esFechaPasada = esFechaPasadaOHoy(fecha);
-      return !yaFueCancelado && !esFechaPasada;
-    });
-
-    // ✅ CORREGIDO: Calcular horas correctamente
-    let horasADevolver;
-    if (solicitud.estado === 'pendiente') {
-      // Para pendientes: devolver las horas solicitadas originalmente (menos las ya canceladas)
-      const horasYaCanceladas = diasYaCancelados.length * 8;
-      horasADevolver = solicitud.horasSolicitadas - horasYaCanceladas;
-    } else {
-      // Para aprobadas: calcular por días disponibles
-      horasADevolver = diasDisponibles.length * 8;
-    }
-
-    // ✅ ACTUALIZAR estado a "cancelado"
-    await updateDoc(doc(db, 'VACACIONES', solicitud.id), {
-      estado: 'cancelado',
-      fechaCancelacion: formatYMD(new Date()),
-      motivoCancelacion: motivoCancelacion.trim(),
-      updatedAt: new Date()
-    });
-
-    if (horasADevolver > 0) {
-      const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
-      
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const vacacionesActuales = userData.vacaciones || { disponibles: 0, pendientes: 0 };
-        
-        if (solicitud.estado === 'pendiente') {
-          await updateDoc(userDocRef, {
-            'vacaciones.pendientes': vacacionesActuales.pendientes - horasADevolver
-          });
-        } else if (solicitud.estado === 'aprobada') {
-          await updateDoc(userDocRef, {
-            'vacaciones.disponibles': vacacionesActuales.disponibles + horasADevolver
-          });
-        }
-      }
-    }
-
-    return true;
-  } catch (error) {
-    set({ error: error.message });
-    throw error;
-  }
-},
-
-
-    // Cambiar estado solicitud (admin)
+// Cambiar estado solicitud (admin)
     cambiarEstadoSolicitud: async (solicitudId, nuevoEstado, comentariosAdmin, solicitud) => {
       try {
         const { isAdminOrOwner } = useAuthStore.getState();
@@ -525,40 +573,47 @@ export const useVacacionesStore = create((set, get) => {
         if (!isAdminOrOwner()) {
           throw new Error('Sin permisos para cambiar estado de solicitudes');
         }
-      // Obtener saldo actual del empleado ANTES del cambio
+
+        const solicitudRef = doc(db, 'VACACIONES', solicitudId);
         const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
-        const userDoc = await getDoc(userDocRef);
-        const userData = userDoc.data();
-        const saldoAntes = userData.vacaciones || { disponibles: 0, pendientes: 0 };
 
-        let saldoDespues = { ...saldoAntes };
+        // Usar transacción para actualizar estado y saldo atómicamente
+        await runTransaction(db, async (transaction) => {
+          // Obtener saldo actual del empleado ANTES del cambio
+          const userDoc = await transaction.get(userDocRef);
+          if (!userDoc.exists()) {
+            throw new Error('Usuario no encontrado');
+          }
+          const saldoAntes = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
 
-            
-        if (nuevoEstado === 'aprobada') {
-          saldoDespues.disponibles = saldoAntes.disponibles - solicitud.horasSolicitadas;
-          saldoDespues.pendientes = saldoAntes.pendientes - solicitud.horasSolicitadas;
-          
-          await updateDoc(userDocRef, {
-            'vacaciones.disponibles': saldoDespues.disponibles,
-            'vacaciones.pendientes': saldoDespues.pendientes
+          let saldoDespues = { ...saldoAntes };
+
+          let updateData = {
+            estado: nuevoEstado,
+            comentariosAdmin: comentariosAdmin || '',
+            fechaAprobacionDenegacion: formatYMD(new Date()),
+            updatedAt: new Date(),
+            horasDisponiblesAntes: saldoAntes.disponibles,
+            horasDisponiblesDespues: saldoAntes.disponibles // Default, se ajusta si aplica
+          };
+
+          if (nuevoEstado === 'aprobada') {
+            saldoDespues.disponibles -= solicitud.horasSolicitadas;
+            saldoDespues.pendientes -= solicitud.horasSolicitadas;
+            updateData.horasDisponiblesDespues = saldoDespues.disponibles;
+          } else if (nuevoEstado === 'denegada') {
+            saldoDespues.pendientes -= solicitud.horasSolicitadas;
+            updateData.horasDisponiblesAlDenegar = saldoAntes.disponibles;
+          }
+
+          // Actualizar solicitud
+          transaction.update(solicitudRef, updateData);
+
+          // Actualizar saldo del usuario
+          transaction.update(userDocRef, {
+            'vacaciones': saldoDespues,
+            updatedAt: new Date()
           });
-        } else if (nuevoEstado === 'denegada') {
-          saldoDespues.pendientes = saldoAntes.pendientes - solicitud.horasSolicitadas;
-          
-          await updateDoc(userDocRef, {
-            'vacaciones.pendientes': saldoDespues.pendientes
-          });
-        }
-
-        await updateDoc(doc(db, 'VACACIONES', solicitudId), {
-          estado: nuevoEstado,
-          comentariosAdmin: comentariosAdmin || '',
-          fechaAprobacionDenegacion: formatYMD(new Date()),
-          updatedAt: new Date(),
-          horasDisponiblesAntesCambio: saldoAntes.disponibles,           
-          horasDisponiblesDespuesCambio: saldoDespues.disponibles,       
-          horasPendientesAntesCambio: saldoAntes.pendientes,            
-          horasPendientesDespuesCambio: saldoDespues.pendientes,  
         });
 
         return true;
@@ -950,7 +1005,7 @@ export const useVacacionesStore = create((set, get) => {
 
 
     // Detectar conflictos de cobertura
-    detectarConflictos: async (fecha, umbralMinimo = {}) => {
+    detectarConflictos: async (fecha) => {
       try {
         const { configVacaciones } = get();
         const umbralesConfig = (configVacaciones?.cobertura?.umbrales) || null;
@@ -1000,9 +1055,15 @@ export const useVacacionesStore = create((set, get) => {
         },
 
         evaluarAutoAprobacion: async (solicitud) => {
-          const { configVacaciones, detectarConflictos } = get();
+          const {loadConfigVacaciones, configVacaciones, detectarConflictos } = get();
+          if (!configVacaciones) {
+              const unsubscribe = loadConfigVacaciones();
+              return () => unsubscribe()}
+          
+          if (!configVacaciones?.autoAprobar?.habilitado) {
+            return { aplicar: false, motivo: 'Autoaprobación deshabilitada' };
+          }
 
-          if (!configVacaciones?.autoAprobar?.habilitado) return { aplicar: false, motivo: 'flag off' };
 
           const modo = configVacaciones.autoAprobar.modo || 'todas';
           const maxHoras = parseInt(configVacaciones.autoAprobar.maxHoras || 0, 10);
@@ -1032,7 +1093,7 @@ export const useVacacionesStore = create((set, get) => {
           if (!res.aplicar) return { aplicado: false, motivo: res.motivo };
 
           const mensaje = (configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.');
-          await cambiarEstadoSolicitud(solicitud.id, 'aprobada', mensaje, solicitud);
+          await cambiarEstadoSolicitud(solicitud.id, 'aprobada', mensaje, solicitud,true);
 
           return { aplicado: true };
         },
@@ -1235,46 +1296,51 @@ export const useVacacionesStore = create((set, get) => {
       }
 
       const horasADevolver = diasACancelar.length * 8;
-      //  Obtener saldo actual del empleado ANTES de la cancelación
       const empleadoActual = esAdmin ? solicitud.solicitante : user?.email;
       const userDocRef = doc(db, 'USUARIOS', empleadoActual);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (!userDoc.exists()) {
-        throw new Error('Empleado no encontrado');
-      }
 
-      const userData = userDoc.data();
-      const saldoAntes = userData.vacaciones?.disponibles || 0;
-      const saldoDespues = saldoAntes + horasADevolver;
+      // Usar transacción para crear cancelación parcial y actualizar saldo
+      let cancelacionId;
+      let saldoAntes = 0;
+      let saldoDespues = 0;
 
-      // ✅ CREAR subcolección de cancelación parcial
-      const cancelacionData = {
-        fechasCanceladas: diasACancelar.sort(),
-        horasDevueltas: horasADevolver,
-        motivoCancelacion: motivoCancelacion.trim(),
-        fechaCancelacion: formatYMD(new Date()),
-        horasDisponiblesAntesCancelacion: saldoAntes,         
-        horasDisponiblesDespuesCancelacion: saldoDespues,
-        procesadaPor: user?.email,
-        esAdmin: esAdmin,
-        createdAt: new Date()
-      };
+      await runTransaction(db, async (transaction) => {
+        // Obtener saldo actual del empleado ANTES de la cancelación
+        const userDoc = await transaction.get(userDocRef);
+        if (!userDoc.exists()) {
+          throw new Error('Empleado no encontrado');
+        }
+        saldoAntes = userDoc.data().vacaciones?.disponibles || 0;
+        saldoDespues = saldoAntes + horasADevolver;
 
-      const cancelacionRef = await addDoc(
-        collection(db, 'VACACIONES', solicitud.id, 'cancelaciones_parciales'),
-        cancelacionData
-      );
-        
-      // ✅ ACTUALIZAR saldo del empleado
-      await updateDoc(userDocRef, {
-        'vacaciones.disponibles': saldoDespues,
-        updatedAt: new Date()
+        // ✅ CREAR subcolección de cancelación parcial
+        const cancelacionRef = doc(collection(db, 'VACACIONES', solicitud.id, 'cancelaciones_parciales'));
+        cancelacionId = cancelacionRef.id;
+
+        const cancelacionData = {
+          fechasCanceladas: diasACancelar.sort(),
+          horasDevueltas: horasADevolver,
+          motivoCancelacion: motivoCancelacion.trim(),
+          fechaCancelacion: formatYMD(new Date()),
+          horasDisponiblesAntesCancelacion: saldoAntes,         
+          horasDisponiblesDespuesCancelacion: saldoDespues,
+          procesadaPor: user?.email,
+          esAdmin: esAdmin,
+          createdAt: new Date()
+        };
+
+        transaction.set(cancelacionRef, cancelacionData);
+
+        // ✅ ACTUALIZAR saldo del empleado
+        transaction.update(userDocRef, {
+          'vacaciones.disponibles': saldoDespues,
+          updatedAt: new Date()
+        });
       });
 
       return {
         exito: true,
-        cancelacionId: cancelacionRef.id,
+        cancelacionId,
         horasDevueltas: horasADevolver,
         diasCancelados: diasACancelar.length,
         saldoAntes,                                           
@@ -1291,7 +1357,7 @@ export const useVacacionesStore = create((set, get) => {
   // Obtener todos los empleados con sus saldos actuales
   obtenerEmpleadosConSaldos: async () => {
     try {
-      const { isAdminOrOwner } = useAuthStore.getState();
+      const { isAdminOrOwner, isLeaveAdmin } = useAuthStore.getState();
       
       if (!isAdminOrOwner()) {
         throw new Error('Sin permisos para acceder a los saldos');
@@ -1316,7 +1382,7 @@ export const useVacacionesStore = create((set, get) => {
     }
   },
 
-  // Ajustar saldo individual
+// Ajustar saldo individual
   ajustarSaldoIndividual: async (empleadoEmail, tipoAjuste, horas, razonAjuste) => {
     try {
       const { user, userProfile } = useAuthStore.getState();
@@ -1325,75 +1391,82 @@ export const useVacacionesStore = create((set, get) => {
         throw new Error('Debes especificar una razón para el ajuste');
       }
 
-      // Obtener datos actuales del empleado
       const userDocRef = doc(db, 'USUARIOS', empleadoEmail);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (!userDoc.exists()) {
-        throw new Error('Empleado no encontrado');
-      }
+      let ajusteId;
+      let saldoActual = { disponibles: 0, pendientes: 0 };
+      let nuevoSaldo = { disponibles: 0, pendientes: 0 };
 
-      const datosEmpleado = userDoc.data();
-      const saldoActual = datosEmpleado.vacaciones || { disponibles: 0, pendientes: 0 };
-      
-      // Calcular nuevo saldo
-      let nuevoSaldo = { ...saldoActual };
-      
-      switch (tipoAjuste) {
-        case 'añadir':
-          nuevoSaldo.disponibles += horas;
-          break;
-        case 'reducir':
-          if (saldoActual.disponibles < horas) {
-            throw new Error(`No se pueden reducir ${horas}h. Saldo disponible: ${saldoActual.disponibles}h`);
-          }
-          nuevoSaldo.disponibles -= horas;
-          break;
-        case 'establecer':
+      // Usar transacción para actualizar saldo y crear solicitud de ajuste
+      await runTransaction(db, async (transaction) => {
+        // Obtener datos actuales del empleado
+        const userDoc = await transaction.get(userDocRef);
+        if (!userDoc.exists()) {
+          throw new Error('Empleado no encontrado');
+        }
+        const datosEmpleado = userDoc.data();
+        saldoActual = datosEmpleado.vacaciones || { disponibles: 0, pendientes: 0 };
 
-          nuevoSaldo.disponibles = horas
-          break;
-        default:
-          throw new Error('Tipo de ajuste no válido');
-      }
+        // Calcular nuevo saldo
+        nuevoSaldo = { ...saldoActual };
+        
+        switch (tipoAjuste) {
+          case 'añadir':
+            nuevoSaldo.disponibles += horas;
+            break;
+          case 'reducir':
+            if (saldoActual.disponibles < horas) {
+              throw new Error(`No se pueden reducir ${horas}h. Saldo disponible: ${saldoActual.disponibles}h`);
+            }
+            nuevoSaldo.disponibles -= horas;
+            break;
+          case 'establecer':
+            nuevoSaldo.disponibles = horas;
+            break;
+          default:
+            throw new Error('Tipo de ajuste no válido');
+        }
 
-      // Validar que el nuevo saldo no sea negativo
-      if (nuevoSaldo.disponibles < 0 ) {
-        throw new Error('El ajuste resultaría en un saldo negativo');
-      }
+        // Validar que el nuevo saldo no sea negativo
+        if (nuevoSaldo.disponibles < 0 ) {
+          throw new Error('El ajuste resultaría en un saldo negativo');
+        }
 
-      // 1. Actualizar saldo del empleado
-      await updateDoc(userDocRef, {
-        'vacaciones': nuevoSaldo,
-        updatedAt: new Date()
+        // Actualizar saldo del empleado
+        transaction.update(userDocRef, {
+          'vacaciones': nuevoSaldo,
+          updatedAt: new Date()
+        });
+
+        // Crear solicitud auto-aprobada para trazabilidad
+        const newAjusteRef = doc(collection(db, 'VACACIONES'));
+        ajusteId = newAjusteRef.id;
+
+        const solicitudAjuste = {
+          solicitante: empleadoEmail,
+          fechas: [], // Sin fechas específicas
+          horasSolicitadas: Math.abs(horas),
+          horasDisponiblesAntes: saldoActual.disponibles,
+          horasDisponiblesDespues: nuevoSaldo.disponibles,
+          fechaSolicitud: formatYMD(new Date()),
+          estado: 'aprobada',
+          fechaAprobacionDenegacion: formatYMD(new Date()),
+          tipoSolicitud: 'ajuste_saldo',
+          tipoAjuste: tipoAjuste,
+          comentariosSolicitante: `Ajuste de saldo realizado por ${userProfile?.nombre || user?.email}`,
+          comentariosAdmin: `${tipoAjuste.toUpperCase()} ${formatearTiempoVacasLargo(horas)}.\nRazón: ${razonAjuste.trim()}`,
+          motivoAjuste: razonAjuste.trim(),
+          realizadoPor: user?.email,
+          esAjusteSaldo: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        transaction.set(newAjusteRef, solicitudAjuste);
       });
-
-      // 2. Crear solicitud auto-aprobada para trazabilidad
-      const solicitudAjuste = {
-        solicitante: empleadoEmail,
-        fechas: [], // Sin fechas específicas
-        horasSolicitadas: Math.abs(horas),
-        horasDisponiblesAntesSolicitud: saldoActual.disponibles,
-        horasDisponiblesTrasAprobacion: nuevoSaldo.disponibles,
-        fechaSolicitud: formatYMD(new Date()),
-        fechaSolicitudOriginal: formatYMD(new Date()),
-        estado: 'aprobada',
-        fechaAprobacionDenegacion: formatYMD(new Date()),
-        tipoSolicitud: 'ajuste_saldo',
-        tipoAjuste: tipoAjuste,
-        comentariosSolicitante: `Ajuste de saldo realizado por ${userProfile?.nombre || user?.email}`,
-        comentariosAdmin: `AJUSTE DE SALDO: ${tipoAjuste.toUpperCase()} ${horas}h. Razón: ${razonAjuste.trim()}`,
-        motivoAjuste: razonAjuste.trim(),
-        realizadoPor: user?.email,
-        esAjusteSaldo: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      await addDoc(collection(db, 'VACACIONES'), solicitudAjuste);
 
       return {
         exito: true,
+        ajusteId,
         saldoAnterior: saldoActual,
         saldoNuevo: nuevoSaldo,
         horasAjustadas: horas,
@@ -1407,60 +1480,131 @@ export const useVacacionesStore = create((set, get) => {
     }
   },
 
-  // Ajustar saldos masivamente
-  ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjuste) => {
-    try {
-      const { user, userProfile } = useAuthStore.getState();
+
+  // Ajustar saldos masivamente con batch para atomicidad
+ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjuste) => {
+  try {
+    const { user, userProfile } = useAuthStore.getState();
+    
+    if (!razonAjuste || razonAjuste.trim() === '') {
+      throw new Error('Debes especificar una razón para el ajuste masivo');
+    }
+
+    if (!empleadosSeleccionados || empleadosSeleccionados.length === 0) {
+      throw new Error('Debes seleccionar al menos un empleado');
+    }
+
+    // Paso 1: Leer todos los documentos de usuarios en paralelo
+    const userRefs = empleadosSeleccionados.map(email => doc(db, 'USUARIOS', email));
+    const userSnaps = await Promise.all(userRefs.map(ref => getDoc(ref)));
+    
+    const empleadosData = userSnaps.map((snap, index) => {
+      if (!snap.exists()) {
+        throw new Error(`Empleado no encontrado: ${empleadosSeleccionados[index]}`);
+      }
+      return { email: empleadosSeleccionados[index], data: snap.data() };
+    });
+
+    // Paso 2: Validar y calcular nuevos saldos para todos (antes de batch)
+    const nuevosSaldos = empleadosData.map(({ email, data }) => {
+      const saldoActual = data.vacaciones || { disponibles: 0, pendientes: 0 };
+      let nuevoSaldo = { ...saldoActual };
       
-      if (!razonAjuste || razonAjuste.trim() === '') {
-        throw new Error('Debes especificar una razón para el ajuste masivo');
+      switch (tipoAjuste) {
+        case 'añadir':
+          nuevoSaldo.disponibles += horas;
+          break;
+        case 'reducir':
+          if (saldoActual.disponibles < horas) {
+            throw new Error(`No se pueden reducir ${horas}h para ${email}. Saldo disponible: ${saldoActual.disponibles}h`);
+          }
+          nuevoSaldo.disponibles -= horas;
+          break;
+        case 'establecer':
+          nuevoSaldo.disponibles = horas;
+          break;
+        default:
+          throw new Error('Tipo de ajuste no válido');
       }
 
-      if (!empleadosSeleccionados || empleadosSeleccionados.length === 0) {
-        throw new Error('Debes seleccionar al menos un empleado');
+      if (nuevoSaldo.disponibles < 0) {
+        throw new Error(`El ajuste resultaría en saldo negativo para ${email}`);
       }
 
-      let procesados = 0;
-      let errores = [];
-      const resultados = [];
+      return { email, saldoActual, nuevoSaldo };
+    });
 
-      for (const empleadoEmail of empleadosSeleccionados) {
-        try {
-          const resultado = await get().ajustarSaldoIndividual(
-            empleadoEmail, 
-            tipoAjuste, 
-            horas, 
-            `AJUSTE MASIVO: ${razonAjuste.trim()}`
-          );
-          
-          resultados.push({
-            empleado: empleadoEmail,
-            exito: true,
-            ...resultado
-          });
-          procesados++;
-        } catch (error) {
-          errores.push({
-            empleado: empleadoEmail,
-            error: error.message
-          });
-        }
-      }
+    // Paso 3: Crear batch si todas las validaciones pasan
+    const batch = writeBatch(db);
+    const resultados = [];
 
-      return {
-        procesados,
-        errores,
-        total: empleadosSeleccionados.length,
-        exito: errores.length === 0,
-        resultados
+    nuevosSaldos.forEach(({ email, saldoActual, nuevoSaldo }) => {
+      const userDocRef = doc(db, 'USUARIOS', email);
+      batch.update(userDocRef, {
+        'vacaciones': nuevoSaldo,
+        updatedAt: new Date()
+      });
+
+      // Crear solicitud de ajuste para trazabilidad
+      const newAjusteRef = doc(collection(db, 'VACACIONES'));
+      const ajusteId = newAjusteRef.id; // Para incluir en resultados
+
+      const solicitudAjuste = {
+        solicitante: email,
+        fechas: [], 
+        horasSolicitadas: Math.abs(horas),
+        horasDisponiblesAntes: saldoActual.disponibles,
+        horasDisponiblesDespues: nuevoSaldo.disponibles,
+        fechaSolicitud: formatYMD(new Date()),
+        estado: 'aprobada',
+        fechaAprobacionDenegacion: formatYMD(new Date()),
+        tipoSolicitud: 'ajuste_saldo',
+        tipoAjuste: tipoAjuste,
+        comentariosSolicitante: `Ajuste masivo realizado por ${userProfile?.nombre || user?.email}`,
+        comentariosAdmin: `AJUSTE MASIVO: ${tipoAjuste.toUpperCase()} ${horas}h.\nRazón: ${razonAjuste.trim()}`,
+        motivoAjuste: razonAjuste.trim(),
+        realizadoPor: user?.email,
+        esAjusteSaldo: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
 
-    } catch (error) {
-      console.error('Error en ajuste masivo:', error);
-      set({ error: error.message });
-      throw error;
-    }
-  },
+      batch.set(newAjusteRef, solicitudAjuste);
+
+      resultados.push({
+        empleado: email,
+        exito: true,
+        ajusteId,
+        saldoAnterior: saldoActual,
+        saldoNuevo: nuevoSaldo,
+        horasAjustadas: horas,
+        tipoAjuste: tipoAjuste
+      });
+    });
+
+    // Paso 4: Cometer el batch (atómico: todo o nada)
+    await batch.commit();
+
+    return {
+      procesados: resultados.length,
+      errores: [],
+      total: empleadosSeleccionados.length,
+      exito: true,
+      resultados
+    };
+
+  } catch (error) {
+    console.error('Error en ajuste masivo:', error);
+    set({ error: error.message });
+    return {
+      procesados: 0,
+      errores: [error.message],
+      total: empleadosSeleccionados.length,
+      exito: false,
+      resultados: []
+    };
+  }
+},
 
   // Obtener historial de ajustes de saldo
   obtenerHistorialAjustes: async (empleadoEmail = null) => {
@@ -1729,6 +1873,251 @@ export const useVacacionesStore = create((set, get) => {
       throw error;
     }
   },
+
+      // ✅ AÑADIR en vacacionesStore.js
+    loadHistorialSolicitudesConCancelaciones: async (filtros = {}) => {
+      try {
+        const { isAdminOrOwner } = useAuthStore.getState();
+        if (!isAdminOrOwner()) {
+          throw new Error('Sin permisos para acceder al historial completo');
+        }
+
+        // Query base para todas las solicitudes
+        let solicitudesQuery = query(
+          collection(db, 'VACACIONES'),
+          orderBy('fechaSolicitud', 'desc')
+        );
+
+        // Aplicar filtros si se especifican
+        if (filtros.estado && filtros.estado !== 'todos') {
+          solicitudesQuery = query(
+            collection(db, 'VACACIONES'),
+            where('estado', '==', filtros.estado),
+            orderBy('fechaSolicitud', 'desc')
+          );
+        }
+
+        const querySnapshot = await getDocs(solicitudesQuery);
+        const solicitudes = [];
+
+        // ✅ CARGAR cada solicitud con sus cancelaciones parciales
+        for (const docSnap of querySnapshot.docs) {
+          const solicitudData = { id: docSnap.id, ...docSnap.data() };
+          const cancelacionesParciales = await get().obtenerCancelacionesParciales(docSnap.id);
+          
+          solicitudes.push({
+            ...solicitudData,
+            cancelacionesParciales
+          });
+        }
+
+        // Filtros adicionales en memoria
+        let solicitudesFiltradas = solicitudes;
+
+        if (filtros.empleado) {
+          solicitudesFiltradas = solicitudesFiltradas.filter(s => s.solicitante === filtros.empleado);
+        }
+
+        if (filtros.año) {
+          solicitudesFiltradas = solicitudesFiltradas.filter(s => {
+            const añoSolicitud = new Date(s.fechaSolicitud).getFullYear();
+            const añoPrimeraFecha = s.fechas && s.fechas.length > 0 ?
+              new Date(s.fechas[0]).getFullYear() : añoSolicitud;
+            return añoSolicitud === filtros.año || añoPrimeraFecha === filtros.año;
+          });
+        }
+
+        return solicitudesFiltradas;
+      } catch (error) {
+        console.error('Error cargando historial con cancelaciones:', error);
+        set({ error: error.message });
+        return [];
+      }
+    },
+
+    
+mapSolicitudToEventos: (solicitud) => {
+  // Todas las fechas vienen como "YYYY-MM-DD"
+  const eventos = [];
+  const rank = { ajuste: 0, aprobacion: 1, cancelacion_parcial: 2, cancelacion_total: 3, denegada: 4 };
+
+  // Ajustes de saldo (auto-aprobados para trazabilidad)
+  if (solicitud.esAjusteSaldo) {
+    const fecha = solicitud.fechaAprobacionDenegacion || solicitud.fechaSolicitud;
+    eventos.push({
+      tipo: 'ajuste',
+      tipoAjuste: solicitud.tipoAjuste, // 'añadir' | 'reducir' | 'establecer'
+      fecha,
+      deltaHoras: (solicitud.horasDisponiblesDespues ?? 0) - (solicitud.horasDisponiblesAntes ?? 0),
+      saldoAntes: solicitud.horasDisponiblesAntes ?? null,
+      saldoDespues: solicitud.horasDisponiblesDespues ?? null,
+      concepto: `Ajuste: ${solicitud.tipoAjuste}`,
+      solicitudId: solicitud.id,
+      ordenDia: rank.ajuste,
+      comentariosSolicitante:solicitud.comentariosSolicitante,
+      comentariosAdmin:solicitud.comentariosAdmin
+    });
+  }
+
+  // Aprobación (resta saldo disponible)
+  if (!solicitud.esAjusteSaldo && ['aprobada','cancelado'].includes(solicitud.estado) && solicitud.fechaAprobacionDenegacion) {
+    eventos.push({
+      tipo: 'aprobacion',
+      fecha: solicitud.fechaAprobacionDenegacion,
+      deltaHoras: (solicitud.horasDisponiblesDespues ?? 0) - (solicitud.horasDisponiblesAntes ?? 0), // suele ser negativo
+      saldoAntes: solicitud.horasDisponiblesAntes ?? null,
+      saldoDespues: solicitud.horasDisponiblesDespues ?? null,
+      concepto: 'Solicitud aprobada',
+      solicitudId: solicitud.id,
+      ordenDia: rank.aprobacion,
+      horasSolicitadas: solicitud.horasSolicitadas,
+      fechasSolicitadas: solicitud.fechasSeleccionadas || solicitud.fechas || null,
+      comentariosAdmin: solicitud.comentariosAdmin || null,
+      comentariosSolicitante: solicitud.comentariosSolicitante || null 
+    });
+  }
+
+  // Cancelaciones parciales (suman)
+  if (Array.isArray(solicitud.cancelacionesParciales)) {
+    for (const c of solicitud.cancelacionesParciales) {
+      eventos.push({
+        tipo: 'cancelacion_parcial',
+        fecha: c.fechaCancelacion,
+        deltaHoras: (c.horasDisponiblesDespuesCancelacion ?? 0) - (c.horasDisponiblesAntesCancelacion ?? 0), // positivo
+        saldoAntes: c.horasDisponiblesAntesCancelacion ?? null,
+        saldoDespues: c.horasDisponiblesDespuesCancelacion ?? null,
+        concepto: `Cancelación parcial`,
+        solicitudId: solicitud.id,
+        ordenDia: rank.cancelacion_parcial,
+        fechasCanceladas: c.fechasCanceladas || [],
+        motivoCancelacion: c.motivoCancelacion || null    
+      });
+    }
+  }
+
+  // Cancelación total (suma)
+  if (solicitud.estado === 'cancelado' && solicitud.fechaCancelacion) {
+    eventos.push({
+      tipo: 'cancelacion_total',
+      fecha: solicitud.fechaCancelacion,
+      deltaHoras: (solicitud.horasDisponiblesDespuesCancelacion ?? 0) - (solicitud.horasDisponiblesAntesCancelacion ?? 0), // positivo
+      saldoAntes: solicitud.horasDisponiblesAntesCancelacion ?? null,
+      saldoDespues: solicitud.horasDisponiblesDespuesCancelacion ?? null,
+      concepto: 'Cancelación total',
+      solicitudId: solicitud.id,
+      ordenDia: rank.cancelacion_total,
+      motivoCancelacion: solicitud.motivoCancelacion || null,
+      fechasCanceladas: solicitud.fechasCanceladas || null
+    });
+  }
+
+  // Denegada (0)
+  if (solicitud.estado === 'denegada' && solicitud.fechaAprobacionDenegacion) {
+    eventos.push({
+      tipo: 'denegada',
+      fecha: solicitud.fechaAprobacionDenegacion,
+      deltaHoras: 0,
+      saldoAntes: solicitud.horasDisponiblesAlDenegar ?? null,
+      saldoDespues: solicitud.horasDisponiblesAlDenegar ?? null,
+      concepto: 'Solicitud denegada',
+      solicitudId: solicitud.id,
+      horasSolicitadas: solicitud.horasSolicitadas,
+      ordenDia: rank.denegada,
+      fechasSolicitadas: solicitud.fechasSeleccionadas || solicitud.fechas || null,
+      comentariosAdmin: solicitud.comentariosAdmin || null,
+      comentariosSolicitante: solicitud.comentariosSolicitante || null  
+    });
+  }
+
+  return eventos;
+},
+
+getEventosSaldoUsuarioPeriodo: async (usuarioEmail, inicioYMD, finYMD) => {
+  const { loadSolicitudesConCancelaciones, mapSolicitudToEventos } = get();
+  // 1) Cargar solicitudes + parciales del usuario 
+  const solicitudes = await loadSolicitudesConCancelaciones(usuarioEmail);
+
+  // 2) Aplanar a eventos
+  const todosEventos = solicitudes.flatMap(s => mapSolicitudToEventos(s));
+
+  // 3) Filtrar por periodo [inicioYMD, finYMD]
+  const enRango = todosEventos.filter(e => e.fecha >= inicioYMD && e.fecha <= finYMD);
+
+  // 4) Ordenar por fecha y por cadena de saldos (más fiable que solo por tipo)
+  const { eventosOrdenados, saldoInicial } = get().ordenarEventosPorDiaCadena(enRango, null);
+
+  // 5) Devolver
+  return { eventos: eventosOrdenados, saldoInicial };
+  },
+
+// Orden estable por día encadenando saldoAntes -> saldoDespues
+ordenarEventosPorDiaCadena: (eventos, saldoInicialPeriodo = null) => {
+  const rank = { ajuste: 0, aprobacion: 1, cancelacion_parcial: 2, cancelacion_total: 3, denegada: 4 };
+
+  // Fechas en orden ascendente
+  const fechas = [...new Set(eventos.map(e => e.fecha))].sort();
+
+  let cursor = saldoInicialPeriodo;
+  let saldoInicialDetectado = saldoInicialPeriodo ?? null;
+  let salida = [];
+
+  for (const f of fechas) {
+    // Eventos del día f (orden preliminar por tipo para estabilidad si falta info)
+    const restantes = eventos
+      .filter(e => e.fecha === f)
+      .sort((a, b) => (a.ordenDia ?? rank[a.tipo] ?? 99) - (b.ordenDia ?? rank[b.tipo] ?? 99));
+
+    // Si aún no tenemos cursor (primer día del periodo), usa el primer saldoAntes disponible
+    if (cursor == null) {
+      const cand = restantes.find(x => typeof x.saldoAntes === 'number');
+      if (cand) {
+        cursor = cand.saldoAntes;
+        if (saldoInicialDetectado == null) saldoInicialDetectado = cand.saldoAntes;
+      }
+    }
+
+    const ordenadosDia = [];
+    while (restantes.length) {
+      // 1) Buscar el que empareja exacto con cursor
+      let idx = -1;
+      if (cursor != null) {
+        idx = restantes.findIndex(ev => typeof ev.saldoAntes === 'number' && ev.saldoAntes === cursor);
+      }
+
+      // 2) Si no hay match exacto, elegir el más cercano por |saldoAntes - cursor| y, en empate, por rank
+      if (idx === -1) {
+        let mejor = -1, mejorDist = Infinity, mejorOrden = Infinity;
+        restantes.forEach((ev, i) => {
+          if (typeof ev.saldoAntes === 'number' && cursor != null) {
+            const dist = Math.abs(ev.saldoAntes - cursor);
+            const ord = ev.ordenDia ?? (rank[ev.tipo] ?? 99);
+            if (dist < mejorDist || (dist === mejorDist && ord < mejorOrden)) {
+              mejor = i; mejorDist = dist; mejorOrden = ord;
+            }
+          }
+        });
+        idx = mejor !== -1 ? mejor : 0; // último recurso: primero de la lista
+      }
+
+      const ev = restantes.splice(idx, 1)[0];
+      ordenadosDia.push(ev);
+
+      // Avanzar el cursor con preferencia por saldoDespues (si no, saldoAntes+delta)
+      if (typeof ev.saldoDespues === 'number') {
+        cursor = ev.saldoDespues;
+      } else if (typeof ev.deltaHoras === 'number' && typeof ev.saldoAntes === 'number') {
+        cursor = ev.saldoAntes + ev.deltaHoras;
+      } // si faltan datos, mantenemos cursor como está
+    }
+
+    salida = salida.concat(ordenadosDia);
+  }
+
+  return { eventosOrdenados: salida, saldoInicial: saldoInicialDetectado };
+},
+
+
+
 
     // Cleanup
     cleanup: () => {

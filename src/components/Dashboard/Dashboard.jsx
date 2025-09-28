@@ -30,8 +30,14 @@ import { formatCurrency } from '../../utils/nominaUtils';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { loading, userSalaryInfo  } = useGlobalData();
-  const { procesarSolicitudesCaducadas } = useVacacionesStore();
+  const { procesarSolicitudesCaducadas, loadConfigVacaciones, configVacaciones } = useVacacionesStore();
   const { user, userProfile, toggleVisibility } = useAuthStore();
+
+  useEffect(() => {
+    if (!configVacaciones){
+    const unsubscribe = loadConfigVacaciones();
+    return () => unsubscribe();} // Cleanup al desmontar
+  }, [loadConfigVacaciones, configVacaciones]);
 
   useEffect(() => {
     const procesarCaducadas = async () => {
@@ -110,7 +116,7 @@ const Dashboard = () => {
     },
     {
       title: 'Horas Extras',
-      value: mask(userSalaryInfo?.totalTiempoMesActual),
+      value: userSalaryInfo?.totalTiempoMesActual,
       subtitle: (userProfile?.tarifasHorasExtra)
         ? `estimado ${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: AccessTimeIcon,
@@ -311,7 +317,8 @@ const Dashboard = () => {
               height: 100,  
               border:'2px solid grey',
               boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
-              fontSize: '2rem'
+              fontSize: '2rem',
+              flexShrink: 0
             }}
           >
             {(!userProfile?.photoURL && userProfile?.nombre) ? 
@@ -319,14 +326,14 @@ const Dashboard = () => {
               (user?.email?.[0] || 'U').toUpperCase()
             }
           </Avatar>
-          <Box justifyItems="center" flex={1}sx={{ml:-5}}>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
+          <Box justifyItems="center" flex={1}sx={{ml:-5, minWidth:0}}>
+            <Typography variant="h5" fontWeight="bold" gutterBottom noWrap>
               {formatearNombre(userProfile?.nombre)}
             </Typography>
-            <Typography fontSize="1rem" sx={{ opacity: 0.9, mb: 0}}>
+            <Typography fontSize="1rem" noWrap sx={{ opacity: 0.9, mb: 0}}>
               {userProfile?.puesto||'Operario'}
             </Typography>
-            <Typography fontSize="1rem" sx={{ opacity: 0.9, mb: 1 }}>
+            <Typography fontSize="1rem" noWrap sx={{ opacity: 0.9, mb: 1 }}>
               Nv {userProfile?.nivel||'?'} 
             </Typography>
           </Box>

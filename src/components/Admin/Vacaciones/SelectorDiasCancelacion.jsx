@@ -99,14 +99,14 @@ const SelectorDiasCancelacion = ({
                   transition: 'background-color 0.2s',
                   // ✅ NUEVOS: Estilos por estado
                   ...(estado === 'cancelado' && {
-                    backgroundColor: 'error.100',
+                    backgroundColor: 'rojo.fondo',
                     color: 'error.main',
                     border: '1px solid',
                     borderColor: 'error.main',
                     textDecoration: 'line-through'
                   }),
                   ...(estado === 'disfrutado' && {
-                    backgroundColor: 'success.100',
+                    backgroundColor: 'verde.fondo',
                     color: 'success.main',
                     border: '1px solid',
                     borderColor: 'success.main',
@@ -138,11 +138,12 @@ const SelectorDiasCancelacion = ({
         })}
       </Grid>
             {/* Leyenda */}
-      <Box sx={{ mt: 4, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            
+      <Box sx={{ mt: 4, display: 'flex', justifyContent:'center', flexWrap: 'wrap', gap: 1 }}>
         <Chip size="small" label="Disponible" sx={{ bgcolor: 'white', border: '1px solid grey' }} />
+        <Chip size="small" label="Cancelado" sx={{ bgcolor: 'rojo.fondo', color: 'error.main' }} />
+        <Chip size="small" label="Disfrutado" sx={{ bgcolor: 'verde.fondo', color: 'success.main' }} />
         <Chip size="small" label="Seleccionado" color="primary" />
-        <Chip size="small" label="Cancelado" sx={{ bgcolor: 'error.100', color: 'error.main' }} />
-        <Chip size="small" label="Disfrutado" sx={{ bgcolor: 'success.100', color: 'success.main' }} />
         {!esAdmin && <Chip size="small" label="No disponible" sx={{ bgcolor: 'grey.200' }} />}
       </Box>
     </Box>

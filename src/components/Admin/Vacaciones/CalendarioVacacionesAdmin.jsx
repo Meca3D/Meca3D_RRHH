@@ -30,6 +30,7 @@ import { formatearTiempoVacas } from '../../../utils/vacacionesUtils';
 const CalendarioVacacionesAdmin = () => {
   const navigate = useNavigate();
   const { 
+    loadConfigVacaciones,
     loadFestivos,
     loadVacacionesAprobadas,
     calcularDisponibilidadPorFecha,
@@ -58,7 +59,7 @@ const CalendarioVacacionesAdmin = () => {
   const [loadingConflictos, setLoadingConflictos] = useState(false);
 
   const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
+  loadConfigVacaciones()
   // ✅ useEffect 1: Carga inicial de datos CON cleanup
   useEffect(() => {
   const cargarDatos = async () => {
@@ -385,7 +386,7 @@ const CalendarioVacacionesAdmin = () => {
           <Box display="flex" justifyContent="center" sx={{ mt: 0.5 }}>
               <Avatar  
                 sx={{ fontSize: '0.8rem', fontWeight:'bold', height: 25, width: 25, 
-                  bgcolor:vacaciones.length >= 6 ? 'rojo.main' : vacaciones.length >= 3 ? 'naranja.main' : 'azul.main'  }}>
+                  bgcolor:vacaciones.length >= 7 ? 'rojo.main' : vacaciones.length >= 4 ? 'naranja.main' : 'verde.main'  }}>
                 {`${vacaciones.length}`}              
               </Avatar>
           </Box>
@@ -697,21 +698,31 @@ const CalendarioVacacionesAdmin = () => {
                     {/* Leyenda */}
                     <Box sx={{ mt: 2, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>         
-                        <Box sx={{ width: 16, height: 16, bgcolor: '#d7fbd7', border: '1px solid #ddd' }} />
+                        <Box sx={{ width: 20, height: 20, bgcolor: '#d7fbd7', border: '1px solid #ddd' }} />
                         <Typography variant="caption">Ausencia Baja (1-3)</Typography>
                       </Box>  
                        
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Box sx={{ width: 16, height: 16, bgcolor: '#faf6cd', border: '1px solid #ddd' }} />
+                        <Box sx={{ width: 20, height: 20, bgcolor: '#faf6cd', border: '1px solid #ddd' }} />
                         <Typography variant="caption">Ausencia Media (4-6)</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Box sx={{ width: 16, height: 16, bgcolor: '#fad3d9', border: '1px solid #ddd' }} />
+                        <Box sx={{ width: 20, height: 20, bgcolor: '#fad3d9', border: '1px solid #ddd' }} />
                         <Typography variant="caption">Ausencia Alta (6+)</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <WarningIcon fontSize="small" sx={{color:"naranja.main"}} />
                         <Typography variant="caption">Conflicto de cobertura</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Avatar sx={{ height: 22, width: 22, bgcolor:'grey.100', border: '1px solid grey' }}>
+                          <Typography color="black" sx={{ fontSize:'0.75rem'}}>1</Typography>
+                        </Avatar> 
+                        <Typography variant="caption">Personas Ausentes</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                         <Box sx={{ width: 20, height: 20, borderColor:'dorado.main', border: '2px solid' }} />
+                        <Typography variant="caption">Hoy</Typography>
                       </Box>
                     </Box>
                   </>
@@ -726,9 +737,9 @@ const CalendarioVacacionesAdmin = () => {
             {diaSeleccionado && disponibilidadDia.enVacaciones && (
               <Card sx={{ mb: 2 }}>
                 <CardContent>
-                  <Box display="flex" bgcolor={'grey.100'} alignItems="center" sx={{p:0.5, borderRadius:2, mb:2}} >
+                  <Box display="flex"  alignItems="center" sx={{p:0.5,px:1, borderRadius:2, mb:2,bgcolor:'verde.fondo'}} >
                   <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center',  }}>
-                    <ScheduleIcon color="primary" sx={{mr:1}}/>
+                    <ScheduleIcon color="primary" sx={{mr:1}}/> 
                     {formatearFechaLarga(diaSeleccionado)}
                   </Typography>
                   </Box>
@@ -782,13 +793,15 @@ const CalendarioVacacionesAdmin = () => {
             {/* Próximos 10 días con vacaciones */}
             <Card sx={{ mb: 2 }}>
               <CardContent>
-                <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb:2 }}>
+                <Box display="flex"  alignItems="center" sx={{p:0.5,px:1, borderRadius:2, mb:2,bgcolor:'verde.fondo'}} >
+                <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <TodayIcon color="primary" />
                   Próximos 10 Días
                 </Typography>
+                </Box>
                 
                 {(() => {
-                  // ✅ NUEVA LÓGICA: Generar próximos 10 días
+                  //  Generar próximos 10 días
                   const generarProximos10Dias = () => {
                     const dias = [];
                     const hoy = new Date();
@@ -801,7 +814,7 @@ const CalendarioVacacionesAdmin = () => {
                     return dias;
                   };
 
-                  // ✅ NUEVA LÓGICA: Obtener vacaciones por día
+                  //  Obtener vacaciones por día
                   const obtenerVacacionesPorDia = (fecha) => {
                     const fechaStr = formatYMD(fecha);
                     return vacacionesAprobadas.filter(vacacion => 
@@ -809,7 +822,7 @@ const CalendarioVacacionesAdmin = () => {
                     );
                   };
 
-                  // ✅ NUEVA LÓGICA: Obtener etiqueta del día
+                  //  Obtener etiqueta del día
                   const obtenerEtiquetaDia = (fecha) => {
                     const hoy = new Date();
                     const mañana = new Date(hoy);
@@ -942,10 +955,12 @@ const CalendarioVacacionesAdmin = () => {
             {/* Estadísticas rápidas */}
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <GroupsIcon color="primary" />
+                <Box display="flex"  alignItems="center" sx={{p:0.5,px:1, borderRadius:2, mb:2,bgcolor:'verde.fondo'}} >
+                <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', px:1 }}>
+                  <GroupsIcon color="primary" sx={{mr:2}} />
                   Resumen del {vistaActual === 'mensual' ? 'Mes' : 'Año'}
                 </Typography>
+                </Box>
                 
                {vistaActual === 'mensual' ? (
                 // ✅ ESTADÍSTICAS MENSUALES
@@ -974,17 +989,17 @@ const CalendarioVacacionesAdmin = () => {
                     return (
                       <>                   
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body2">Empleados de vacaciones:</Typography>
+                          <Typography variant="body1">Empleados de vacaciones:</Typography>
                           <Chip label={empleadosUnicosDelMes.size} size="small" />
                         </Box>
                         
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body2">Días de vacaciones del mes:</Typography>
+                          <Typography variant="body1">Días de vacaciones del mes:</Typography>
                           <Chip label={diasTotalesDelMes} size="small" color="primary" />
                         </Box>
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body2">Días con conflictos:</Typography>
+                          <Typography variant="body1">Días con conflictos:</Typography>
                           <Chip 
                             label={Object.keys(conflictosPorFecha).length} 
                             size="small" 
@@ -1015,17 +1030,17 @@ const CalendarioVacacionesAdmin = () => {
                     return (
                       <>                       
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body2">Empleados de vacaciones:</Typography>
+                          <Typography variant="body1">Empleados de vacaciones:</Typography>
                           <Chip label={empleadosUnicosDelAño.size} size="small" />
                         </Box>
                         
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body2">Días de vacaciones del año:</Typography>
+                          <Typography variant="body1">Días de vacaciones del año:</Typography>
                           <Chip label={diasTotalesDelAño} size="small" color="primary" />
                         </Box>
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body2">Posibles conflictos detectados:</Typography>
+                          <Typography variant="body1">Posibles conflictos detectados:</Typography>
                           <Chip 
                             label={getConflictosAnuales} 
                             size="small" 

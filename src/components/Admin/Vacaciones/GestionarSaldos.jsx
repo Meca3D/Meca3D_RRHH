@@ -618,10 +618,12 @@ const GestionarSaldos = () => {
                   }
                 }}
                 helperText={
-                  <Typography component="span" fontSize='1rem' sx={{fontWeight:700 }}>
-                  {horasAjuste 
-                  ? `${formatearTiempoVacasLargo(horasAjuste)}`
-                  : 'Especifica la cantidad de horas'}
+                  horasAjuste 
+                  ? <Typography component="span" fontSize='1rem' sx={{fontWeight:700 }}>
+                   {formatearTiempoVacasLargo(horasAjuste)}
+                   </Typography>
+                  : <Typography component="span" fontSize='0.8rem' sx={{fontWeight:700 }}>
+                    Especifica la cantidad de horas
                   </Typography>
                 }
               />
@@ -689,7 +691,7 @@ const GestionarSaldos = () => {
       >
         <DialogTitle sx={{display:'flex', justifyContent:'center', bgcolor:'dorado.main', color:'white'
         }}>
-          <Typography  component='span' fontSize='1.2rem' fontWeight={600}>
+          <Typography  textAlign='center' component='span' fontSize='1.2rem' fontWeight={600}>
           Historial de Ajustes de Saldo
           </Typography>
         </DialogTitle>
