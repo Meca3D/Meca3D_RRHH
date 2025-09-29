@@ -28,8 +28,9 @@ const SelectorDiasCancelacion = ({
   });
 
   const handleToggleDia = (fecha) => {
-    if (!esAdmin && (esFechaPasadaOHoy(fecha)||diasCancelados.includes(fecha))) return; // No permitir seleccionar días pasados o hoy a users
-    const nuevaSeleccion = diasSeleccionados.includes(fecha)
+    const noSeleccionable = !diasDisponiblesParaCancelar.includes(fecha); 
+      if (noSeleccionable) return;
+      const nuevaSeleccion = diasSeleccionados.includes(fecha)
       ? diasSeleccionados.filter(d => d !== fecha)
       : [...diasSeleccionados, fecha];
     
@@ -87,7 +88,10 @@ const SelectorDiasCancelacion = ({
             <Grid size={{ xs: 6, sm: 4 }} key={index}>
               <Box
                 onClick={() => handleToggleDia(fecha)}
+                aria-disabled={!esSeleccionable}
                 sx={{
+                  pointerEvents: esSeleccionable ? 'auto' : 'none',
+                  cursor: esSeleccionable ? 'pointer' : 'not-allowed',
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
@@ -113,9 +117,10 @@ const SelectorDiasCancelacion = ({
                     fontStyle: 'italic'
                   }),
                   ...(estado === 'disfrutado' && estaSeleccionado && {
-                    backgroundColor: 'azul.fondo',
-                    color: 'verde.main',
+                    backgroundColor: 'primary.main',
+                    color: 'white',
                     border: '1px solid',
+                    fontStyle: 'italic',
                     borderColor: 'primary.main'
                   }),
                   ...(estado === 'disponible' && estaSeleccionado && {

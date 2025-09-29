@@ -1084,7 +1084,7 @@ const MisSolicitudesVacaciones = () => {
                 placeholder="Ej: Ya no necesito estos días, ha cambiado mi situación..."
                 disabled={procesandoCancelacionParcial}
                 required
-                helperText="Especifica por qué necesitas cancelar solo estos días"
+                helperText="Especifica por qué necesitas cancelar estos días"
                 sx={{ mt: 2 }}
                 error={motivoCancelacionParcial.trim() === '' && diasACancelar.length > 0}
               />

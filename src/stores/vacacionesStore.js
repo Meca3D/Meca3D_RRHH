@@ -512,6 +512,24 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
+    getFechasVivasDeSolicitud:(solicitud)=> {
+  const fechasSolicitadas = Array.isArray(solicitud?.fechas) ? [...new Set(solicitud.fechas)] : [];
+
+  const parciales = Array.isArray(solicitud?.cancelacionesParciales)
+    ? solicitud.cancelacionesParciales.flatMap(c => Array.isArray(c.fechasCanceladas) ? c.fechasCanceladas : [])
+    : [];
+
+  // Si hubo cancelación total, la solicitud suele guardar 'fechasCanceladas'
+  // Fallback: si estado === 'cancelado' y no hay 'fechasCanceladas', considerar todo cancelado
+  const totales = Array.isArray(solicitud?.fechasCanceladas)
+    ? solicitud.fechasCanceladas
+    : (solicitud?.estado === 'cancelado' ? fechasSolicitadas : []);
+
+  const canceladasSet = new Set([...parciales, ...totales]);
+
+  return fechasSolicitadas.filter(f => !canceladasSet.has(f)).sort();
+    },
+
     obtenerSolicitudPorId: async (solicitudId) => {
       try {
         const docSnap = await getDoc(doc(db, 'VACACIONES', solicitudId));

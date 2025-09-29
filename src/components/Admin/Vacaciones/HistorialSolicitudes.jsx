@@ -45,6 +45,7 @@ const HistorialSolicitudes = () => {
     obtenerDiasCancelados,
     obtenerDiasDisfrutados,
     cancelarSolicitudParcial,
+    getFechasVivasDeSolicitud,
     cancelarSolicitudVacaciones
   } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
@@ -275,7 +276,7 @@ const HistorialSolicitudes = () => {
     switch (estado) {
       case 'aprobada': return 'verde';
       case 'denegada': return 'rojo';
-      case 'cancelado': return 'naranja';
+      case 'cancelado': return 'dorado';
       case 'pendiente': return 'azul';
       default: return 'default';
     }
@@ -295,6 +296,7 @@ const HistorialSolicitudes = () => {
     setDiasACancelar([]);
     setMotivoCancelacionParcial('');
     setDialogCancelarParcial(true);
+    console.log(getFechasVivasDeSolicitud(solicitud))
     };
 
     const handleConfirmarCancelacionParcial = async () => {
@@ -311,8 +313,9 @@ const HistorialSolicitudes = () => {
     try {
         setProcesandoCancelacion(true);
         let resultado
-        if (solicitudParaCancelar.horasSolicitadas<8){
-         resultado = await cancelarSolicitudVacaciones(
+        if (solicitudParaCancelar.horasSolicitadas<8 || getFechasVivasDeSolicitud(solicitudParaCancelar).length===diasACancelar.length) {
+          console.log(getFechasVivasDeSolicitud(solicitudParaCancelar), diasACancelar)
+          resultado = await cancelarSolicitudVacaciones(
           solicitudParaCancelar,
           motivoCancelacionParcial,
           true
@@ -881,9 +884,15 @@ const HistorialSolicitudes = () => {
                             sx={{ py:1, mb:-1, mt: 2, borderRadius:2 }}
                         >
                             <CancelOutlined sx={{fontSize:'1.5rem', mr:2}} />
-                            <Typography fontSize={'1.1rem'}>
+                            {solicitud.horasSolicitadas<8 
+                            ?<Typography fontSize={'1.1rem'}>
+                            Cancelar {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
+                            </Typography>
+                            :<Typography fontSize={'1.1rem'}>
                             Cancelar Días
                             </Typography>
+                            
+                          }
                         </Button>
                 )}
   
@@ -1006,7 +1015,7 @@ const HistorialSolicitudes = () => {
           <Grid size={{ xs: 6, sm: 3 }}>
             <Paper onClick={() => handleClickEstadistica('cancelado')}
               sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.50', borderRadius:3 }}>
-              <Typography variant="h4" fontWeight={600} color="warning.main">
+              <Typography variant="h4" fontWeight={600} color="dorado.main">
                 {estadisticasTotales.canceladas}
               </Typography>
               <Typography variant="body2">Canceladas</Typography>
@@ -1222,7 +1231,7 @@ const HistorialSolicitudes = () => {
                 fullWidth
                 multiline
                 rows={3}
-                label="Motivo de la cancelación parcial"
+                label="Motivo de la cancelación"
                 value={motivoCancelacionParcial}
                 onChange={(e) => setMotivoCancelacionParcial(e.target.value)}
                 placeholder="Ej: El empleado se reincorporó antes de lo previsto por motivos familiares"
