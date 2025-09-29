@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import axios from 'axios';
+import { iniciales } from '../Helpers';
 
 const opcionesPuesto = [
   'Fresador',
@@ -288,7 +289,7 @@ const OwnerProfile = ({ open, onClose }) => {
                   boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)'
                 }}
               >
-                {userProfile.nombre?.charAt(0) || 'U'}
+                {iniciales(userProfile.nombre) || 'J'}
               </Avatar>
               
               {editMode && !changePasswordMode &&(

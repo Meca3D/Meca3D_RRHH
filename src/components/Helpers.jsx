@@ -52,6 +52,30 @@ export function formatearNombre(nombre) {
   return `${primerNombre} ${inicialesApellidos}`;
 }
 
+export function iniciales(nombre) {
+  if (!nombre || typeof nombre !== 'string') {
+    return '';
+  }
+  
+  // Limpiar espacios extra y dividir por espacios
+  const partes = nombre.trim().split(/\s+/);
+  
+  if (partes.length === 0) {
+    return '';
+  }
+  
+  if (partes.length === 1) {
+    // Solo un nombre, devolver primera Inicial
+    return partes[0][0];
+  }
+  
+  // Inicial nombre + inicial del primer Apellido
+  const inicialNombre = partes[0][0];
+  const inicialApellido = partes[1][0]
+  
+  return inicialNombre+inicialApellido;
+}
+
 export function capitalizeFirstLetter(str) {
   if (typeof str !== 'string' || str.length === 0) {
     return str;

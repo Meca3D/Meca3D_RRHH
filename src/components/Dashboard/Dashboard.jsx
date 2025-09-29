@@ -24,7 +24,7 @@ import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import AddIcon from '@mui/icons-material/Add';
-import { formatearNombre } from '../Helpers';
+import { formatearNombre, iniciales } from '../Helpers';
 import { formatCurrency } from '../../utils/nominaUtils';
 
 const Dashboard = () => {
@@ -322,7 +322,7 @@ const Dashboard = () => {
             }}
           >
             {(!userProfile?.photoURL && userProfile?.nombre) ? 
-              userProfile.nombre.charAt(0).toUpperCase() : 
+              iniciales(userProfile.nombre) : 
               (user?.email?.[0] || 'U').toUpperCase()
             }
           </Avatar>

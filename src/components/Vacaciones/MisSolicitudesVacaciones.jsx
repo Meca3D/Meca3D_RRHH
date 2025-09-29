@@ -245,7 +245,6 @@ const MisSolicitudesVacaciones = () => {
   const SolicitudCard = ({ solicitud }) => {
     const { puedeEditar, puedeCancelar, puedeCancelarParcialmente, horasDisponibles } = puedeGestionarSolicitud(solicitud);
     const colorEstado = getColorEstado(solicitud.estado);
-
     const diasCancelados = solicitud.fechasCanceladas || []
     const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
     const cancelacionesParciales = solicitud.cancelacionesParciales || [];
@@ -411,9 +410,9 @@ const MisSolicitudesVacaciones = () => {
               <Collapse in={solicitudExpandida === solicitud.id}>
                 <Box sx={{ ml: 2, mb: 2 }}>
                   {ordenarFechas(solicitud.fechas).map(fecha => {
-                    const estaCancelado = diasCancelados.includes(fecha);
-                    const estaDisfrutado = diasDisfrutados.includes(fecha);
-                    const resto = solicitud.estado=="cancelado" && (!estaCancelado && !estaDisfrutado )
+                    const estaCancelado = diasCanceladosParcialmente.includes(fecha);
+                      const estaDisfrutado = diasDisfrutados.includes(fecha);
+                      const resto = diasCancelados.includes(fecha)
                     
                     return (
                       <Typography 
@@ -640,9 +639,7 @@ const MisSolicitudesVacaciones = () => {
               
               <Collapse in={cancelacionExpandida === solicitud.id}>
                 <Box sx={{ ml: 2, mb: 2 }}>
-                  {diasCancelados.map(fecha => {
-                    
-                    
+                  {diasCancelados.map(fecha => {            
                     return (
                       <Typography 
                         key={fecha} 
@@ -658,6 +655,8 @@ const MisSolicitudesVacaciones = () => {
                   })}
                 </Box>
               </Collapse>
+              </>
+              )}
               <Divider sx={{ my: 2, bgcolor:"black" }} />
                 <Box sx={{ mt: 1, bgcolor: 'dorado.fondo',p:1,mb:1 }}>
                   <Typography variant="h6" display="block">
@@ -677,7 +676,7 @@ const MisSolicitudesVacaciones = () => {
                     </Grid>
                   </Grid>
                 </Box>
-                </>)}
+                
                 </>
               )}
 

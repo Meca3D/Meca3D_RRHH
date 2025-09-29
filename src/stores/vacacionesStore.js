@@ -347,7 +347,7 @@ export const useVacacionesStore = create((set, get) => {
         },
 
         // Cancelar Solicitudes de Vacaciones
-        cancelarSolicitudVacaciones: async (solicitud, motivoCancelacion) => {
+        cancelarSolicitudVacaciones: async (solicitud, motivoCancelacion, esAdmin = false) => {
       try {
         if (!motivoCancelacion || motivoCancelacion.trim() === '') {
           throw new Error('Debes proporcionar un motivo para la cancelación');
@@ -388,13 +388,14 @@ export const useVacacionesStore = create((set, get) => {
           }
           const saldoAntes = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
           const saldoDespues = saldoAntes.disponibles + (solicitud.estado === 'aprobada' ? horasADevolver : 0);
+          const motivo=esAdmin?('Jefe: '+motivoCancelacion.trim()):motivoCancelacion.trim()
 
           // ✅ ACTUALIZAR estado a "cancelado"
           transaction.update(solicitudRef, {
             estado: 'cancelado',
             fechaCancelacion: formatYMD(new Date()),
             fechasCanceladas: diasDisponibles,
-            motivoCancelacion: motivoCancelacion.trim(),
+            motivoCancelacion: motivo,
             horasDisponiblesAntesCancelacion: saldoAntes.disponibles, 
             horasDisponiblesDespuesCancelacion: saldoDespues,  
             updatedAt: new Date()
@@ -533,7 +534,7 @@ export const useVacacionesStore = create((set, get) => {
       try {
         const cancelacionesQuery = query(
           collection(db, 'VACACIONES', solicitudId, 'cancelaciones_parciales'),
-          orderBy('fechaCancelacion', 'desc')
+          orderBy('fechaCancelacion', 'asc')
         );
         const snapshot = await getDocs(cancelacionesQuery);
         return snapshot.docs.map(doc => ({
@@ -939,7 +940,7 @@ export const useVacacionesStore = create((set, get) => {
         // ✅ OPTIMIZACIÓN: Obtener solicitudes aprobadas directamente desde Firestore
         // En lugar de usar solicitudesVacaciones que puede estar vacío
         const añoFecha = new Date(fecha).getFullYear();
-        const solicitudesAprobadas = await get().loadVacacionesAprobadas(añoFecha);
+        const solicitudesAprobadas = await get().loadVacacionesAprobadasConCancelaciones(añoFecha);
         
         // ✅ VALIDACIÓN: Asegurar que tenemos solicitudes válidas
         if (!Array.isArray(solicitudesAprobadas) || solicitudesAprobadas.length === 0) {
@@ -951,9 +952,11 @@ export const useVacacionesStore = create((set, get) => {
         }
         
         // Filtrar solo las solicitudes que incluyen la fecha específica
-        const solicitudesEnFecha = solicitudesAprobadas.filter(s => 
-          Array.isArray(s.fechas) && s.fechas.includes(fecha)
-        );
+        const solicitudesEnFecha = solicitudesAprobadas.filter(s => {
+          if (!Array.isArray(s.fechas) || !s.fechas.includes(fecha)) return false;
+          const set = s._diasCanceladosSet;
+          return !(set && set.has(fecha));
+        });
         
         if (solicitudesEnFecha.length === 0) {
           return { 
@@ -1139,6 +1142,21 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
+    loadVacacionesAprobadasConCancelaciones: async (año = new Date().getFullYear()) => {
+      const base = await get().loadVacacionesAprobadas(año);
+      const result = [];
+      for (const s of base) {
+        const cancelacionesParciales = await get().obtenerCancelacionesParciales(s.id);
+        const diasCancelados = get().obtenerDiasCancelados(cancelacionesParciales);
+        result.push({
+          ...s,
+          cancelacionesParciales,
+          _diasCanceladosSet: new Set(diasCancelados),
+        });
+      }
+      return result;
+    },
+
     // Cargar historial completo con filtros
     loadHistorialSolicitudes: async (filtros = {}) => {
       try {
@@ -1265,6 +1283,7 @@ export const useVacacionesStore = create((set, get) => {
 
       // ✅ VALIDACIÓN: Solo para solicitudes de días completos
       const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
+
       if (esHorasSueltas) {
         throw new Error('No se pueden cancelar parcialmente solicitudes de horas sueltas');
       }

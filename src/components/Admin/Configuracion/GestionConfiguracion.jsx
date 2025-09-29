@@ -12,56 +12,20 @@ import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
 
-const GestionVacaciones = () => {
+const GestionConfiguracion = () => {
   const navigate = useNavigate();
 
 
   const quickActions = [
-    {
-      id: 'pendientes',
-      title: 'Solicitudes Pendientes',
-      description: 'Vacaciones pendientes de revisar',
-      icon: MarkEmailUnreadOutlinedIcon,
-      route: '/admin/vacaciones/pendientes',
-      color: 'naranja.main',
-      bgColor: 'naranja.fondo',
-    },
-    {
-        id: 'calendario',
-        title: 'Calendario Vacaciones',
-        description: 'Calendario visual de vacaciones del personal',
-        icon: CalendarMonthOutlinedIcon,
-        route: '/admin/vacaciones/calendario',
-        color: 'verde.main',
-        bgColor: 'verde.fondo',
-    },
-    {
-      id: 'historial',
-      title: 'Historial de Solicitudes',
-      description: 'Consulta las solicitudes de los trabajadores',
-      icon: EventRepeatOutlinedIcon,
-      route: '/admin/vacaciones/historial',
-      color: 'azul.main',
-      bgColor: 'azul.fondo',
-    },
-      {
-        id: 'saldo',
-        title: 'Gestión de saldo',
-        description: 'Ajustar los días de vacaciones de los empleados',
-        icon: AccountBalanceOutlinedIcon,
-        route: '/admin/vacaciones/saldos', 
-        color: 'dorado.main',
-        bgColor: 'dorado.fondo',
-    },
         {
-      id: 'analytics',
-      title: 'Estadisticas',
-      description: 'Analisis y Estadisticas de Vacaciones',
-      icon: AssessmentOutlined,
-      route: '/admin/vacaciones/estadisticas',
-      color: 'rosa.main',
-      bgColor: 'rosa.fondo',
-    },
+      id: 'configuracion',
+      title: 'Configuración Ausencias',
+      description: 'Configura las opciones de vacaciones',
+      icon: SettingsOutlined,
+      route: '/admin/configuracion/configuracionVacas',
+      color: 'rojo.main',
+      bgColor: 'rojo.fondo',
+    }
   ];
 
   
@@ -94,15 +58,15 @@ const GestionVacaciones = () => {
         />
         
         <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
-            <BeachAccessOutlinedIcon sx={{ color:'purpura.main', fontSize: '4rem' }} />
+            <SettingsOutlined sx={{ color:'purpura.main', fontSize: '4rem' }} />
           <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap">
-            <Typography textAlign="center" color="purpura.main" variant="h4" fontWeight="bold" gutterBottom>
-              Gestión de Vacaciones
+            <Typography textAlign="center" color="purpura.main" variant="h5" fontWeight="bold" gutterBottom>
+              Configuraciones
             </Typography>
             <Box display="flex" alignItems="center" gap={1}>
            <Typography variant="h6" textAlign="center" color="purpura.main" fontWeight="bold">{}
            </Typography>
-           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">solicitudes pendientes
+           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">Autoaprobacion {}
            </Typography>
            </Box>
                          
@@ -163,4 +127,4 @@ const GestionVacaciones = () => {
             );
           };
 
-export default GestionVacaciones;
+export default GestionConfiguracion;

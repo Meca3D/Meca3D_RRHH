@@ -11,10 +11,13 @@ import OwnerProfile from '../UI/OwnerProfile';
 
 // Iconos
 import MenuIcon from '@mui/icons-material/Menu';
+import ConstructionOutlinedIcon from '@mui/icons-material/ConstructionOutlined';
 import PeopleIcon from '@mui/icons-material/People';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import PaymentIcon from '@mui/icons-material/Payment';
 import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import FastFoodOutlinedIcon from '@mui/icons-material/FastfoodOutlined';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
@@ -23,8 +26,7 @@ import { useAdminStats } from '../../hooks/useAdminStats';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, userProfile, isAuthenticated, isOwner } = useAuthStore();
-  const { dataLoaded, loading, ordersCount } = useGlobalData();
+  const { user, userProfile, isAuthenticated, isOwner, loading} = useAuthStore();
     const {
     empleadosCount,
     nominasTotalMes,
@@ -72,7 +74,7 @@ const AdminDashboard = () => {
       icon: BeachAccessIcon,
       color: 'purpura.main',
       bgColor: 'purpura.fondo',
-      action: () => navigate('/admin/vacaciones')
+      action: () => navigate('/admin/vacaciones/pendientes')
     },
     {
       title: 'Productos',
@@ -84,7 +86,27 @@ const AdminDashboard = () => {
       action: () => navigate('/admin/desayunos')
     }
   ];
+ const quickActions = [
 
+    {
+        id: 'calendario',
+        title: 'Calendario Vacaciones',
+        description: 'Calendario visual de vacaciones del personal',
+        icon: CalendarMonthOutlinedIcon,
+        route: '/admin/vacaciones/calendario',
+        color: 'verde.main',
+        bgColor: 'verde.fondo',
+    },
+      {
+        id: 'pedirDesayuno',
+        title: 'Pedir Desayuno',
+        description: 'Pedir Desayuno de los Sabados',
+        icon: FastFoodOutlinedIcon,
+        route: '/desayunos/orders',
+        color: 'dorado.main',
+        bgColor: 'dorado.fondo',
+    },
+  ]
   // Módulos de administración
   const adminModules = [
     {
@@ -95,20 +117,6 @@ const AdminDashboard = () => {
       onClick: () => navigate('/admin/empleados')
     },
     {
-      label: 'Gestión Desayunos',
-      icon: RestaurantIcon,
-      color: 'dorado.main',
-      bgColor: 'dorado.fondo',
-      onClick: () => navigate('/admin/desayunos')
-    },
-    {
-      label: 'Control Nóminas',
-      icon: PaymentIcon,
-      color: 'verde.main',
-      bgColor: 'verde.fondo',
-      onClick: () => navigate('/admin/nominas')
-    },
-    {
       label: 'Gestión Vacaciones',
       icon: BeachAccessIcon,
       color: 'purpura.main',
@@ -116,11 +124,25 @@ const AdminDashboard = () => {
       onClick: () => navigate('/admin/vacaciones')
     },
     {
+      label: 'Gestión Desayunos',
+      icon: RestaurantIcon,
+      color: 'dorado.main',
+      bgColor: 'dorado.fondo',
+      onClick: () => navigate('/admin/desayunos')
+    },
+    {
       label: 'Reportes Analytics',
       icon: BarChartIcon,
       color: 'naranja.main',
       bgColor: 'naranja.fondo',
       onClick: () => navigate('/admin/reportes')
+    },
+        {
+      label: 'Utilidades',
+      icon: ConstructionOutlinedIcon,
+      color: 'verde.main',
+      bgColor: 'verde.fondo',
+      onClick: () => navigate('/admin/utilidades')
     },
     {
       label: 'Configuración',
@@ -189,6 +211,7 @@ const AdminDashboard = () => {
     </Card>
   );
 
+  
   // Componente AdminModule igual que QuickAction
   const AdminModule = ({ label, icon: Icon, color, bgColor, onClick }) => (
     <Card
@@ -252,6 +275,72 @@ const AdminDashboard = () => {
         ))}
       </Grid>
 
+      {/* Grid de acciones rapidas para owner*/}
+      {isOwner()&&
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3,
+          mb:3, 
+          borderRadius: 4,
+          border: '1px solid',
+          borderColor: 'rgba(0,0,0,0.08)'
+        }}
+      >
+        <Typography textAlign="center" variant="h6" fontWeight="bold" color="text.primary" mb={3}>
+          Acciones Rápidas
+        </Typography>
+      <Grid container spacing={3}>
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Grid size={{xs:6 ,sm:3}}  key={action.id}>
+                    <Card 
+                      elevation={5}
+                      onClick={() => navigate(action.route)}
+                      sx={{ 
+                        height: '100%',
+                        border: '1px solid',
+                        borderColor: 'rgba(0,0,0,0.08)',
+                        borderRadius: 3,
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+                          transform: 'translateY(-2px)'
+                        },
+                      }}
+                         >
+                                <CardContent sx={{ p: 3 }}>
+                                  <Box display="flex" justifyContent="center" alignItems="flex-start"  mb={2}>
+                                    <Box 
+                                      sx={{ 
+                                        p: 1,
+                                        m: -2, 
+                                        borderRadius: 2, 
+                                        bgcolor: action.bgColor,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                      }}
+                                    >
+                                      <Icon sx={{ color: action.color, fontSize: 30 }} />
+                                    </Box>
+      
+                                  </Box>
+                                   <Box sx={{mt:3, display:'flex', flexDirection:'column', justifyItems:'center', justifyContent:'center', alignItems:'center', alignContent:'center'}}>
+             
+                                  <Typography textAlign="center" variant="body1" fontSize="1.1rem" fontWeight="600" sx={{ mb:-1, color:action.color, lineHeight: 1.2 }}>
+                                    {action.title}
+                                  </Typography>
+                                  </Box>
+                                </CardContent>
+                              </Card>
+                            </Grid>
+                          );
+                        })}
+                        </Grid>
+                        </Paper>
+                        }
       {/* Módulos de administración */}
       <Paper 
         elevation={0} 

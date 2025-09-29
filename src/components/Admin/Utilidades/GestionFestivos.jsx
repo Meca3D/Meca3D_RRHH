@@ -1,5 +1,5 @@
 // components/Admin/Vacaciones/GestionFestivos.jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
@@ -47,7 +47,6 @@ const GestionFestivos = () => {
   // Estados para menú contextual
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [festivoSeleccionado, setFestivoSeleccionado] = useState(null);
-  
   // Estados para dialogs
   const [dialogAñadir, setDialogAñadir] = useState(false);
   const [dialogEditar, setDialogEditar] = useState(false);
@@ -62,10 +61,9 @@ const GestionFestivos = () => {
   // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
-      const unsubscribe = loadFestivos(añoSeleccionado);
+      const unsubscribe = loadFestivos();
       const años = await obtenerAñosConFestivos();
       setAñosDisponibles(años);
-      
       return unsubscribe;
     };
     
@@ -76,6 +74,8 @@ const GestionFestivos = () => {
     
     return () => cleanup && cleanup();
   }, [añoSeleccionado, loadFestivos, obtenerAñosConFestivos]);
+
+  const festivosAño = useMemo(() => festivos.filter(f => f.fecha.startsWith(añoSeleccionado)), [festivos, añoSeleccionado])
 
   // Generar opciones de años (actual ± 5 años)
   const añosParaSelector = () => {
@@ -195,7 +195,6 @@ const GestionFestivos = () => {
       showError(error.message);
     }
   };
-
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
       {/* AppBar */}
@@ -211,7 +210,7 @@ const GestionFestivos = () => {
                 <IconButton
                   edge="start"
                   color="inherit"
-                  onClick={() => navigate('/admin/vacaciones')}
+                  onClick={() => navigate('/admin/utilidades')}
                   sx={{
                     bgcolor: 'rgba(255,255,255,0.1)',
                     '&:hover': {
@@ -331,7 +330,7 @@ const GestionFestivos = () => {
                 Festivos {añoSeleccionado}
               </Typography>
               <Chip 
-                label={`${festivos.length} festivos`}
+                label={`${festivosAño.length} festivos`}
                 
                 sx={{ bgcolor:"primary.main", color:"white"}}
                 size="medium"
@@ -345,7 +344,7 @@ const GestionFestivos = () => {
                   Cargando festivos...
                 </Typography>
               </Box>
-            ) : festivos.length === 0 ? (
+            ) : festivosAño.length === 0 ? (
               <Alert severity="info" sx={{ my: 2 }}>
                 No hay festivos configurados para {añoSeleccionado}.
                 <br />
@@ -353,7 +352,7 @@ const GestionFestivos = () => {
               </Alert>
             ) : (
               <List>
-                {festivos.map((festivo, index) => (
+                {festivosAño.map((festivo, index) => (
                   <ListItem
                     key={`${festivo.fecha}-${festivo.nombre}`}
                     sx={{

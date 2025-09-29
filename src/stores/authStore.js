@@ -237,7 +237,7 @@ logout: async () => {
     isCocinero: () => get().userRole === 'cocinero',
     isLeaveAdmin: () => get().userRole === 'leaveAdmin',
     isOwner: () => get().userRole === 'owner',
-    isAdmin: () => get().userRole === 'admin',
+    isAdmin: () => () => ['leaveAdmin', 'admin'].includes(get().userRole),
     isUser: () => get().userRole === 'user',
     canManageUsers: () => ['owner', 'admin'].includes(get().userRole),
     isAdminOrOwner: () => ['admin', 'owner', 'leaveAdmin'].includes(get().userRole),

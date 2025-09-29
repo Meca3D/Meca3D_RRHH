@@ -44,7 +44,8 @@ const HistorialSolicitudes = () => {
     obtenerDatosUsuarios,
     obtenerDiasCancelados,
     obtenerDiasDisfrutados,
-    cancelarSolicitudParcial
+    cancelarSolicitudParcial,
+    cancelarSolicitudVacaciones
   } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
 
@@ -309,17 +310,27 @@ const HistorialSolicitudes = () => {
 
     try {
         setProcesandoCancelacion(true);
-        
-      const resultado = await cancelarSolicitudParcial(
+        let resultado
+        if (solicitudParaCancelar.horasSolicitadas<8){
+         resultado = await cancelarSolicitudVacaciones(
+          solicitudParaCancelar,
+          motivoCancelacionParcial,
+          true
+         )
+         showSuccess(
+        `Cancelación procesada correctamente. (${formatearTiempoVacasLargo(solicitudParaCancelar.horasSolicitadas)})`
+        );
+        } else {
+        resultado = await cancelarSolicitudParcial(
         solicitudParaCancelar,
         diasACancelar,
         motivoCancelacionParcial,
-        true // 
+        true // es admin
       );
-
-        showSuccess(
-        `Cancelación parcial procesada correctamente. (${resultado.diasCancelados} días)`
-        );
+      showSuccess(
+      `Cancelación parcial procesada correctamente. (${resultado.diasCancelados} días)`
+      );
+      }
         setDialogCancelarParcial(false);
         setSolicitudParaCancelar(null);
         setDiasACancelar([]);
@@ -355,18 +366,20 @@ const HistorialSolicitudes = () => {
 
     return {
       puedeCancelarParcialmente: solicitud.estado === 'aprobada'
-        && !esHorasSueltas
-        && diasDisponibles.length > 1, // Admin sin restricción de fechas pasadas
-      diasDisponibles
+        //&& !esHorasSueltas
+        && !solicitud.esAjusteSaldo, // Admin sin restricción de fechas pasadas
+      horasDisponibles:esHorasSueltas ? solicitud.horasSolicitadas : diasDisponibles,
+      esHorasSueltas
     };
   };
 
     const SolicitudCard = ({ solicitud }) => {
-      const { puedeCancelarParcialmente, diasDisponibles } = puedeGestionarSolicitud(solicitud);
+      const { puedeCancelarParcialmente, horasDisponibles } = puedeGestionarSolicitud(solicitud);
       const colorEstado = getColorEstado(solicitud.estado);
-      const diasCancelados = obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
+      const diasCancelados = solicitud.fechasCanceladas || [];
       const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
       const cancelacionesParciales = solicitud.cancelacionesParciales || [];
+      const diasCanceladosParcialmente=obtenerDiasCancelados(cancelacionesParciales)
       const tieneCancelacionesParciales = cancelacionesParciales.length > 0;
       const userData = datosUsuarios[solicitud.solicitante] || {};
       const esExpandida = solicitudesExpanded[solicitud.id];
@@ -506,7 +519,7 @@ const HistorialSolicitudes = () => {
                 
   
             {/*  Lista de fechas con estados visuales */}
-                      {!solicitud?.esAjusteSaldo && (
+            {!solicitud?.esAjusteSaldo && (
             <>
             {solicitud.fechas.length === 1 ? (
               <Box  justifyContent='space-between' alignItems={'center'} sx={{
@@ -560,9 +573,9 @@ const HistorialSolicitudes = () => {
                 <Collapse in={solicitudExpandida === solicitud.id}>
                   <Box sx={{ ml: 2, mb: 2 }}>
                     {ordenarFechas(solicitud.fechas).map(fecha => {
-                      const estaCancelado = diasCancelados.includes(fecha);
+                      const estaCancelado = diasCanceladosParcialmente.includes(fecha);
                       const estaDisfrutado = diasDisfrutados.includes(fecha);
-                      const resto = solicitud.estado=="cancelado" && (!estaCancelado && !estaDisfrutado )
+                      const resto = diasCancelados.includes(fecha)
                       
                       return (
                         <Typography 
@@ -597,13 +610,46 @@ const HistorialSolicitudes = () => {
             )}
             </>
            )}
+            {solicitud.comentariosSolicitante && (
+              <Box  sx={{mt:1, p:1, bgcolor:solicitud.esAjusteSaldo
+                  ?
+                  solicitud.tipoAjuste === 'añadir' ? 'verde.fondo' : 
+                  solicitud.tipoAjuste === 'reducir' ? 'rojo.fondo' : 'azul.fondo'
+                  
+                  :
+                  solicitud.estado === 'aprobada' ? 'verde.fondo' : 
+                  solicitud.estado === 'cancelado' ? 'dorado.fondo' : 'rojo.fondo'}}>
+
+              <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
+                "{solicitud.comentariosSolicitante}"
+              </Typography>
+              </Box>
+            )}
+          {solicitud.comentariosAdmin && (
+              <Alert 
+                severity={solicitud.esAjusteSaldo
+                  ?
+                  solicitud.tipoAjuste === 'añadir' ? 'success' : 
+                  solicitud.tipoAjuste === 'reducir' ? 'error' : 'info'
+                  
+                  :
+                  solicitud.estado === 'aprobada' ? 'success' : 
+                  solicitud.estado === 'cancelado' ? 'info' : 'error'
+                } 
+                sx={{ mt: 1 }}
+              >
+                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                  <strong>Respuesta Jefe: </strong>{solicitud.comentariosAdmin}
+                </Typography>
+              </Alert>
+            )}
             
             {/* Acordeón de cancelaciones parciales */}
             {tieneCancelacionesParciales && (
               <>
                 <Divider sx={{ my: 2, bgcolor:"black" }} />
-                <Typography variant="body1" color="info.main" sx={{ mb: 1 }}>
-                  Días cancelados Parcialmente: {formatearTiempoVacasLargo(diasCancelados.length * 8)}
+                <Typography  sx={{ mb: 1,  fontWeight: 600, fontSize:'1.2rem' }}>
+                 Cancelado Parcialmente: {formatearTiempoVacasLargo(diasCanceladosParcialmente.length * 8)}
                 </Typography>         
                 <Box 
                   onClick={() => toggleCancelacionesExpanded(solicitud.id)}
@@ -688,37 +734,63 @@ const HistorialSolicitudes = () => {
               </>
             )}
   
-                {solicitud.comentariosSolicitante && (
-                  <Box bgcolor={'grey.50'} sx={{mt:1, p:1}}>
-                  <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
-                    "{solicitud.comentariosSolicitante}"
-                  </Typography>
-                  </Box>
-                )}
-  
   
                 {/*  Mostrar saldos en solicitudes canceladas */}
                 {solicitud.horasDisponiblesAntesCancelacion !== undefined && 
                 solicitud.horasDisponiblesAntesCancelacion!=solicitud.horasDisponiblesDespuesCancelacion && (
                 <>
                 <Divider sx={{ my: 2, bgcolor:"black" }} />
-                <Typography variant="body1" color="info.main" sx={{ mb: 1 }}>
-                  Días cancelados Totalmente: {formatearTiempoVacasLargo(diasDisponibles.length*8)}
-                </Typography>  
-                 <Box
-                  onClick={() => setCancelacionesFechasExpanded(cancelacionesFechasExpanded === solicitud.id ? null : solicitud.id)}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent:'space-between',
-                    cursor: 'pointer',
-                    p: 1,
-                    bgcolor: `rojo.fondo`,
-                    borderRadius: 1,
-                    '&:hover': { bgcolor: `rojo.fondoFuerte` },
-                    
-                  }}
-                >
+                              {solicitud.fechas.length === 1? (
+                                <>
+                                <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mb:1}}>
+                                Pedido Cancelado: {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
+                              </Typography>  
+                            <Box  justifyContent='space-between' alignItems={'center'} sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  cursor: 'pointer',
+                                  p: 1,
+                                  bgcolor: `dorado.fondo`,
+                                  borderRadius: 1,
+                                  '&:hover': { bgcolor: `dorado.fondoFuerte` }
+                            }}>
+                            <Typography fontSize={'1.15rem'}>
+                              {formatearFechaLarga(solicitud.fechas[0])}
+                            </Typography>
+                            {solicitud.horasSolicitadas<8 && (
+                              <Chip
+                                label ={formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
+                                size="small"
+                                      sx={{ 
+                                        py:0.5,
+                                        
+                                        bgcolor: 'rojo.main', 
+                                        color: 'white', 
+                                        fontWeight: 700,
+                                      }}
+                                    />
+                            )}
+                            </Box>
+                            </>
+                            ) : (
+                            <>
+                              <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mb:1}}>
+                                Pedido Cancelado: {formatearTiempoVacasLargo(horasDisponibles.length*8)}
+                              </Typography> 
+                               <Box
+                                onClick={() => setCancelacionesFechasExpanded(cancelacionesFechasExpanded === solicitud.id ? null : solicitud.id)}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent:'space-between',
+                                  cursor: 'pointer',
+                                  p: 1,
+                                  bgcolor: `rojo.fondo`,
+                                  borderRadius: 1,
+                                  '&:hover': { bgcolor: `rojo.fondoFuerte` },
+                                  
+                                }}
+                              >
                   <Typography variant="body1">
                     Fechas Canceladas 
                   </Typography>
@@ -727,7 +799,7 @@ const HistorialSolicitudes = () => {
                 
                 <Collapse in={cancelacionesFechasExpanded === solicitud.id}>
                   <Box sx={{ ml: 2, mb: 2 }}>
-                    {ordenarFechas(diasDisponibles).map(fecha => {
+                    {ordenarFechas(diasCancelados).map(fecha => {
                       
                       
                       return (
@@ -745,6 +817,8 @@ const HistorialSolicitudes = () => {
                     })}
                   </Box>
                 </Collapse>
+                 </>
+                  )}
                 <Divider sx={{ my: 2, bgcolor:"black" }} />
                   <Box sx={{ mt: 1, bgcolor: 'dorado.fondo',p:1,mb:1 }}>
                     <Typography variant="h6" display="block">
@@ -764,9 +838,10 @@ const HistorialSolicitudes = () => {
                       </Grid>
                     </Grid>
                   </Box>
-                  </>
+                 
+               
+                </>
                 )}
-  
                 {/* Mostrar motivo de cancelación si existe */}
                 {solicitud.motivoCancelacion && (
                   <Alert 
@@ -779,24 +854,6 @@ const HistorialSolicitudes = () => {
                   </Alert>
                 )} 
   
-                {solicitud.comentariosAdmin && (
-                  <Alert 
-                    severity={solicitud.esAjusteSaldo
-                      ?
-                      solicitud.tipoAjuste === 'añadir' ? 'success' : 
-                      solicitud.tipoAjuste === 'reducir' ? 'error' : 'info'
-                      
-                      :
-                      solicitud.estado === 'aprobada' ? 'success' : 
-                      solicitud.estado === 'cancelado' ? 'info' : 'error'
-                    } 
-                    sx={{ mt: 1 }}
-                  >
-                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                      <strong>Respuesta Jefe: </strong>{solicitud.comentariosAdmin}
-                    </Typography>
-                  </Alert>
-                )}
                 </Collapse>
               </Grid>
             {/* Acciones*/}
@@ -825,7 +882,7 @@ const HistorialSolicitudes = () => {
                         >
                             <CancelOutlined sx={{fontSize:'1.5rem', mr:2}} />
                             <Typography fontSize={'1.1rem'}>
-                            Cancelar Parcialmente
+                            Cancelar Días
                             </Typography>
                         </Button>
                 )}
@@ -1198,9 +1255,14 @@ const HistorialSolicitudes = () => {
             sx={{textTransform: 'none', py:1.5}}
             startIcon={procesandoCancelacion ? <CircularProgress size={20} /> : <CancelOutlined />}
             >
-            <Typography fontSize={'1.1rem'}>
-            {procesandoCancelacion ? 'Procesando...' : `Cancelar ${diasACancelar.length} día${diasACancelar.length==1?"":'s'}`}
-            </Typography>
+              {solicitudParaCancelar?.horasSolicitadas<8
+                ? <Typography fontSize={'1.1rem'}>
+                    {procesandoCancelacion ? 'Procesando...' : `Cancelar ${solicitudParaCancelar.horasSolicitadas} hora${solicitudParaCancelar.horasSolicitadas==1?"":'s'}`}
+                  </Typography>
+                : <Typography fontSize={'1.1rem'}>
+                    {procesandoCancelacion ? 'Procesando...' : `Cancelar ${diasACancelar.length} día${diasACancelar.length==1?"":'s'}`}
+                 </Typography>
+              }
             </Button>
         </DialogActions>
         </Dialog>

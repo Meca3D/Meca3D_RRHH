@@ -4,6 +4,7 @@ import {
   CardActionArea, Container, Fab, Paper,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import ConstructionOutlinedIcon from '@mui/icons-material/ConstructionOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import MarkEmailUnreadOutlinedIcon from '@mui/icons-material/MarkEmailUnreadOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
@@ -12,56 +13,22 @@ import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
 
-const GestionVacaciones = () => {
+const GestionUtilidades = () => {
   const navigate = useNavigate();
 
 
   const quickActions = [
+
     {
-      id: 'pendientes',
-      title: 'Solicitudes Pendientes',
-      description: 'Vacaciones pendientes de revisar',
-      icon: MarkEmailUnreadOutlinedIcon,
-      route: '/admin/vacaciones/pendientes',
-      color: 'naranja.main',
-      bgColor: 'naranja.fondo',
+      id: 'festivos',
+      title: 'Gestion de Festivos',
+      description: 'Gestiona los días de fiesta',
+      icon: EventAvailableOutlinedIcon,
+      route: '/admin/utilidades/festivos',
+      color: 'rojo.main',
+      bgColor: 'rojo.fondo',
     },
-    {
-        id: 'calendario',
-        title: 'Calendario Vacaciones',
-        description: 'Calendario visual de vacaciones del personal',
-        icon: CalendarMonthOutlinedIcon,
-        route: '/admin/vacaciones/calendario',
-        color: 'verde.main',
-        bgColor: 'verde.fondo',
-    },
-    {
-      id: 'historial',
-      title: 'Historial de Solicitudes',
-      description: 'Consulta las solicitudes de los trabajadores',
-      icon: EventRepeatOutlinedIcon,
-      route: '/admin/vacaciones/historial',
-      color: 'azul.main',
-      bgColor: 'azul.fondo',
-    },
-      {
-        id: 'saldo',
-        title: 'Gestión de saldo',
-        description: 'Ajustar los días de vacaciones de los empleados',
-        icon: AccountBalanceOutlinedIcon,
-        route: '/admin/vacaciones/saldos', 
-        color: 'dorado.main',
-        bgColor: 'dorado.fondo',
-    },
-        {
-      id: 'analytics',
-      title: 'Estadisticas',
-      description: 'Analisis y Estadisticas de Vacaciones',
-      icon: AssessmentOutlined,
-      route: '/admin/vacaciones/estadisticas',
-      color: 'rosa.main',
-      bgColor: 'rosa.fondo',
-    },
+      
   ];
 
   
@@ -71,10 +38,10 @@ const GestionVacaciones = () => {
       <Paper 
         elevation={5} 
         sx={{ 
-          border:'1px solid purpura.main',
+          border:'1px solid verde.main',
           p: 2, 
           mb: 4, 
-          bgcolor: 'purpura.fondo', 
+          bgcolor: 'verde.fondo', 
           borderRadius: 4,
           position: 'relative',
           overflow: 'hidden'
@@ -88,21 +55,19 @@ const GestionVacaciones = () => {
             width: 150,
             height: 150,
             borderRadius: '50%',
-            bgcolor: 'purpura.fondo',
+            bgcolor: 'verde.fondo',
             zIndex: 0
           }}
         />
         
         <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
-            <BeachAccessOutlinedIcon sx={{ color:'purpura.main', fontSize: '4rem' }} />
+            <ConstructionOutlinedIcon sx={{ color:'verde.main', fontSize: '4rem' }} />
           <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap">
-            <Typography textAlign="center" color="purpura.main" variant="h4" fontWeight="bold" gutterBottom>
-              Gestión de Vacaciones
+            <Typography textAlign="center" color="verde.main" variant="h4" fontWeight="bold" gutterBottom>
+              Utilidades
             </Typography>
             <Box display="flex" alignItems="center" gap={1}>
-           <Typography variant="h6" textAlign="center" color="purpura.main" fontWeight="bold">{}
-           </Typography>
-           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">solicitudes pendientes
+           <Typography variant="h6" textAlign="center" color="verde.main" fontWeight="bold">
            </Typography>
            </Box>
                          
@@ -163,4 +128,4 @@ const GestionVacaciones = () => {
             );
           };
 
-export default GestionVacaciones;
+export default GestionUtilidades;

@@ -22,6 +22,7 @@ import UserProfile from '../UI/UserProfile';
 import OwnerProfile from '../UI/OwnerProfile';
 import { useBeforeInstallPrompt } from '../../hooks/useBeforeInstallPrompt';
 import InstallFAB from '../UI/InstallFAB'
+import {  iniciales } from '../Helpers';
 
 
 const MainLayout = () => {
@@ -541,19 +542,21 @@ const MainLayout = () => {
         }}
       >
         <Toolbar>
+          <Box display='flex' justifyContent='space-between' alignItems='center' width='100%'>
           {isOwner() ? (         
             <IconButton
               color="inherit"
               aria-label="home"
               edge="start"
               onClick={()=>navigate('/')}
-              sx={{ mr: 2, display: { sm: 'none' } }}
+              sx={{display: { sm: 'none' } }}
             >
             <HomeIcon sx={{fontSize:'2rem'}} />
           </IconButton>
           
           ):(  
               <>
+              <Box>
               <IconButton
               color="inherit"
               aria-label="open drawer"
@@ -568,14 +571,15 @@ const MainLayout = () => {
               aria-label="home"
               edge="start"
               onClick={()=>navigate('/')}
-              sx={{ mr: 2, display: { sm: 'none' } }}
+              sx={{display: { sm: 'none' } }}
             >
             <HomeIcon sx={{fontSize:'2rem'}} />
           </IconButton>  
+          </Box>
           </>     
             )}
           
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div"textAlign='center' sx={{ flexGrow: 1 }}>
             {getPageTitle()}
           </Typography>
           
@@ -587,7 +591,7 @@ const MainLayout = () => {
 
                 >
                   {!userProfile?.photoURL && (
-                    (userProfile?.nombre?.[0] || user?.email?.[0] || 'U').toUpperCase()
+                    (iniciales(userProfile?.nombre) || user?.email?.[0] || 'U').toUpperCase()
                   )}
                 </Avatar>
               </IconButton>
@@ -606,6 +610,7 @@ const MainLayout = () => {
             )}
             </>
           )}
+          </Box>
         </Toolbar>
       </AppBar>
       

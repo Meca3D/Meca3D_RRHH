@@ -23,12 +23,12 @@ const SelectorDiasCancelacion = ({
   const diasDisponiblesParaCancelar = solicitud.fechas.filter(fecha => {
     const yaFueCancelado = diasCancelados.includes(fecha);
     const esFechaPasada = esFechaPasadaOHoy(fecha);
-    const estaDisponible = !yaFueCancelado && (esAdmin || !esFechaPasada);
+    const estaDisponible = esAdmin ? !yaFueCancelado : (!yaFueCancelado && !esFechaPasada);
     return estaDisponible;
   });
 
   const handleToggleDia = (fecha) => {
-    if (esFechaPasadaOHoy(fecha)||diasCancelados.includes(fecha)) return; // No permitir seleccionar días pasados o hoy
+    if (!esAdmin && (esFechaPasadaOHoy(fecha)||diasCancelados.includes(fecha))) return; // No permitir seleccionar días pasados o hoy a users
     const nuevaSeleccion = diasSeleccionados.includes(fecha)
       ? diasSeleccionados.filter(d => d !== fecha)
       : [...diasSeleccionados, fecha];
@@ -111,6 +111,12 @@ const SelectorDiasCancelacion = ({
                     border: '1px solid',
                     borderColor: 'success.main',
                     fontStyle: 'italic'
+                  }),
+                  ...(estado === 'disfrutado' && estaSeleccionado && {
+                    backgroundColor: 'azul.fondo',
+                    color: 'verde.main',
+                    border: '1px solid',
+                    borderColor: 'primary.main'
                   }),
                   ...(estado === 'disponible' && estaSeleccionado && {
                     backgroundColor: 'primary.main',

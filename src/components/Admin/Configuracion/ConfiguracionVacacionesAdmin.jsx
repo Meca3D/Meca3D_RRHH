@@ -18,14 +18,14 @@ import { useVacacionesStore } from '../../../stores/vacacionesStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 
-const ConfiguracionVacaciones = () => {
+const ConfiguracionVacacionesAdmin = () => {
   const navigate = useNavigate();
   const { configVacaciones, loadConfigVacaciones, updateConfigVacaciones } = useVacacionesStore();
   const { showSuccess, showError} = useUIStore()
 
   const [localCfg, setLocalCfg] = useState(null);
   const [saving, setSaving] = useState(false);
-  const isEnabledByMode = ['porHoras','porHorasYsinConflictos'].includes(localCfg.autoAprobar?.modo);
+  const isEnabledByMode = ['porHoras','porHorasYsinConflictos'].includes(localCfg?.autoAprobar?.modo);
 
 
   useEffect(() => {
@@ -99,7 +99,7 @@ const ConfiguracionVacaciones = () => {
             <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate('/admin/vacaciones')}
+            onClick={() => navigate('/admin/configuracion')}
             sx={{
                 bgcolor: 'rgba(255,255,255,0.1)',
                 '&:hover': {
@@ -329,4 +329,4 @@ const ConfiguracionVacaciones = () => {
   );
 };
 
-export default ConfiguracionVacaciones;
+export default ConfiguracionVacacionesAdmin;

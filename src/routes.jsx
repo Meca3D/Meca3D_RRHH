@@ -29,12 +29,14 @@ import EliminarEmpleados from './components/Admin/Empleados/EliminarEmpleados';
 
 import GestionVacaciones from './components/Admin/Vacaciones/GestionVacaciones';
 import GestionarSaldos from './components/Admin/Vacaciones/GestionarSaldos';
-import GestionFestivos from './components/Admin/Vacaciones/GestionFestivos';
+import GestionFestivos from './components/Admin/Utilidades/GestionFestivos';
 import SolicitudesPendientes from './components/Admin/Vacaciones/SolicitudesPendientes';
 import CalendarioVacacionesAdmin from './components/Admin/Vacaciones/CalendarioVacacionesAdmin';
 import HistorialSolicitudes from './components/Admin/Vacaciones/HistorialSolicitudes';
 import EstadisticasVacasAdmin from './components/Admin/Vacaciones/EstadisticasVacasAdmin';
-import ConfiguracionVacacionesAdmin from './components/Admin/Vacaciones/ConfiguracionVacacionesAdmin';
+import ConfiguracionVacacionesAdmin from './components/Admin/Configuracion/ConfiguracionVacacionesAdmin';
+import GestionUtilidades from './components/Admin/Utilidades/GestionUtilidades';
+import GestionConfiguracion from './components/Admin/Configuracion/GestionConfiguracion';
 
 import Nominas from './components/Nominas/Nominas';
 import ConfigurarDatosSalariales from './components/Nominas/ConfigurarDatosSalariales';
@@ -133,12 +135,17 @@ const AppRoutes = () => {
         <Route path="admin/vacaciones" element={<AusenciasRoute><GestionVacaciones /></AusenciasRoute>} />
         <Route path="admin/vacaciones/pendientes" element={<AusenciasRoute><SolicitudesPendientes /></AusenciasRoute>} />
         <Route path="admin/vacaciones/saldos" element={<AusenciasRoute><GestionarSaldos /></AusenciasRoute>} />
-        <Route path="admin/vacaciones/festivos" element={<AusenciasRoute><GestionFestivos /></AusenciasRoute>} />
         <Route path="admin/vacaciones/calendario" element={<AusenciasRoute><CalendarioVacacionesAdmin /></AusenciasRoute>} />
         <Route path="admin/vacaciones/historial" element={<AusenciasRoute><HistorialSolicitudes /></AusenciasRoute>} />
         <Route path="admin/vacaciones/estadisticas" element={<AusenciasRoute><EstadisticasVacasAdmin /></AusenciasRoute>} />
-        <Route path="admin/vacaciones/configuracion" element={<AusenciasRoute><ConfiguracionVacacionesAdmin /></AusenciasRoute>} />
 
+        {/* Rutas de Utilidades */}
+        <Route path="admin/utilidades" element={<AusenciasRoute><GestionUtilidades /></AusenciasRoute>} />
+        <Route path="admin/utilidades/festivos" element={<AusenciasRoute><GestionFestivos /></AusenciasRoute>} />
+
+        {/* Rutas de configuracion */}
+        <Route path="admin/configuracion" element={<AusenciasRoute><GestionConfiguracion /></AusenciasRoute>} />
+        <Route path="admin/configuracion/configuracionVacas" element={<AusenciasRoute><ConfiguracionVacacionesAdmin /></AusenciasRoute>} />
 
          <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

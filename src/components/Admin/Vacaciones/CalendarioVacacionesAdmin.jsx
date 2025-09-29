@@ -31,8 +31,9 @@ const CalendarioVacacionesAdmin = () => {
   const navigate = useNavigate();
   const { 
     loadConfigVacaciones,
+    configVacaciones,
     loadFestivos,
-    loadVacacionesAprobadas,
+    loadVacacionesAprobadasConCancelaciones,
     calcularDisponibilidadPorFecha,
     detectarConflictos,
     obtenerEmpleadosConSolicitudes,
@@ -59,19 +60,19 @@ const CalendarioVacacionesAdmin = () => {
   const [loadingConflictos, setLoadingConflictos] = useState(false);
 
   const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-  loadConfigVacaciones()
+
   // ✅ useEffect 1: Carga inicial de datos CON cleanup
   useEffect(() => {
   const cargarDatos = async () => {
     setLoading(true);
     try {
       const año = mesActual.getFullYear();
-      
+      const unsubscribeConfig = loadConfigVacaciones()
       // ✅ Cargar festivos
       const unsubscribeFestivos = loadFestivos(año);
       
       // ✅ Cargar vacaciones aprobadas directamente desde Firestore
-      const vacaciones = await loadVacacionesAprobadas(año);
+      const vacaciones = await loadVacacionesAprobadasConCancelaciones(año);
       setVacacionesAprobadas(vacaciones);
       
       // Cargar próximas vacaciones usando la nueva función
@@ -106,7 +107,7 @@ const CalendarioVacacionesAdmin = () => {
   };
   
   cargarDatos();
-}, [mesActual, loadVacacionesAprobadas, obtenerDatosUsuarios, loadFestivos]);
+}, [mesActual, loadVacacionesAprobadasConCancelaciones, obtenerDatosUsuarios, loadFestivos]);
 
   
   // useEffect para detectar conflictos
@@ -230,7 +231,11 @@ const CalendarioVacacionesAdmin = () => {
   // Obtener vacaciones de un día específico
   const getVacacionesDia = (fecha) => {
     const fechaStr = formatYMD(fecha);
-    return vacacionesFiltradas.filter(v => v.fechas.includes(fechaStr));
+    return vacacionesFiltradas.filter(v => {
+        if (!v.fechas?.includes(fechaStr)) return false;
+        const set = v._diasCanceladosSet;
+        return !(set && set.has(fechaStr));
+      });
   };
 
   // Obtener color del día según disponibilidad y conflictos
@@ -293,17 +298,43 @@ const CalendarioVacacionesAdmin = () => {
     
     for (let mes = 0; mes < 12; mes++) {
       const fechaMes = new Date(año, mes, 1);
-      const vacacionesMes = vacacionesFiltradas.filter(v => {
-        const fechaVacacion = new Date(v.fechas[0]);
-        return fechaVacacion.getFullYear() === año && fechaVacacion.getMonth() === mes;
-      });
-      const personasUnicasDelMes = new Set(vacacionesMes.map(v => v.solicitante));
+      const vacacionesMes = vacacionesFiltradas.filter(v =>
+        Array.isArray(v.fechas) &&
+        v.fechas.some(f => {
+          const d = new Date(f);
+          const set = v._diasCanceladosSet;
+          const esMes = d.getFullYear() === año && d.getMonth() === mes;
+          return esMes && !(set && set.has(f));
+        })
+      );
+      const personasUnicasDelMes = new Set(
+          vacacionesFiltradas
+            .filter(v =>
+              Array.isArray(v.fechas) &&
+              v.fechas.some(f => {
+                const d = new Date(f);
+                const set = v._diasCanceladosSet;
+                const esMes = d.getFullYear() === año && d.getMonth() === mes;
+                return esMes && !(set && set.has(f));
+              })
+            )
+            .map(v => v.solicitante)
+        );
       
       meses.push({
         fecha: fechaMes,
         personasUnicas: personasUnicasDelMes.size,
         vacaciones: vacacionesMes.length,
-        diasTotales: vacacionesMes.reduce((acc, v) => acc + v.fechas.length, 0)
+        diasTotales: vacacionesFiltradas.reduce((acc, v) => {
+            if (!Array.isArray(v.fechas)) return acc;
+            const set = v._diasCanceladosSet;
+            const diasMes = v.fechas.filter(f => {
+              const d = new Date(f);
+              const esMes = d.getFullYear() === año && d.getMonth() === mes;
+              return esMes && !(set && set.has(f));
+            }).length;
+            return acc + diasMes;
+          }, 0)
       });
     }
 
@@ -633,13 +664,18 @@ const CalendarioVacacionesAdmin = () => {
 
                    {/* Vista Mensual con conteo de personas */}
                   {vistaActual === 'mensual' && (() => {
-                    const solicitudesDelMesActual = vacacionesFiltradas.filter(solicitud => {
-                    const primerDia = new Date(solicitud.fechas[0]);
-                    return primerDia.getFullYear() === mesActual.getFullYear() && 
-                          primerDia.getMonth() === mesActual.getMonth();
-                  });
+                    const solicitudesConFechasEnMes = vacacionesFiltradas.filter(s => {
+                      if (!Array.isArray(s.fechas)) return false;
+                      const set = s._diasCanceladosSet;
+                      return s.fechas.some(f => {
+                        const d = new Date(f);
+                        const esDelMes = d.getFullYear() === mesActual.getFullYear() && d.getMonth() === mesActual.getMonth();
+                        return esDelMes && !(set && set.has(f));
+                      });
+                    });
 
-                  const personasUnicasDelMes = new Set(solicitudesDelMesActual.map(s => s.solicitante));
+                    // ✅ Personas únicas con al menos 1 fecha útil en el mes
+                    const personasUnicasDelMes = new Set(solicitudesConFechasEnMes.map(s => s.solicitante));
 
                   return (
                     <Chip 
@@ -716,12 +752,12 @@ const CalendarioVacacionesAdmin = () => {
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Avatar sx={{ height: 22, width: 22, bgcolor:'grey.100', border: '1px solid grey' }}>
-                          <Typography color="black" sx={{ fontSize:'0.75rem'}}>1</Typography>
+                          <Typography color="black" sx={{ fontSize:'0.75rem'}}></Typography>
                         </Avatar> 
                         <Typography variant="caption">Personas Ausentes</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                         <Box sx={{ width: 20, height: 20, borderColor:'dorado.main', border: '2px solid' }} />
+                         <Box sx={{ width: 20, height: 25, borderColor:'dorado.main', borderRadius:0.5, border: '2px solid' }} />
                         <Typography variant="caption">Hoy</Typography>
                       </Box>
                     </Box>
@@ -817,10 +853,11 @@ const CalendarioVacacionesAdmin = () => {
                   //  Obtener vacaciones por día
                   const obtenerVacacionesPorDia = (fecha) => {
                     const fechaStr = formatYMD(fecha);
-                    return vacacionesAprobadas.filter(vacacion => 
-                      vacacion.fechas.includes(fechaStr)
-                    );
-                  };
+                    return vacacionesAprobadas.filter(v => {
+                      if (!v.fechas?.includes(fechaStr)) return false;
+                      const set = v._diasCanceladosSet;
+                      return !(set && set.has(fechaStr));
+                      });}
 
                   //  Obtener etiqueta del día
                   const obtenerEtiquetaDia = (fecha) => {
@@ -966,23 +1003,28 @@ const CalendarioVacacionesAdmin = () => {
                 // ✅ ESTADÍSTICAS MENSUALES
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {(() => {
-                    const solicitudesDelMesActual = vacacionesFiltradas.filter(solicitud => {
-                      const primerDia = new Date(solicitud.fechas[0]);
-                      return primerDia.getFullYear() === mesActual.getFullYear() && 
-                            primerDia.getMonth() === mesActual.getMonth();
+                    // ✅ Solicitudes con al menos 1 fecha útil (no cancelada) en el mes visible
+                    const solicitudesConFechasEnMes = vacacionesFiltradas.filter(s => {
+                      if (!Array.isArray(s.fechas)) return false;
+                      const set = s._diasCanceladosSet;
+                      return s.fechas.some(f => {
+                        const d = new Date(f);
+                        const esDelMes = d.getFullYear() === mesActual.getFullYear() && d.getMonth() === mesActual.getMonth();
+                        return esDelMes && !(set && set.has(f));
+                      });
                     });
 
-                    const empleadosUnicosDelMes = new Set();
+                    // ✅ Personas únicas con al menos 1 fecha útil en el mes
+                    const empleadosUnicosDelMes = new Set(solicitudesConFechasEnMes.map(s => s.solicitante));
+
+                    // ✅ Días totales del mes (solo fechas no canceladas)
                     let diasTotalesDelMes = 0;
-                    
-                    solicitudesDelMesActual.forEach(solicitud => {
-                      empleadosUnicosDelMes.add(solicitud.solicitante);
-                      solicitud.fechas.forEach(fecha => {
-                        const fechaObj = new Date(fecha);
-                        if (fechaObj.getMonth() === mesActual.getMonth() && 
-                            fechaObj.getFullYear() === mesActual.getFullYear()) {
-                          diasTotalesDelMes++;
-                        }
+                    solicitudesConFechasEnMes.forEach(s => {
+                      const set = s._diasCanceladosSet;
+                      s.fechas.forEach(f => {
+                        const d = new Date(f);
+                        const esDelMes = d.getFullYear() === mesActual.getFullYear() && d.getMonth() === mesActual.getMonth();
+                        if (esDelMes && !(set && set.has(f))) diasTotalesDelMes++;
                       });
                     });
 
@@ -1020,11 +1062,26 @@ const CalendarioVacacionesAdmin = () => {
                       return primerDia.getFullYear() === añoActual;
                     });
 
-                    const empleadosUnicosDelAño = new Set(solicitudesDelAño.map(s => s.solicitante));
-                    const diasTotalesDelAño = solicitudesDelAño.reduce((acc, solicitud) => {
-                      return acc + solicitud.fechas.filter(fecha => {
-                        return new Date(fecha).getFullYear() === añoActual;
+                    const empleadosUnicosDelAño = new Set(
+                      solicitudesDelAño
+                        .filter(s =>
+                          Array.isArray(s.fechas) &&
+                          s.fechas.some(f => {
+                            const d = new Date(f);
+                            const set = s._diasCanceladosSet;
+                            return d.getFullYear() === añoActual && !(set && set.has(f));
+                          })
+                        )
+                        .map(s => s.solicitante)
+                    );
+                    const diasTotalesDelAño = solicitudesDelAño.reduce((acc, s) => {
+                      if (!Array.isArray(s.fechas)) return acc;
+                      const set = s._diasCanceladosSet;
+                      const dias = s.fechas.filter(f => {
+                        const d = new Date(f);
+                        return d.getFullYear() === añoActual && !(set && set.has(f));
                       }).length;
+                      return acc + dias;
                     }, 0);
 
                     return (
