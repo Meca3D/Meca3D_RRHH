@@ -1,12 +1,13 @@
+// components/Vacaciones/SaldosVacaciones.jsx
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AppBar, Toolbar, Typography, Container, Box, Grid, Card, CardContent, CardHeader, Collapse,
-  IconButton, Chip, Divider, Button, CircularProgress, MenuItem, Select, FormControl, InputLabel
+  IconButton, Chip, Button, CircularProgress, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
- import { format, parse, isValid, addMonths, startOfYear,subYears, lastDayOfYear  } from 'date-fns'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format, parse, isValid, addMonths,subYears, startOfYear, lastDayOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import TimelineIcon from '@mui/icons-material/Timeline';
@@ -15,28 +16,23 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import ExpandLess from '@mui/icons-material/ExpandLess';
-import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
 
-import { useAuthStore } from '../../stores/authStore';
-import { useVacacionesStore } from '../../stores/vacacionesStore';
-import { formatearFechaCorta } from '../../utils/dateUtils';
-import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../utils/vacacionesUtils';
+import { useVacacionesStore } from '../../../stores/vacacionesStore';
+import { useEmpleadosStore } from '../../../stores/empleadosStore';
+import { formatearFechaCorta } from '../../../utils/dateUtils';
+import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable'
+import autoTable from 'jspdf-autotable';
 
 const toYMD = (d) => {
   if (!d) return '';
-  // Date válida
   if (d instanceof Date && isValid(d)) return format(d, 'yyyy-MM-dd');
-  // Firestore Timestamp u objeto con toDate()
   if (d && typeof d.toDate === 'function') {
     const dd = d.toDate();
     return isValid(dd) ? format(dd, 'yyyy-MM-dd') : '';
   }
-  // String 'yyyy-MM-dd'
   if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  // String 'dd/MM/yyyy'
   if (typeof d === 'string') {
     const parsed = parse(d, 'dd/MM/yyyy', new Date());
     return isValid(parsed) ? format(parsed, 'yyyy-MM-dd') : '';
@@ -44,40 +40,54 @@ const toYMD = (d) => {
   return '';
 };
 
-export default function MiSaldoVacaciones() {
+export default function SaldosVacaciones() {
   const navigate = useNavigate();
-  const user = useAuthStore(s => s.user);
-  const {userProfile}=useAuthStore()
-  const getEventosSaldoUsuarioPeriodo = useVacacionesStore(s => s.getEventosSaldoUsuarioPeriodo);
-  const [expanded, setExpanded] = useState({});
-  const [fechasExpandidas,setFechasExpandidas]=useState(null)
 
-  const [periodo, setPeriodo] = useState('year'); // '3m' | '6m' | 'year' | 'custom'
+  // Empleados
+  const empleados = useEmpleadosStore(s => s.empleados);
+  const fetchEmpleados = useEmpleadosStore(s => s.fetchEmpleados);
+  const [empleadoEmail, setEmpleadoEmail] = useState('');
+
+  // Eventos de saldo
+  const getEventosSaldoUsuarioPeriodo = useVacacionesStore(s => s.getEventosSaldoUsuarioPeriodo);
+
+  // UI estado
+  const [expanded, setExpanded] = useState({});
+  const [fechasExpandidas, setFechasExpandidas] = useState(null);
+  const [periodo, setPeriodo] = useState('year');
   const [inicio, setInicio] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); d.setHours(0,0,0,0); return d; });
   const [fin, setFin] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [loading, setLoading] = useState(false);
   const [eventos, setEventos] = useState([]);
   const [saldoInicial, setSaldoInicial] = useState(null);
 
-  // Ajuste de fechas cuando cambia el periodo
+  // Cargar empleados en tiempo real
   useEffect(() => {
-    if (periodo === '3m') { const hoy = new Date(); setInicio(addMonths(hoy, -3)); setFin(hoy); 
-    } else if (periodo === '6m') { const hoy = new Date(); setInicio(addMonths(hoy, -6)); setFin(hoy); 
-    } else if (periodo === 'year') { setInicio(startOfYear(new Date())); setFin(new Date());      
-    } else if (periodo === 'pastyear') {setInicio(startOfYear(subYears(new Date(), 1))); setFin(lastDayOfYear(subYears(new Date(), 1)))}
+    const off = fetchEmpleados();
+    return () => { if (typeof off === 'function') off(); };
+  }, [fetchEmpleados]);
+
+  // Ajustar fechas por periodo
+  useEffect(() => {
+    const hoy = new Date();
+    if (periodo === '3m') { setInicio(addMonths(hoy, -3)); setFin(hoy); }
+    else if (periodo === '6m') { setInicio(addMonths(hoy, -6)); setFin(hoy); }
+    else if (periodo === 'year') { setInicio(startOfYear(hoy)); setFin(hoy); 
+     } else if (periodo === 'pastyear') {setInicio(startOfYear(subYears(new Date(), 1))); setFin(lastDayOfYear(subYears(new Date(), 1)))}
+    
   }, [periodo]);
 
   const cargar = useCallback(async () => {
-    if (!user?.email) return;
+    if (!empleadoEmail) return;
     setLoading(true);
     try {
-      const { eventos, saldoInicial } = await getEventosSaldoUsuarioPeriodo(user.email, toYMD(inicio), toYMD(fin))
+      const { eventos, saldoInicial } = await getEventosSaldoUsuarioPeriodo(empleadoEmail, toYMD(inicio), toYMD(fin));
       setEventos(eventos);
       setSaldoInicial(saldoInicial);
     } finally {
       setLoading(false);
     }
-  }, [user?.email, inicio, fin, getEventosSaldoUsuarioPeriodo]);
+  }, [empleadoEmail, inicio, fin, getEventosSaldoUsuarioPeriodo]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -90,14 +100,15 @@ export default function MiSaldoVacaciones() {
     return { saldoInicial: inicial, saldoFinal, variacion: (saldoFinal - inicial) };
   }, [eventos, saldoInicial]);
 
-    const colorChip = (tipo, delta) => {
-      if (tipo === 'denegada') return 'default';
-      if (tipo === 'ajuste') return delta >= 0 ? 'success' : 'error';
-      return delta >= 0 ? 'success' : 'error';
-    };
-    const IconoDelta = ({ delta }) => delta >= 0 ? <TrendingUpIcon fontSize="small" /> : <TrendingDownIcon fontSize="small" />;
+  const colorChip = (tipo, delta) => {
+    if (tipo === 'denegada') return 'default';
+    if (tipo === 'ajuste') return delta >= 0 ? 'success' : 'error';
+    return delta >= 0 ? 'success' : 'error';
+  };
+  const IconoDelta = ({ delta }) => delta >= 0 ? <TrendingUpIcon fontSize="small" /> : <TrendingDownIcon fontSize="small" />;
 
-    const loadLogo = (src) => new Promise((resolve, reject) => {
+  // Logo para PDF
+  const loadLogo = (src) => new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -108,24 +119,28 @@ export default function MiSaldoVacaciones() {
       const dataUrl = canvas.toDataURL('image/png');
       resolve({ dataUrl, w: img.naturalWidth, h: img.naturalHeight });
     };
-    img.onerror = () => resolve(null)
+    img.onerror = () => resolve(null);
     img.src = src;
   });
 
-  const exportarPDF = async () =>  {
+  const exportarPDF = async () => {
     const nbDate = (s) => String(s).replace(/(\d{1,2})\s+([A-Za-zÁÉÍÓÚáéíóúñ]+)\s+(\d{4})/g, '$1\u00A0$2\u00A0$3');
     const chunk = (arr, size) => arr.reduce((acc, _, i) => (i % size ? acc : [...acc, arr.slice(i, i + size)]), []);
     const formatFechasBloques = (fechas, porLinea = 4) => {
-    if (!Array.isArray(fechas) || fechas.length === 0) return '-';
-    const fmt = fechas.map(d => nbDate(formatearFechaCorta(d)));
-    return chunk(fmt, porLinea).map(gr => gr.join(', ')).join('\n'); // saltos explícitos entre bloques
-  };
+      if (!Array.isArray(fechas) || fechas.length === 0) return '-';
+      const fmt = fechas.map(d => nbDate(formatearFechaCorta(d)));
+      return chunk(fmt, porLinea).map(gr => gr.join(', ')).join('\n');
+    };
+
+    const emp = empleados.find(e => e.email === empleadoEmail);
+    const nombreEmp = emp?.nombre || empleadoEmail;
+
     const MARGIN = { right: 8, left: 8 };
     const doc = new jsPDF();
     const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
+
     const logoInfo = await loadLogo('/logo.png');
-    let yStart = 34; // valor por defecto si no hay logo
+    let yStart = 34;
     if (logoInfo) {
       const { dataUrl, w, h } = logoInfo;
       const logoW = 30;
@@ -133,66 +148,64 @@ export default function MiSaldoVacaciones() {
       const xLogo = pageW - MARGIN.right - logoW;
       const yLogo = 2;
       doc.addImage(dataUrl, 'PNG', xLogo, yLogo, logoW, logoH);
-      yStart = Math.max(yStart, yLogo + logoH + 2); 
+      yStart = Math.max(yStart, yLogo + logoH + 2);
     }
 
     doc.setFontSize(14);
-    doc.text('Evolución del saldo de vacaciones', 14, 16);
+    doc.text(`Evolución del saldo de vacaciones — ${nombreEmp}`, 14, 16);
     doc.setFontSize(10);
     doc.text(`Periodo: ${formatearFechaCorta(toYMD(inicio))} a ${formatearFechaCorta(toYMD(fin))}`, 14, 22);
-    doc.text(`Saldo inicial: ${formatearTiempoVacasLargo(resumen.saldoInicial) ?? '-'}  |  Saldo final: ${formatearTiempoVacasLargo(resumen.saldoFinal) ?? '-'}  |  Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(resumen.variacion))} `, 14, 28);
+    doc.text(`Saldo inicial: ${formatearTiempoVacasLargo(resumen.saldoInicial) ?? '-'} | Saldo final: ${formatearTiempoVacasLargo(resumen.saldoFinal) ?? '-'} | Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(resumen.variacion))}`, 14, 28);
 
     const rows = (eventos || []).map(e => {
-    const adminShort = e.comentariosAdmin ? String(e.comentariosAdmin).trim() : '-';
-    const fechasSolicFmt = formatFechasBloques(e.fechasSolicitadas, 4);
-    const fechasCancFmt  = formatFechasBloques(e.fechasCanceladas, 4);
+      const adminShort = e.comentariosAdmin ? String(e.comentariosAdmin).trim() : '-';
+      const fechasSolicFmt = formatFechasBloques(e.fechasSolicitadas, 4);
+      const fechasCancFmt = formatFechasBloques(e.fechasCanceladas, 4);
+      const detalle = e.tipo === 'ajuste'
+        ? (adminShort || '-')
+        : (['aprobacion','denegada'].includes(e.tipo) ? fechasSolicFmt : fechasCancFmt);
+      const saldoAntesTxt = typeof e.saldoAntes === 'number' ? formatearTiempoVacas(e.saldoAntes) : '-';
+      const saldoDespuesTxt = typeof e.saldoDespues === 'number' ? formatearTiempoVacas(e.saldoDespues) : '-';
+      return [
+        formatearFechaCorta(e.fecha),
+        e.concepto || '',
+        formatearTiempoVacas(Math.abs(e.deltaHoras === 0 ? e.horasSolicitadas : e.deltaHoras)),
+        detalle,
+        saldoAntesTxt,
+        saldoDespuesTxt,
+      ];
+    });
 
-    const detalle = e.tipo === 'ajuste'
-      ? (adminShort || '-')
-      : (['aprobacion','denegada'].includes(e.tipo) ? fechasSolicFmt : fechasCancFmt);
+    autoTable(doc, {
+      startY: yStart,
+      margin: MARGIN,
+      head: [['Fecha', 'Concepto', 'Pedido', 'Fechas/Detalle', 'Saldo antes', 'Saldo después']],
+      headStyles: { halign: 'center', valign: 'middle', fillColor: [33, 150, 243] },
+      body: rows,
+      styles: { fontSize: 9, overflow: 'linebreak', valign: 'middle' },
+      columnStyles: {
+        0: { cellWidth: 20, halign: 'center' },
+        1: { cellWidth: 36, halign: 'center' },
+        2: { cellWidth: 15, halign: 'center' },
+        3: { cellWidth: 91, halign: 'center' },
+        4: { cellWidth: 15, halign: 'center' },
+        5: { cellWidth: 17, halign: 'center' },
+      },
+    });
 
-    const saldoAntesTxt   = typeof e.saldoAntes === 'number'   ? formatearTiempoVacas(e.saldoAntes)   : '-';
-    const saldoDespuesTxt = typeof e.saldoDespues === 'number' ? formatearTiempoVacas(e.saldoDespues) : '-';
-
-
-  return [
-    formatearFechaCorta(e.fecha),
-    e.concepto || '',
-    formatearTiempoVacas(Math.abs(e.deltaHoras===0?e.horasSolicitadas:e.deltaHoras)),
-    detalle,
-    saldoAntesTxt,
-    saldoDespuesTxt,
-  ];
-});
-
-autoTable(doc, {
-  startY: yStart,
-  margin: MARGIN,
-  head: [['Fecha', 'Concepto', 'Pedido', 'Fechas/Detalle', 'Saldo antes', 'Saldo después']],
-  headStyles: { halign: 'center', valign: 'middle', fillColor: [33, 150, 243]  }, 
-  body: rows,
-  styles: { fontSize: 9, overflow: 'linebreak',valign: 'middle' }, // respeta '\n' y corta por espacios
-  columnStyles: {
-    0: { cellWidth: 20, halign: 'center'},  // Fecha
-    1: { cellWidth: 36, halign: 'center' },  // Concepto
-    2: { cellWidth: 15, halign: 'center'},  // Delta
-    3: { cellWidth: 91, halign: 'center'},  // Fechas/Detalle (más ancho -> caben 4 fechas por línea)
-    4: { cellWidth: 15, halign: 'center' }, // Saldo antes
-    5: { cellWidth: 17, halign: 'center' }, // Saldo después
-  },
-});
-
-    doc.save(`saldo_vacaciones_${formatearFechaCorta(toYMD(inicio))}_${formatearFechaCorta(toYMD(fin))}.pdf`);
+    doc.save(`saldo_${nombreEmp}_${formatearFechaCorta(toYMD(inicio))}_${formatearFechaCorta(toYMD(fin))}.pdf`);
   };
 
   const toggle = (k) => setExpanded((s) => ({ ...s, [k]: !s[k] }));
+
+  const controlesDeshabilitados = !empleadoEmail;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
       <AppBar  
         sx={{ 
           overflow:'hidden',
-          background: 'linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%)',
+          background: 'linear-gradient(135deg, #ec5858ff 0%, #e03535ff 50%, #c23636ff 100%)',
           boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)',
           zIndex: 1100
         }}
@@ -201,7 +214,7 @@ autoTable(doc, {
           <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate('/vacaciones')}
+            onClick={() => navigate('/admin/vacaciones')}
             sx={{
               bgcolor: 'rgba(255,255,255,0.1)',
               '&:hover': {
@@ -224,7 +237,7 @@ autoTable(doc, {
                 lineHeight: 1.2
               }}
             >
-              Mi saldo
+              Evolucion de Saldos
             </Typography>
             <Typography 
               variant="caption" 
@@ -233,7 +246,7 @@ autoTable(doc, {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Estado actual de tus vacaciones
+              Estado actual de las vacaciones
             </Typography>
           </Box>
           <IconButton
@@ -250,13 +263,28 @@ autoTable(doc, {
 
       <Container maxWidth="sm" sx={{ pb: 3 }}>
         <Box sx={{ mt: 2 }}>
-          <Card sx={{p:2, my:2}}>
-            <Typography variant='h6' sx={{mb:2, mt:1, textAlign:'center', fontWeight:'bold'}}>
-              Seleccione Periodo a Visualizar
-
-            </Typography>
+          <Grid container spacing={2}>
+            {/* Selector de empleado */}
             <Grid size={{ xs: 12 }}>
-              <FormControl sx={{mb:2}} fullWidth>
+              <FormControl fullWidth disabled={loading}>
+                <InputLabel>Empleado</InputLabel>
+                <Select
+                  label="Empleado"
+                  value={empleadoEmail}
+                  onChange={(e) => setEmpleadoEmail(e.target.value)}
+                >
+                  {empleados.map(emp => (
+                    <MenuItem key={emp.email} value={emp.email}>
+                      {emp.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Selector de periodo */}
+            <Grid size={{ xs: 12 }}>
+              <FormControl fullWidth disabled={controlesDeshabilitados}>
                 <InputLabel>Periodo</InputLabel>
                 <Select
                   label="Periodo"
@@ -277,27 +305,35 @@ autoTable(doc, {
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <DatePicker
                     label="Desde"
-                    value={inicio} 
-                    onChange={(v) => v && setInicio(v)} 
+                    value={inicio}
+                    onChange={(v) => v && setInicio(v)}
                     format="dd/MM/yyyy"
-                    sx={{width:'100%'}}
-                    
+                    disabled={controlesDeshabilitados}
+                    sx={{ width: '100%' }}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <DatePicker
                     label="Hasta"
-                    value={fin} 
-                    onChange={(v) => v && setFin(v)} 
+                    value={fin}
+                    onChange={(v) => v && setFin(v)}
                     format="dd/MM/yyyy"
-                    sx={{width:'100%'}}
-                    
+                    disabled={controlesDeshabilitados}
+                    sx={{ width: '100%' }}
                   />
                 </Grid>
               </>
             )}
-           {eventos.length > 0 && (
+          </Grid>
+        </Box>
 
+        <Box sx={{ mt: 2 }}>
+            
+              {eventos.length === 0 ? (
+                <Card variant="outlined"><CardContent>
+                  <Typography variant="body2">No hay eventos en este periodo</Typography>
+                </CardContent></Card>
+              ) : (
             <Grid size={{ xs: 12 }}>
               <Box display="flex" gap={1} justifyContent='space-between' alignItems="center" flexWrap="wrap" sx={{mb:2}}>
                 <Box display='flex' flexDirection='column' alignItems='center'>
@@ -324,9 +360,7 @@ autoTable(doc, {
               </Box>
             </Grid>
            )}
-          </Card>
-        </Box>
-
+           </Box>
         <Box sx={{ mt: 2 }}>
 {loading ? (
   <Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>

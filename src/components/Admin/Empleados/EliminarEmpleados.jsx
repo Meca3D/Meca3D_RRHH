@@ -8,6 +8,7 @@ import {
   Button
 } from '@mui/material';
 import {
+  PersonRemoveOutlined,
   ArrowBackIosNew as ArrowBackIosNewIcon,
   DeleteOutlined as DeleteOutlinedIcon,
   Delete as DeleteIcon,
@@ -132,7 +133,7 @@ const EliminarEmpleados = () => {
               cursor: 'default'
             }}
           >
-            <DeleteOutlinedIcon sx={{fontSize:'2rem'}}/>
+            <PersonRemoveOutlined sx={{fontSize:'2rem'}}/>
           </IconButton>
         </Toolbar>
       </AppBar>

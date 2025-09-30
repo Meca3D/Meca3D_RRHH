@@ -2097,6 +2097,21 @@ ordenarEventosPorDiaCadena: (eventos, saldoInicialPeriodo = null) => {
   let cursor = saldoInicialPeriodo;
   let saldoInicialDetectado = saldoInicialPeriodo ?? null;
   let salida = [];
+  const valorDespues = (ev) =>
+  typeof ev.saldoDespues === 'number'
+    ? ev.saldoDespues
+    : (typeof ev.saldoAntes === 'number' && typeof ev.deltaHoras === 'number'
+        ? ev.saldoAntes + ev.deltaHoras
+        : null);
+
+    // Devuelve el saldo de arranque del día: un saldoAntes que no es saldoDespues de ningún otro evento del día
+    const findSourceSaldoDelDia = (arr) => {
+      const afters = new Set(arr.map(valorDespues).filter(v => typeof v === 'number'));
+      const sources = arr
+        .map(ev => ev.saldoAntes)
+        .filter(v => typeof v === 'number' && !afters.has(v));
+      return sources.length ? sources[0] : null;
+    };
 
   for (const f of fechas) {
     // Eventos del día f (orden preliminar por tipo para estabilidad si falta info)
@@ -2104,8 +2119,13 @@ ordenarEventosPorDiaCadena: (eventos, saldoInicialPeriodo = null) => {
       .filter(e => e.fecha === f)
       .sort((a, b) => (a.ordenDia ?? rank[a.tipo] ?? 99) - (b.ordenDia ?? rank[b.tipo] ?? 99));
 
-    // Si aún no tenemos cursor (primer día del periodo), usa el primer saldoAntes disponible
-    if (cursor == null) {
+    // Intentar fijar un saldo de arranque del día encadenando por balances
+    const source = findSourceSaldoDelDia(restantes);
+    if (cursor == null && source != null) {
+      cursor = source;
+      if (saldoInicialDetectado == null) saldoInicialDetectado = source;
+    } else if (cursor == null) {
+      // Fallback: si no se pudo inferir, usa el primer saldoAntes disponible para no bloquear la cadena
       const cand = restantes.find(x => typeof x.saldoAntes === 'number');
       if (cand) {
         cursor = cand.saldoAntes;

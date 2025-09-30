@@ -9,8 +9,8 @@ import {
   PersonAdd as PersonAddIcon,
   EditOutlined as EditIcon,
   PollOutlined as StatsIcon,
+  PersonRemove,
   People as PeopleIcon,
-  DeleteForeverOutlined as DeleteForeverOutlinedIcon,
 } from '@mui/icons-material';
 
 const GestionEmpleados = () => {
@@ -41,7 +41,7 @@ const GestionEmpleados = () => {
       id: 'borrar',
       title: 'Eliminar Empleado',
       subtitle: '',
-      icon: DeleteForeverOutlinedIcon,
+      icon: PersonRemove,
       color: 'rojo.main',
       bgColor: 'rojo.fondo',
       route: '/admin/empleados/eliminar'

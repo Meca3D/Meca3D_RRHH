@@ -201,7 +201,7 @@ const GestionFestivos = () => {
       <AppBar  
               sx={{ 
                 overflow:'hidden',
-                background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%)',
+                background: 'linear-gradient(135deg, #f16060ff 0%, #DC2626 50%, #B91C1C 100%)',
                 boxShadow: '0 2px 10px rgba(239, 68, 68, 0.2)',
                 zIndex: 1100
               }}

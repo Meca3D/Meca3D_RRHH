@@ -9,7 +9,7 @@ import {
   AddOutlined as AddIcon,
   HistoryOutlined as HistoryIcon,
   AssessmentOutlined as StatsIcon,
-  AccountBalanceWalletOutlined as WalletIcon
+  TrendingDown as TrendingDownIcon
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
 import { formatearTiempoVacas } from '../../utils/vacacionesUtils';
@@ -56,7 +56,7 @@ const Vacaciones = () => {
       subtitle: 'Horas disponibles',
       description: 'Resumen y movimientos',
       label: 'Saldo',
-      icon: WalletIcon,
+      icon: TrendingDownIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
       route: '/vacaciones/saldo'

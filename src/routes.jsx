@@ -34,6 +34,7 @@ import SolicitudesPendientes from './components/Admin/Vacaciones/SolicitudesPend
 import CalendarioVacacionesAdmin from './components/Admin/Vacaciones/CalendarioVacacionesAdmin';
 import HistorialSolicitudes from './components/Admin/Vacaciones/HistorialSolicitudes';
 import EstadisticasVacasAdmin from './components/Admin/Vacaciones/EstadisticasVacasAdmin';
+import SaldosVacaciones from './components/Admin/Vacaciones/SaldosVacaciones';
 import ConfiguracionVacacionesAdmin from './components/Admin/Configuracion/ConfiguracionVacacionesAdmin';
 import GestionUtilidades from './components/Admin/Utilidades/GestionUtilidades';
 import GestionConfiguracion from './components/Admin/Configuracion/GestionConfiguracion';
@@ -107,7 +108,7 @@ const AppRoutes = () => {
         <Route path="/vacaciones/editar/:solicitudId" element={<NoOwnerRoute><EditarSolicitudVacaciones /></NoOwnerRoute>} />
         <Route path="/vacaciones/solicitudes" element={<NoOwnerRoute><MisSolicitudesVacaciones /></NoOwnerRoute>} />
         <Route path="/vacaciones/saldo" element={<NoOwnerRoute><MiSaldoVacaciones /></NoOwnerRoute>} />
-        <Route path="/vacaciones/estadisticas" element={<NoOwnerRoute><CrearSolicitudVacaciones /></NoOwnerRoute>} />
+        <Route path="/vacaciones/estadisticas" element={<NoOwnerRoute></NoOwnerRoute>} />
         <Route path="/horas-extras" element={<NoOwnerRoute><HorasExtras /></NoOwnerRoute>} />
         <Route path="/horas-extras/registrar" element={<NoOwnerRoute><RegistrarHorasExtras /></NoOwnerRoute>} />
         <Route path="/horas-extras/gestionar" element={<NoOwnerRoute><GestionarHorasExtras /></NoOwnerRoute>} />
@@ -134,9 +135,10 @@ const AppRoutes = () => {
         {/* Rutas de Gestión de Vacaciones */}
         <Route path="admin/vacaciones" element={<AusenciasRoute><GestionVacaciones /></AusenciasRoute>} />
         <Route path="admin/vacaciones/pendientes" element={<AusenciasRoute><SolicitudesPendientes /></AusenciasRoute>} />
-        <Route path="admin/vacaciones/saldos" element={<AusenciasRoute><GestionarSaldos /></AusenciasRoute>} />
         <Route path="admin/vacaciones/calendario" element={<AusenciasRoute><CalendarioVacacionesAdmin /></AusenciasRoute>} />
         <Route path="admin/vacaciones/historial" element={<AusenciasRoute><HistorialSolicitudes /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/saldos" element={<AusenciasRoute><GestionarSaldos /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/evolucionsaldos" element={<AusenciasRoute><SaldosVacaciones /></AusenciasRoute>} />
         <Route path="admin/vacaciones/estadisticas" element={<AusenciasRoute><EstadisticasVacasAdmin /></AusenciasRoute>} />
 
         {/* Rutas de Utilidades */}

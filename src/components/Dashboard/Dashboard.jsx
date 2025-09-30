@@ -133,8 +133,8 @@ const Dashboard = () => {
         {
       label: 'Generar Nómina',
       icon: PostAddOutlinedIcon,
-      color:  'azul.main',
-      bgColor: 'azul.fondo',
+      color:  'verde.main',
+      bgColor: 'verde.fondo',
       onClick: () => navigate('/nominas/generar'),
     },
     {
@@ -160,7 +160,7 @@ const Dashboard = () => {
       onClick: () => navigate('/permisos')
     },
     {
-      label: 'Pedido Desayuno',
+      label: 'Pedidr Desayuno',
       icon: LocalCafeOutlinedIcon,
       color: 'dorado.main',
       bgColor: 'dorado.fondo',
