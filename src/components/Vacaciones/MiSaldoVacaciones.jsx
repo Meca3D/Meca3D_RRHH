@@ -19,7 +19,7 @@ import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
 
 import { useAuthStore } from '../../stores/authStore';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
-import { formatearFechaCorta } from '../../utils/dateUtils';
+import { formatearFechaCorta, formatearFechaEspanol2 } from '../../utils/dateUtils';
 import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../utils/vacacionesUtils';
 
 import jsPDF from 'jspdf';
@@ -356,17 +356,34 @@ autoTable(doc, {
                    {formatearTiempoVacas(e.saldoAntes )?? '-'} → {formatearTiempoVacas(e.saldoDespues) ?? '-'}
                 </Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap">
+                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap" sx={{mb:2}}>
                 <Typography variant="h6">
                   {e.concepto}
                 </Typography>
                 <Chip color={chipColor} size="small" label={<Typography fontSize='1rem'>{deltaTxt}</Typography>} />
                 
               </Box>
-            <Box display='flex' sx={{}}>
-              <IconButton onClick={() => toggle(key)} aria-label={abierto ? 'Contraer' : 'Expandir'}>
-                {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
-              </IconButton>
+            <Box 
+              display='flex'
+              justifyContent='space-around'
+              alignItems='center' 
+              borderRadius={2}
+              onClick={() => toggle(key)} aria-label={abierto ? 'Contraer' : 'Expandir'} 
+              bgcolor={ e.tipo === 'denegada' ? 'grey.100' 
+                : e.tipo ==='aprobacion' ? 'verde.fondo'
+                : e.tipo ==='cancelacion_parcial' ? 'naranja.fondo'
+                : e.tipo ==='cancelacion_total' ? 'rojo.fondo'
+                : e.tipo ==='ajuste' && e.tipoAjuste==="añadir" ? 'verde.fondo'
+                : e.tipo ==='ajuste' && e.tipoAjuste==="reducir" ? 'rojo.fondo'
+                : e.tipo ==='ajuste' && e.tipoAjuste==="establecer" ? 'azul.fondo'
+                : 'default'
+              } 
+              sx={{width:'100%'}}
+            >       
+              {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
+              {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
+              {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
+
               </Box>
               </>
             }           
@@ -376,10 +393,9 @@ autoTable(doc, {
               {e.tipo === 'aprobacion' && (
                 <>
                   {Array.isArray(e.fechasSolicitadas) && e.fechasSolicitadas.length > 0 && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'azul.fondo', p:1}}>
+                    <Box sx={{mt:-2, border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1}}>
                     
                     <Box
-                    onClick={() => setFechasExpandidas(fechasExpandidas === e.solicitudId+idx ? null : e.solicitudId+idx)}
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
@@ -388,10 +404,8 @@ autoTable(doc, {
                     }}
                   >
                   <Typography fontWeight={600} variant="body1">Fechas Solicitadas: </Typography>                    
-                    {fechasExpandidas === e.solicitudId+idx ? <ExpandLess /> : <ExpandMore />}
                   </Box>
-                    <Collapse in={fechasExpandidas === e.solicitudId+idx}>
-                      <Box sx={{ ml: 2 }}>
+                      <Box sx={{ }}>
                       {e.fechasSolicitadas.map(fecha=>{
                         return (
                           <Typography 
@@ -401,21 +415,20 @@ autoTable(doc, {
                               mb: 0.5,
                             }}
                           >
-                            • {formatearFechaCorta(fecha)} {esHorasSueltas &&`(${horasSolicitadas} ${horasSolicitadas===1?'hora':'horas'})`}
+                            • {formatearFechaEspanol2(fecha)} {esHorasSueltas &&`(${horasSolicitadas} ${horasSolicitadas===1?'hora':'horas'})`}
                           </Typography>)
                       })}
                       </Box>
-                      </Collapse>
                     </Box>
                   )}
                   {e.comentariosSolicitante && (
                   <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Comentario trabajador:</strong> {e.comentariosSolicitante}</Typography>
+                    <Typography variant="body1"><strong>Comentario trabajador:<br/></strong> {e.comentariosSolicitante}</Typography>
                     </Box>
                   )}
                   {e.comentariosAdmin && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'azul.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Comentario admin:</strong> {e.comentariosAdmin}</Typography>
+                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1, mt:1}}>
+                    <Typography variant="body1"><strong>Comentario Jefe:</strong><br/> {e.comentariosAdmin}</Typography>
                     </Box>
                   )}
                 </>
@@ -423,10 +436,9 @@ autoTable(doc, {
               {e.tipo === 'cancelacion_parcial' && (
                 <>
                   {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
-                     <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'naranja.fondo', p:1}}>
+                     <Box sx={{mt:-2,border:'1px solid black', borderRadius:2, bgcolor:'naranja.fondo', p:1}}>
                     
                     <Box
-                    onClick={() => setFechasExpandidas(fechasExpandidas === e.solicitudId+idx ? null : e.solicitudId+idx)}
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
@@ -434,11 +446,9 @@ autoTable(doc, {
                       cursor: 'pointer',                    
                     }}
                   >
-                  <Typography fontWeight={600} variant="body1">Fechas Canceladas: </Typography>                    
-                    {fechasExpandidas === e.solicitudId+idx ? <ExpandLess /> : <ExpandMore />}
+                  <Typography fontWeight={600} variant="body1">{e.fechasCanceladas?.length===1?'Fecha Cancelada':'Fechas Canceladas'} </Typography>                    
                   </Box>
-                    <Collapse in={fechasExpandidas === e.solicitudId+idx}>
-                      <Box sx={{ ml: 2 }}>
+                      <Box sx={{ }}>
                       {e.fechasCanceladas.map(fecha=>{
                         return (
                           <Typography 
@@ -448,16 +458,15 @@ autoTable(doc, {
                               mb: 0.5,
                             }}
                           >
-                            • {formatearFechaCorta(fecha)} 
+                            • {formatearFechaEspanol2(fecha)} 
                           </Typography>)
                       })}
                       </Box>
-                      </Collapse>
                     </Box>
                   )}
                   {e.motivoCancelacion && (
                     <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'naranja.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Motivo cancelación:</strong> {e.motivoCancelacion}</Typography>
+                    <Typography variant="body1"><strong>Motivo cancelación:</strong><br/> {e.motivoCancelacion}</Typography>
                     </Box>
                   )}
                 </>
@@ -465,10 +474,9 @@ autoTable(doc, {
               {e.tipo === 'cancelacion_total' && (
                 <>
                   {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'rojo.fondo', p:1}}>
+                    <Box sx={{mt:-2, border:'1px solid black', borderRadius:2, bgcolor:'rojo.fondo', p:1}}>
                     
                     <Box
-                    onClick={() => setFechasExpandidas(fechasExpandidas === e.solicitudId+idx ? null : e.solicitudId+idx)}
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
@@ -476,11 +484,9 @@ autoTable(doc, {
                       cursor: 'pointer',                    
                     }}
                   >
-                  <Typography fontWeight={600} variant="body1">Fechas Canceladas: </Typography>                    
-                    {fechasExpandidas === e.solicitudId+idx ? <ExpandLess /> : <ExpandMore />}
+                  <Typography fontWeight={600} variant="body1">{e.fechasCanceladas?.length===1?'Fecha Cancelada':'Fechas Canceladas'}</Typography>                    
                   </Box>
-                    <Collapse in={fechasExpandidas === e.solicitudId+idx}>
-                      <Box sx={{ ml: 2 }}>
+                      <Box sx={{ }}>
                       {e.fechasCanceladas.map(fecha=>{
                         return (
                           <Typography 
@@ -490,27 +496,26 @@ autoTable(doc, {
                               mb: 0.5,
                             }}
                           >
-                            • {formatearFechaCorta(fecha)} {esHorasSueltas &&`(${delta} ${delta===1?'hora':'horas'})`}
+                            • {formatearFechaEspanol2(fecha)} {esHorasSueltas &&`(${delta} ${delta===1?'hora':'horas'})`}
                           </Typography>)
                       })}
                       </Box>
-                      </Collapse>
                     </Box>
                   )}
                   {e.motivoCancelacion && (
                     <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'rojo.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Motivo cancelación:</strong> {e.motivoCancelacion}</Typography>
+                    <Typography variant="body1"><strong>Motivo cancelación:</strong><br/>{e.motivoCancelacion}</Typography>
                     </Box>
                   )}
                 </>
               )}
               {e.tipo === 'ajuste' && (
                 <>
-                <Box sx={{border:'1px solid black', borderRadius:2, p:1, bgcolor:e.tipoAjuste==="añadir"
-                                                                            ?'verde.fondo'
-                                                                            :e.tipoAjuste==="reducir"
-                                                                              ?'rojo.fondo'
-                                                                              :'azul.fondo'
+                <Box sx={{mt:-2,border:'1px solid black', borderRadius:2, p:1, bgcolor:e.tipoAjuste==="añadir"
+                                                                                ?'verde.fondo'
+                                                                                :e.tipoAjuste==="reducir"
+                                                                                  ?'rojo.fondo'
+                                                                                  :'azul.fondo'
                   }}>
                   {e.comentariosSolicitante && (
                     <Typography variant="body1">{e.comentariosSolicitante}</Typography>
@@ -530,10 +535,9 @@ autoTable(doc, {
               {e.tipo === 'denegada' && (
                 <>
                   {Array.isArray(e.fechasSolicitadas) && e.fechasSolicitadas.length > 0 && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'azul.fondo', p:1}}>
+                    <Box sx={{mt:-2, border:'1px solid black', borderRadius:2, bgcolor:'azul.fondo', p:1}}>
                     
                     <Box
-                    onClick={() => setFechasExpandidas(fechasExpandidas === e.solicitudId+idx ? null : e.solicitudId+idx)}
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
@@ -542,10 +546,8 @@ autoTable(doc, {
                     }}
                   >
                   <Typography fontWeight={600} variant="body1">Fechas Denegadas: </Typography>                    
-                    {fechasExpandidas === e.solicitudId+idx ? <ExpandLess /> : <ExpandMore />}
                   </Box>
-                    <Collapse in={fechasExpandidas === e.solicitudId+idx}>
-                      <Box sx={{ ml: 2 }}>
+                      <Box sx={{ }}>
                       {e.fechasSolicitadas.map(fecha=>{
                         return (
                           <Typography 
@@ -555,21 +557,20 @@ autoTable(doc, {
                               mb: 0.5,
                             }}
                           >
-                            • {formatearFechaCorta(fecha)} {esHorasSueltas &&`(${horasSolicitadas} ${horasSolicitadas===1?'hora':'horas'})`}
+                            • {formatearFechaEspanol2(fecha)} {esHorasSueltas &&`(${horasSolicitadas} ${horasSolicitadas===1?'hora':'horas'})`}
                           </Typography>)
                       })}
                       </Box>
-                      </Collapse>
                     </Box>
                   )}
                   {e.comentariosSolicitante && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Comentario trabajador:</strong> {e.comentariosSolicitante}</Typography>
+                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'grey.100', p:1, mt:1}}>
+                    <Typography variant="body1"><strong>Comentario trabajador:</strong><br/> {e.comentariosSolicitante}</Typography>
                     </Box>
                   )}
                   {e.comentariosAdmin && (
                     <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'rojo.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Comentario admin:</strong> {e.comentariosAdmin}</Typography>
+                    <Typography variant="body1"><strong>Comentario admin:</strong><br/>{e.comentariosAdmin}</Typography>
                     </Box>
                   )}
                 </>
