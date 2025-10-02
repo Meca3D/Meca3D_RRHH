@@ -122,7 +122,7 @@ const HorasExtras = () => {
             <Typography   color="naranja.main" variant="h6" fontSize="1rem" textAlign='center' lineHeight={1.2} fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
               Estimado {userSalaryInfo.mesNomina || 'Mes Actual'} 
             </Typography>
-              <Typography textAlign="center" color="naranja.main"><strong>{mask(formatearTiempo(horasFormateadas, minutosFormateados))}</strong></Typography>
+              <Typography textAlign="center" color="naranja.main"><strong>{(formatearTiempo(horasFormateadas, minutosFormateados))}</strong></Typography>
               
               <Typography textAlign="center" color="naranja.main"><strong>{mask(formatCurrency(totalImporteEsteMes))}</strong></Typography>
 

@@ -64,7 +64,7 @@ const MainLayout = () => {
     },
         { 
       name: 'Permisos', 
-      path: '/vacaciones', 
+      path: '/permisos-bajas', 
       icon: AssignmentOutlinedIcon, 
       color: 'rojo',
     },
@@ -91,7 +91,7 @@ const MainLayout = () => {
     if (location.pathname.startsWith('/desayunos')) return 'Desayunos';
     if (location.pathname.startsWith('/nominas')) return 'Mis Nóminas';
     if (location.pathname.startsWith('/vacaciones')) return 'Mis Vacaciones';
-    if (location.pathname.startsWith('/permisos')) return 'Mis Permisos/Bajas';
+    if (location.pathname.startsWith('/permisos-bajas')) return 'Mis Permisos/Bajas';
     if (location.pathname.startsWith('/horas-extras')) return 'Mis Horas Extras';
     return 'Mecaformas 3D';
   };

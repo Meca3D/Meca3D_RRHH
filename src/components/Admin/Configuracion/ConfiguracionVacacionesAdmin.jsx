@@ -2,10 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container, AppBar, Toolbar, IconButton, Box, Typography, Card, CardContent,
+  Container, AppBar, Toolbar, IconButton, Box, Typography, Card, CardHeader, CardContent,
   Grid, Paper, Switch, FormControlLabel, RadioGroup, Radio, TextField, Button,
   Table, TableHead, TableRow, TableCell, TableBody, Chip, Divider, Alert, FormControl,
-  InputAdornment
+  InputAdornment,
 } from '@mui/material';
 import {
   ArrowBackIosNew,
@@ -72,7 +72,7 @@ const ConfiguracionVacacionesAdmin = () => {
       const resultado = await updateConfigVacaciones(localCfg);
       if (resultado) {
       showSuccess('Configuración guardada con éxito')
-      navigate('/admin/vacaciones')
+      navigate('/admin/configuracion')
       } else {
       showError('Error al guardar la configuración')
       }
@@ -90,7 +90,7 @@ const ConfiguracionVacacionesAdmin = () => {
      <AppBar  
         sx={{ 
             overflow:'hidden',
-            background: 'linear-gradient(135deg, #263238 0%, #37474F 100%)',
+            background: 'linear-gradient(135deg, #a67373ff 0%, #8d3131ff 100%)',
             boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)',
             zIndex: 1100
         }}
@@ -122,7 +122,7 @@ const ConfiguracionVacacionesAdmin = () => {
                 lineHeight: 1.2
                 }}
             >
-                Configuración de Vacaciones
+                Configuración de Ausencias
             </Typography>
             <Typography 
                 variant="caption" 
@@ -151,6 +151,9 @@ const ConfiguracionVacacionesAdmin = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
+                  <Typography fontSize='1.75rem' fontWeight={700} sx={{mb:2, textAlign:'center'}}>
+                    Vacaciones
+                    </Typography>
                 <Typography fontSize='1.45rem' gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <ThumbUpAlt color="success" /> Auto-aprobación
                 </Typography>
@@ -240,7 +243,7 @@ const ConfiguracionVacacionesAdmin = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography fontSize='1.45rem' gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography fontSize='1.45rem' gutterBottom sx={{ mb:1,display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Shield color="warning" /> Umbrales de Cobertura
                 </Typography>
                 <Table size="small">
@@ -285,7 +288,7 @@ const ConfiguracionVacacionesAdmin = () => {
                 </Table>
                 <Alert severity='info'>
                    <Typography fontSize='1rem' sx={{ mb: 2 }}>
-                    Define el número de personas de vacaciones a la vez, que dispara “posible conflicto” por puesto
+                    Define el número de personas de vacaciones a la vez, que activa “posible conflicto” por puesto
                   </Typography>
                 </Alert>
 
@@ -300,7 +303,7 @@ const ConfiguracionVacacionesAdmin = () => {
                 variant="outlined"
                 color="error"
 
-                onClick={() => navigate('/admin/vacaciones')}
+                onClick={() => navigate('/admin')}
                 disabled={saving}
                 sx={{textTransform:'none', p:1.5}}
               >

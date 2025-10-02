@@ -1,32 +1,22 @@
-// components/Vacaciones/Vacaciones.jsx
+// components/Bajas/Bajas.jsx
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Grid, Card, CardContent,
   Paper, Chip
 } from '@mui/material';
-import {
-  BeachAccessOutlined as BeachIcon,
-  EditCalendarOutlined as EditCalendarOutlinedIcon,
-  ListAlt as ListAltIcon,
-  AssessmentOutlined as StatsIcon,
-  TrendingDown as TrendingDownIcon
-} from '@mui/icons-material';
+
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import AssignmentAddIcon from '@mui/icons-material/Assignment';
+
 import { useAuthStore } from '../../stores/authStore';
 import { formatearTiempoVacas } from '../../utils/vacacionesUtils';
 
 
-const Vacaciones = () => {
+const Bajas = () => {
   const { userProfile } = useAuthStore();
   const navigate = useNavigate();
 
-
-  const vacacionesDisponibles = userProfile?.vacaciones?.disponibles || 0;
-  const vacacionesPendientes = userProfile?.vacaciones?.pendientes || 0;
-  const diasDisponibles = Math.floor(vacacionesDisponibles / 8);
-  const horasRestantes = vacacionesDisponibles % 8;
-  const diasPendientes = Math.floor(vacacionesPendientes / 8);
-  const horasPendientesRestantes = vacacionesPendientes % 8;
-
+/* 
   const quickActions = [
     {
       id: 'crear',
@@ -34,7 +24,7 @@ const Vacaciones = () => {
       subtitle: 'Nueva petición',
       description: 'Solicitar días u horas',
       label: 'Nueva',
-      icon: EditCalendarOutlinedIcon,
+      icon: AssignmentAddIcon,
       color: 'naranja.main',
       bgColor: 'naranja.fondo',
       route: '/vacaciones/crear'
@@ -45,7 +35,7 @@ const Vacaciones = () => {
       subtitle: 'Historial personal',
       description: 'Ver, editar y eliminar',
       label: 'Gestión',
-      icon: ListAltIcon,
+      icon: HistoryIcon,
       color: 'azul.main',
       bgColor: 'azul.fondo',
       route: '/vacaciones/solicitudes'
@@ -61,7 +51,7 @@ const Vacaciones = () => {
       bgColor: 'verde.fondo',
       route: '/vacaciones/saldo'
     },
-/*     {
+    {
       id: 'estadisticas',
       title: 'Estadísticas',
       subtitle: 'Análisis personal',
@@ -71,10 +61,10 @@ const Vacaciones = () => {
       color: 'purpura.main',
       bgColor: 'purpura.fondo',
       route: '/vacaciones/estadisticas'
-    } */
+    }
   ];
 
-
+ */
 
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
@@ -82,8 +72,8 @@ const Vacaciones = () => {
         <Paper 
         elevation={5} 
         sx={{ 
-          background: 'linear-gradient(135deg, #CE93D8 0%, #BA68C8 40%, #7B1FA2 100%)',
-          border:'1px solid purpura.main',
+          background: 'linear-gradient(135deg, #d89393ff 0%, #c86868ff 40%, #a21f1fff 100%)',
+          border:'1px solid rojo.main',
           p: 2, 
           mb: 4, 
           borderRadius: 4,
@@ -104,32 +94,38 @@ const Vacaciones = () => {
           }}
         />
         
-        <Typography variant="h4" fontWeight="700" gutterBottom>
-          <BeachIcon sx={{ mr: 3, verticalAlign: 'middle', fontSize: '4rem' }} />
-          Vacaciones
+        <Typography variant="h5" fontWeight="700" gutterBottom>
+          <AssignmentIcon sx={{ mr: 3, verticalAlign: 'middle', fontSize: '4rem' }} />
+          Permisos y Bajas
         </Typography>
 
           <Grid container spacing={3} sx={{ mt: 1 , justifyContent:'space-around'}}>
             <Grid size={{xs:6}}>
               <Typography textAlign="center" variant="body1" sx={{ opacity: 0.9 }}>
-                Disponibles
+               
               </Typography>
               <Typography textAlign="center" variant="h5" fontWeight="600">
-                {formatearTiempoVacas(vacacionesDisponibles)}
+               
               </Typography>
             </Grid>
             <Grid size={{xs:6}}>
               <Typography textAlign="center"variant="body1" sx={{ opacity: 0.9 }}>
-                Pendientes
+                
               </Typography>
               <Typography textAlign="center"variant="h5" fontWeight="600">
-                {formatearTiempoVacas(vacacionesPendientes)}
+                
               </Typography>
             </Grid>
           </Grid>
       </Paper>
 
-      {/* Grid de acciones */}
+      <Card  elevation={5} sx={{p:2,  bgcolor:'azul.fondo'}}>
+        <Typography textAlign="center" variant="h6" fontWeight="500">
+           Proximamente, creación y gestión de permisos y bajas.    
+        </Typography>
+      </Card>
+{/* 
+     
       <Grid container spacing={3}>
         {quickActions.map((action) => {
           const Icon = action.icon;
@@ -179,10 +175,11 @@ const Vacaciones = () => {
             </Grid>
           );
         })}
-        </Grid>
-    </Container>
+        </Grid> */}    
+        
+        </Container>
   );
 };
  
 
-export default Vacaciones;
+export default Bajas;

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
+  Container, Typography, Box, Card, CardHeader, CardContent, AppBar, Toolbar,
   IconButton, Button, TextField, FormControl, FormLabel,
   RadioGroup, Radio, FormControlLabel, Alert, CircularProgress,
   Collapse, Grid
@@ -150,12 +150,15 @@ const CrearSolicitudVacaciones = () => {
           {/* Tipo */}
           <Card sx={{ mb: 3, mt:2 }}>
             <CardContent>
+              <Typography  textAlign="center" sx={{ mb:2, fontWeight: 600, fontSize: '1.45rem' }}>
+              Solicitud de Vacaciones
+              </Typography>
               {/* Saldo */}
               <Alert severity="warning" sx={{ fontSize:'1rem', mb: 3 }}>
                 Vacaciones Disponibles: <strong>{formatearTiempoVacas(horasLibres)}</strong> 
               </Alert>
               <FormControl>
-                <FormLabel sx={{ mb: 2, fontWeight: 600 }}>Tipo de solicitud</FormLabel>
+                <FormLabel sx={{ mb: 1, fontWeight: 600, textAlign:"center" }}>Tipo de solicitud</FormLabel>
                 <RadioGroup
                   value={tipoSolicitud}
                   onChange={(e) => {
@@ -163,7 +166,7 @@ const CrearSolicitudVacaciones = () => {
                     setFechasSeleccionadas([]);
                     setHorasSolicitadas(1);
                   }}
-                  sx={{ flexDirection: 'row', gap: 2 }}>
+                  sx={{ width:'100%', display:'flex', flexDirection: 'row', justifyContent:'space-between' }}>
                   <FormControlLabel value="dias" control={<Radio />} label="Días completos" />
                   <FormControlLabel value="horas"control={<Radio disabled={horasLibres === 0} />} label="Horas sueltas" />
                 </RadioGroup>

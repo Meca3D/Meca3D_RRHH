@@ -54,6 +54,7 @@ import RegistrarHorasExtras from './components/HorasExtras/RegistrarHorasExtras'
 import GestionarHorasExtras from './components/HorasExtras/GestionarHorasExtras';
 import EstadisticasHorasExtras from './components/HorasExtras/EstadisticasHorasExtras';
 import ConfiguracionHorasExtras from './components/HorasExtras/ConfiguracionHorasExtras';
+import Bajas from './components/Bajas/Bajas';
 
 import LoadingScreen from './components/Layout/LoadingScreen';
 import { useAuthStore } from './stores/authStore';
@@ -114,7 +115,7 @@ const AppRoutes = () => {
         <Route path="/horas-extras/gestionar" element={<NoOwnerRoute><GestionarHorasExtras /></NoOwnerRoute>} />
         <Route path="/horas-extras/estadisticas" element={<NoOwnerRoute><EstadisticasHorasExtras /></NoOwnerRoute>} />
         <Route path="/horas-extras/configurar" element={<NoOwnerRoute><ConfiguracionHorasExtras /></NoOwnerRoute>} /> 
-
+        <Route path="/permisos-bajas" element={<NoOwnerRoute><Bajas /></NoOwnerRoute>} /> 
 
         {/* Rutas de Administración */}
         <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

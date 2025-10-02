@@ -145,7 +145,7 @@ const GestionarSaldos = () => {
   };
 
   const handleConfirmarAjuste = async () => {
-    if (!horasAjuste || parseInt(horasAjuste) <= 0) {
+    if (!horasAjuste || parseInt(horasAjuste) < 0) {
       showError('Debes especificar una cantidad válida de horas');
       return;
     }

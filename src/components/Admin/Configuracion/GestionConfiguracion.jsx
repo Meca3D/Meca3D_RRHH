@@ -12,8 +12,11 @@ import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
 
+import { useVacacionesStore } from '../../../stores/vacacionesStore';
+
 const GestionConfiguracion = () => {
   const navigate = useNavigate();
+  const { configVacaciones } = useVacacionesStore();
 
 
   const quickActions = [
@@ -66,7 +69,7 @@ const GestionConfiguracion = () => {
             <Box display="flex" alignItems="center" gap={1}>
            <Typography variant="h6" textAlign="center" color="purpura.main" fontWeight="bold">{}
            </Typography>
-           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">Autoaprobacion {}
+           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">Auto-Aprobación <strong>{configVacaciones?.autoAprobar?.habilitado ? 'ON' : 'OFF'}</strong>
            </Typography>
            </Box>
                          

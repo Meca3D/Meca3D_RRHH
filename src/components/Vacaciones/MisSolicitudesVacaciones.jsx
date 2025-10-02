@@ -7,7 +7,7 @@ import {
   DialogTitle, DialogContent, DialogActions, Button, TextField, CircularProgress
 } from '@mui/material';
 import {
-  CalendarMonthOutlined as CalendarMonthOutlinedIcon,
+  ListAlt as ListAltIcon,
   ArrowBackIosNew as ArrowBackIcon,
   EventBusyOutlined as EventBusyOutlinedIcon,
   HistoryOutlined as HistoryIcon,
@@ -849,7 +849,7 @@ const MisSolicitudesVacaciones = () => {
               Gestiona tus peticiones de vacaciones
             </Typography>
           </Box>         
-          <CalendarMonthOutlinedIcon sx={{ fontSize: '2rem' }} />
+          <ListAltIcon sx={{ fontSize: '2rem' }} />
         </Toolbar>
       </AppBar>
 

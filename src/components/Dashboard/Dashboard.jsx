@@ -157,7 +157,7 @@ const Dashboard = () => {
       icon: AssignmentOutlinedIcon,
       color: 'rojo.main',
       bgColor: 'rojo.fondo',
-      onClick: () => navigate('/permisos')
+      onClick: () => navigate('/permisos-bajas')
     },
     {
       label: 'Pedidr Desayuno',
