@@ -1,9 +1,9 @@
-// components/OwnerRoute.jsx
+// components/AdminRoute.jsx
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import LoadingScreen from './Layout/LoadingScreen';
 
-const OwnerRoute = ({ children }) => {
+const AusenciasRoute = ({ children }) => {
   const { userRole, loading, isAuthenticated } = useAuthStore();
 
   if (loading) {
@@ -14,14 +14,14 @@ const OwnerRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Solo el owner puede acceder
-  const isOwner = userRole === 'owner';
+  // Solo cocinero, admin y owner pueden acceder a rutas de administración desayunos
+  const isAdminOrOwner = userRole === 'admin' || userRole === 'owner' || userRole === 'leaveAdmin';
 
-  if (!isOwner) {
+  if (!isAdminOrOwner) {
     return <Navigate to="/dashboard" replace />;
   }
 
   return children;
 };
 
-export default OwnerRoute;
+export default AusenciasRoute;

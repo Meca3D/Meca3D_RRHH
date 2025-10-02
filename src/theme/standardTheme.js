@@ -24,9 +24,9 @@ export const standarTheme = createTheme({
         fondoFuerte: alpha('#3B82F6',0.3)
     },
     verde: {
-        main:'#10B981',
-        fondo: alpha('#10B981',0.1),
-        fondoFuerte: alpha('#10B981',0.3)
+        main:'#129569ff',
+        fondo: alpha('#129569',0.1),
+        fondoFuerte: alpha('#129569',0.3)
     },
     naranja: {
         main:'#FB8C00',
@@ -47,6 +47,12 @@ export const standarTheme = createTheme({
         main:'#6D3B07',
         fondo: alpha('#6D3B07',0.1),
         fondoFuerte: alpha('#6D3B07',0.3)
+    },
+
+        rosa: {
+        main:'#f508ed',
+        fondo: alpha('#f508ed',0.1),
+        fondoFuerte: alpha('#f508ed',0.3)
     },
 
     comida: {

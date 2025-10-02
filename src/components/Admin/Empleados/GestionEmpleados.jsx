@@ -9,13 +9,14 @@ import {
   PersonAdd as PersonAddIcon,
   EditOutlined as EditIcon,
   PollOutlined as StatsIcon,
+  PersonRemove,
   People as PeopleIcon,
-  DeleteForeverOutlined as DeleteForeverOutlinedIcon,
 } from '@mui/icons-material';
 
 const GestionEmpleados = () => {
   const navigate = useNavigate();
 
+  
 
   const quickActions = [
     {
@@ -40,7 +41,7 @@ const GestionEmpleados = () => {
       id: 'borrar',
       title: 'Eliminar Empleado',
       subtitle: '',
-      icon: DeleteForeverOutlinedIcon,
+      icon: PersonRemove,
       color: 'rojo.main',
       bgColor: 'rojo.fondo',
       route: '/admin/empleados/eliminar'
@@ -90,52 +91,56 @@ const GestionEmpleados = () => {
       </Paper>
 
      <Grid container spacing={3}>
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Grid size={{xs:6 ,md:3}}  key={action.id}>
-              <Card 
-                elevation={5}
-      sx={{ 
-        cursor: 'pointer',
-        bgcolor: action.bgColor,
-        border: '1px solid',
-        borderRadius: 3,
-        minHeight: 100,
-        borderColor: 'rgba(0,0,0,0.08)',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
-          transform: 'translateY(-2px)',
-          borderColor: action.color
-        }
-      }}
-                onClick={() => navigate(action.route)}
-              >
-                <CardContent 
-                    sx={{ 
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      p: 2,
-                      textAlign: 'center'
-                    }}
-                  >
-                    <Icon sx={{  mb:2, fontSize: '30', color: action.color }} />
-
-                  <Typography variant="body1" fontWeight="600" sx={{ color:action.color, lineHeight: 1.2 }}>
-                    {action.title}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
-    </Container>
-  );
-};
-
+             {quickActions.map((action) => {
+               const Icon = action.icon;
+               return (
+                 <Grid size={{xs:6 ,sm:3}}  key={action.id}>
+                   <Card 
+                     elevation={5}
+                     onClick={() => navigate(action.route)}
+                     sx={{ 
+                       height: '100%',
+                       border: '1px solid',
+                       borderColor: 'rgba(0,0,0,0.08)',
+                       borderRadius: 3,
+                       transition: 'all 0.3s ease',
+                       '&:hover': {
+                         boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+                         transform: 'translateY(-2px)'
+                       },
+                     }}
+                        >
+                               <CardContent sx={{ p: 3 }}>
+                                 <Box display="flex" justifyContent="center" alignItems="flex-start"  mb={2}>
+                                   <Box 
+                                     sx={{ 
+                                       p: 1,
+                                       m: -2, 
+                                       borderRadius: 2, 
+                                       bgcolor: action.bgColor,
+                                       display: 'flex',
+                                       alignItems: 'center',
+                                       justifyContent: 'center'
+                                     }}
+                                   >
+                                     <Icon sx={{ color: action.color, fontSize: 30 }} />
+                                   </Box>
+     
+                                 </Box>
+                                  <Box sx={{mt:3, display:'flex', flexDirection:'column', justifyItems:'center', justifyContent:'center', alignItems:'center', alignContent:'center'}}>
+            
+                                 <Typography textAlign="center" variant="body1" fontSize="1.1rem" fontWeight="600" sx={{ mb:-1, color:action.color, lineHeight: 1.2 }}>
+                                   {action.title}
+                                 </Typography>
+                                 </Box>
+                               </CardContent>
+                             </Card>
+                           </Grid>
+                         );
+                       })}
+                       </Grid>
+                   </Container>
+                 );
+               };
+     
 export default GestionEmpleados;

@@ -395,7 +395,7 @@ const ConfigurarDatosSalariales = () => {
                         </Typography> 
                        : 
                        <Typography  variant='body1'>
-                        Configura en tu perfil, la fecha de ingreso en la empresa para calcular automaticamente tus trienios.
+                        Configura en tu perfil la fecha de ingreso en la empresa para calcular automaticamente tus trienios.
                        </Typography>
                        }
                       </Alert>

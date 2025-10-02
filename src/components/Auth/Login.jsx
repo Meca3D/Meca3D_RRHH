@@ -79,7 +79,6 @@ const Login = () => {
       
       setError(errorMessage);
       showError(errorMessage);
-            console.error("Login.jsx handleSubmit: Error al iniciar sesión:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,12 +110,6 @@ const Login = () => {
                 Inicia sesión para acceder a la aplicación
               </Typography>
             </Box>
-
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
 
             <Box component="form" onSubmit={handleSubmit}>
               <TextField

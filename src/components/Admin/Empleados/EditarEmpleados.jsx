@@ -16,10 +16,13 @@ import {
   Key as KeyIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  Cancel as CancelIcon
+  Cancel as CancelIcon,
+  GroupOutlined
 } from '@mui/icons-material';
 import { useEmpleadosStore } from '../../../stores/empleadosStore';
+import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { formatearTiempoVacas } from '../../../utils/vacacionesUtils';
 
 const EditarEmpleados = () => {
   const navigate = useNavigate();
@@ -32,6 +35,7 @@ const EditarEmpleados = () => {
     fetchEmpleadoPorEmail,
     changeEmployeePassword
   } = useEmpleadosStore();
+  const { getRol} = useAuthStore()
   const { showSuccess, showError } = useUIStore();
 
   // Estado para el modal
@@ -52,7 +56,8 @@ const EditarEmpleados = () => {
     'Administrativo',
     'Diseñador',
     'Montador',
-    'Ayudante de Taller'
+    'Ayudante de Taller',
+    'Jefe'
   ];
 
   useEffect(() => {
@@ -73,8 +78,6 @@ const EditarEmpleados = () => {
           fechaIngreso: empleadoCompleto.fechaIngreso || '',
           nivel: empleadoCompleto.nivel || '',
           puesto: empleadoCompleto.puesto || '',
-          vacaDias: empleadoCompleto.vacaDias || '',
-          vacaHoras: empleadoCompleto.vacaHoras || '',
           rol: empleadoCompleto.rol || 'user'
         });
         setModalOpen(true);
@@ -101,8 +104,6 @@ const EditarEmpleados = () => {
         fechaIngreso: formData.fechaIngreso,
         nivel: parseInt(formData.nivel) || null,
         puesto: formData.puesto,
-        vacaDias: parseInt(formData.vacaDias) || 0,
-        vacaHoras: parseInt(formData.vacaHoras) || 0,
         rol: formData.rol
       };
 
@@ -162,7 +163,6 @@ const EditarEmpleados = () => {
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
   };
-
 
   return (
     <>
@@ -244,116 +244,80 @@ const EditarEmpleados = () => {
             </Typography>
           </Box>
         ) : (
-               <Grid container spacing={3} sx={{ p:3 }  }>
+          <>
+              <Card sx={{p:3}}>
+                <Alert severity="info" sx={{ }}>
+                  <Typography textAlign="center" variant="h6" fontWeight={'bold'}>
+                    Pulsa un empleado para modificarlo
+                  </Typography> 
+                </Alert>
+              </Card>
+
+        <Card 
+          elevation={5} 
+          sx={{ 
+            mt:2,
+            borderRadius: 4,
+            border: '1px solid rgba(0,0,0,0.08)'
+          }}
+        >
+          <CardContent sx={{   }}>
+              <Box display='flex' justifyContent="center" gap={2} sx={{ width: '100%', py: 1, bgcolor:'azul.fondo' }}>
+                <GroupOutlined sx={{fontSize:'2rem'}} />
+                <Typography variant="h5" textAlign="center" fontWeight="bold">Empleados</Typography>
+              </Box>
+            
             {empleados.map((empleado) => (
-              <Grid key={empleado.email} size={{ xs: 12, sm: 6, md: 4 }}>
-                {/* ✅ CARD INDIVIDUAL DEL EMPLEADO */}
-                <Card
-                  elevation={5}
-                  onClick={() => handleEditarEmpleado(empleado)}
-                  sx={{
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                    overflow: 'hidden',
-                    position: 'relative',
-                    border: '1px solid rgba(59, 130, 246, 0.1)',
-                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-                    
-                    // ✅ EFECTOS HOVER/ACTIVO PARA MÓVIL
-                    '&:hover': {
-                      elevation: 8,
-                      transform: 'translateY(-4px) scale(1.02)',
-                      boxShadow: '0 12px 40px rgba(59, 130, 246, 0.15)',
-                      borderColor: 'azul.main',
-                      
-                      // Efecto en el avatar
-                      '& .avatar-empleado': {
-                        transform: 'scale(1.1)',
-                        boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
-                      },
-                      
-                      // Efecto en el badge de editar
-                      '& .edit-badge': {
-                        transform: 'scale(1.1)',
-                        bgcolor: 'azul.main',
-                        color: 'white'
-                      }
-                    },
-                    
-                    '&:active': {
-                      transform: 'translateY(-2px) scale(0.98)',
-                      transition: 'transform 0.1s ease'
-                    },
-
-                                        // ✅ GRADIENTE AZUL EN EL BORDE SUPERIOR
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '4px',
-                      background: 'linear-gradient(90deg,rgb(68, 119, 239),rgb(48, 38, 220),rgb(28, 85, 185))',
-                      zIndex: 1
-                    }
-                    
-                  }}
-                >
-                  <CardContent sx={{ p: 3, textAlign: 'center' }}>
-
-                    {/* ✅ INFORMACIÓN DEL EMPLEADO */}
-                    <Typography 
-                      variant="h6" 
-                      fontWeight="600"
-                      sx={{ 
-                        mb: 1,
-                        fontSize: { xs: '1.5rem', sm: '1.75rem' },
-                        color: 'text.primary',
-                        lineHeight: 1.2
-                      }}
-                    >
-                      {empleado.nombre}
-                    </Typography>
-
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color:"azul.main",
-                        mb: 0,
-                        fontSize: '1.1rem',
-                        minHeight: '20px' // Para mantener altura consistente
-                      }}
-                    >
-                      {empleado.puesto || 'Sin puesto asignado'}
-                    </Typography>
-
-                    {/* ✅ EFECTO RIPPLE PARA MÓVIL */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        width: '0px',
-                        height: '0px',
-                        borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%)',
-                        transform: 'translate(-50%, -50%)',
-                        transition: 'all 0.6s ease',
-                        pointerEvents: 'none',
-                        zIndex: 0,
-                        
-                        // Activar en touch
-                        '.MuiCard-root:active &': {
-                          width: '300px',
-                          height: '300px'
-                        }
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
+              <Box 
+                key={empleado.id} 
+                onClick={() => handleEditarEmpleado(empleado)}
+                sx={{ 
+                  px:1,
+                  py:2,
+                  display: 'flex', 
+                  justifyContent:'space-between',
+                  alignItems:'center',
+                  borderTop: '1px solid rgba(0, 0, 0, 0.5)',
+                  cursor: 'pointer', 
+                  transition: 'background-color 0.2s ease-in-out',
+                  '&:hover': {
+                    bgcolor: 'rgba(0, 0, 0, 0.06)' 
+                  },
+                  '&:active': {
+                    bgcolor: 'rgba(0, 0, 0, 0.12)', 
+                    transform: 'scale(0.98)', 
+                    transition: 'background-color 0.1s ease-out, transform 0.1s ease-out',
+                    borderLeft:'4px solid blue'
+                  },                 
+                }}
+              >
+              <Box sx={{                   
+                  display: 'flex', 
+                  flexDirection:'column',
+                  justifyContent:'center'
+              }}
+              >
+                  <Typography sx={{fontWeight:'bold'}} fontSize="1.1rem">{empleado.nombre}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">{empleado.puesto}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">Fecha Ingreso:{empleado.fechaIngreso}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">Nivel Salarial:{empleado.nivel}</Typography>
+              </Box>
+              <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection:'column',
+                  alignItems:'center',
+                  justifyContent:'center'
+              }}
+              >
+                <Typography sx={{}} fontSize="1rem">Vacaciones</Typography>
+                <Typography sx={{}} fontSize="1.2rem">{formatearTiempoVacas(empleado.vacaciones.disponibles)}</Typography>
+                <Typography sx={{mt:2}} fontSize="0.75rem">{getRol(empleado.rol)}</Typography>
+              </Box>
+              </Box>
             ))}
-          </Grid>
+          </CardContent>
+        </Card>
+        </>
         )}
       </Container>
 
@@ -377,13 +341,15 @@ const EditarEmpleados = () => {
           }
         }}
       >
-
+        <DialogTitle variant='div' display='flex' flexDirection='column' alignItems='center' sx={{bgcolor:'azul.main' }}>  
           <Typography sx={{
             fontSize:'1.75rem',
             textAlign:'center',
-            color:'azul.main',
-            mt:2
-          }}>{formData.nombre}</Typography>
+            color:'white',
+          }}>
+            {formData.nombre}
+          </Typography>
+        </DialogTitle>
         <DialogContent sx={{ mt:2, p: 2 }}>
           {empleadoEditando && (
             <Grid container spacing={3}>
@@ -396,6 +362,7 @@ const EditarEmpleados = () => {
                   required
                   fullWidth
                   sx={{
+                    mt:1,
                     '& .MuiOutlinedInput-root': {
                       '&:hover .MuiOutlinedInput-notchedOutline': {
                         borderColor: 'azul.main'
@@ -514,7 +481,9 @@ const EditarEmpleados = () => {
                   >
                     <MenuItem value="user">Empleado</MenuItem>
                     <MenuItem value="admin">Administrador</MenuItem>
+                    <MenuItem value="leaveAdmin">Administrador de Ausencias</MenuItem>
                     <MenuItem value="cocinero">Cocinero</MenuItem>
+                    <MenuItem value="owner">Jefe</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -592,83 +561,11 @@ const EditarEmpleados = () => {
                   {changingPassword ? 'Cambiando...' : 'Cambiar Contraseña'}
                 </Button>
               </Grid>
-
-              {/* Sección Vacaciones */}
-              <Grid size={{ xs: 12 }}>
-                <Typography 
-                  variant="h6" 
-                  textAlign='center'
-                  sx={{ 
-                    mb: 1, 
-                    color: 'azul.main', 
-                    fontWeight: 600,
-                    fontSize: '1.1rem'
-                  }}
-                >
-                  Vacaciones
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  {/* Días de vacaciones */}
-                  <Grid size={{ xs: 6 }}>
-                    <TextField
-                      label="Días"
-                      type="number"
-                      value={formData.vacaDias || ''}
-                      onChange={handleChange('vacaDias')}
-                      fullWidth
-                      inputProps={{ min: 0 }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'azul.main'
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'azul.main'
-                          }
-                        },
-                        '& .MuiInputLabel-root.Mui-focused': {
-                          color: 'azul.main'
-                        }
-                      }}
-                    />
-                  </Grid>
-
-                  {/* Horas de vacaciones */}
-                  <Grid size={{ xs: 6 }}>
-                    <TextField
-                      label="Horas"
-                      type="number"
-                      value={formData.vacaHoras || ''}
-                      onChange={handleChange('vacaHoras')}
-                      fullWidth
-                      slotProps={{ 
-                        htmlInput:{
-                          min: 0 
-                        }
-                      }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'azul.main'
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'azul.main'
-                          }
-                        },
-                        '& .MuiInputLabel-root.Mui-focused': {
-                          color: 'azul.main'
-                        }
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              </Grid>
             </Grid>
           )}
         </DialogContent>
 
-        <DialogActions sx={{ display:'flex', justifyContent:`space-between`, p: 1, gap:2 }}>
+        <DialogActions sx={{ display:'flex', justifyContent:`space-between`, p: 2, gap:2 }}>
           <Button
             variant="outlined"
             onClick={handleCloseModal}

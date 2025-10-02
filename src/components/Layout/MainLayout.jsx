@@ -1,12 +1,12 @@
 // src/components/Layout/MainLayout.jsx
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   AppBar, Toolbar, Typography, IconButton, Box, 
   Avatar, Drawer, List, ListItemButton, ListItemIcon, 
   ListItemText, Divider, Container
 } from '@mui/material';
-import EuroIcon from '@mui/icons-material/Euro';
+import HomeIcon from '@mui/icons-material/Home';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
@@ -16,11 +16,13 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PaymentIcon from '@mui/icons-material/Payment';
 import WysiwygOutlinedIcon from '@mui/icons-material/WysiwygOutlined'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import UserProfile from '../UI/UserProfile';
+import OwnerProfile from '../UI/OwnerProfile';
 import { useBeforeInstallPrompt } from '../../hooks/useBeforeInstallPrompt';
 import InstallFAB from '../UI/InstallFAB'
+import {  iniciales } from '../Helpers';
 
 
 const MainLayout = () => {
@@ -28,10 +30,11 @@ const MainLayout = () => {
   useBeforeInstallPrompt()
 
   const [profileOpen, setProfileOpen] = useState(false);
-  const {user, userProfile, isAuthenticated, canManageUsers, isCocinero} = useAuthStore();
+  const {user, userProfile, isAuthenticated, canManageUsers, isCocinero, isOwner, isLeaveAdmin} = useAuthStore();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const drawerWidth = 280; // Aumentar un poco el ancho
+  const navigate = useNavigate();
 
   const menuItems = [
     { 
@@ -61,7 +64,7 @@ const MainLayout = () => {
     },
         { 
       name: 'Permisos', 
-      path: '/vacaciones', 
+      path: '/permisos-bajas', 
       icon: AssignmentOutlinedIcon, 
       color: 'rojo',
     },
@@ -88,7 +91,7 @@ const MainLayout = () => {
     if (location.pathname.startsWith('/desayunos')) return 'Desayunos';
     if (location.pathname.startsWith('/nominas')) return 'Mis Nóminas';
     if (location.pathname.startsWith('/vacaciones')) return 'Mis Vacaciones';
-    if (location.pathname.startsWith('/permisos')) return 'Mis Permisos/Bajas';
+    if (location.pathname.startsWith('/permisos-bajas')) return 'Mis Permisos/Bajas';
     if (location.pathname.startsWith('/horas-extras')) return 'Mis Horas Extras';
     return 'Mecaformas 3D';
   };
@@ -420,6 +423,108 @@ const MainLayout = () => {
             
           </>
         )}
+                {isLeaveAdmin() && (
+          <>
+            <Divider sx={{ my: 2 }} />
+
+            <ListItemButton
+              key="leaveAdmin"
+              component={Link}
+              to="/admin/vacaciones"
+              onClick={handleDrawerClose}
+              selected={location.pathname.startsWith('/admin')}
+              sx={{
+                bgcolor: location.pathname === '/admin'? `azul.fondo` : 'rgba(255, 255, 255, 0.3)',
+                border: '3px solid',
+                borderRadius: 2,
+                mb: 1,
+                py: 1.5,
+                borderColor: location.pathname === '/admin' ? `#1D4ED8` : 'rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                
+                // ✅ Estado activo (mobile-friendly)
+                ...(location.pathname === '/admin'&& {
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                  transform: 'translateX(5px)',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    right: 12,
+                    top: '25%',
+                    transform: 'translateY(-50%)',
+                    width: 8,
+                    height: 8,
+                    bgcolor: `azul.main`,
+                    borderRadius: '50%',
+                    animation: 'pulse 2s infinite'
+                  }
+                }),
+                
+                // ✅ Hover para desktop
+                '&:hover': {
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+                  transform:  location.pathname === '/admin' ? 'translateX(8px) translateY(-2px)' : 'translateY(-2px)',
+                  borderColor: `azul.main`
+                },
+                
+                // ✅ Efectos táctiles para móvil
+                '&:active': {
+                  transform:  location.pathname === '/admin' ? 'translateX(8px) scale(0.98)' : 'scale(0.98)',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.12)',
+                },
+                
+                // ✅ Focus para accesibilidad
+                '&:focus-visible': {
+                  outline: `3px solid azul.main`,
+                  outlineOffset: '2px'
+                },
+                
+                // ✅ Animación de pulso
+                '@keyframes pulse': {
+                  '0%, 100%': { opacity: 1, transform: 'translateY(-50%) scale(1)' },
+                  '50%': { opacity: 0.7, transform: 'translateY(-50%) scale(1.2)' }
+                }
+              }}
+            >
+              <ListItemIcon 
+                sx={{ 
+                  minWidth: 40, 
+                  color: `azul.fondo`,
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <AdminPanelSettingsIcon 
+                  sx={{
+                    fontSize: '2.5rem',
+                    color:  '#1D4ED8' ,
+                    mr: 2,
+                    transition: 'all 0.3s ease',
+                    // ✅ Efecto de escala en item activo
+                    transform:  location.pathname === '/admin' ? 'scale(1.1)' : 'scale(1)'
+                  }}
+                />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Administración Vacaciones"
+                slotProps={{
+                  primary: {
+                    color: '#1D4ED8',
+                    fontSize: '1rem',
+                    fontWeight: location.pathname === '/admin' ? 800 : 700, // ✅ Más bold cuando está activo
+                    sx: {
+                      transition: 'all 0.3s ease'
+                    }
+                  },
+                  secondary: {
+                    fontSize: '0.75rem'
+                  }
+                }}
+              />
+            </ListItemButton>
+            
+          </>
+        )}
 
       </List>
     </Box>
@@ -437,17 +542,44 @@ const MainLayout = () => {
         }}
       >
         <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
+          <Box display='flex' justifyContent='space-between' alignItems='center' width='100%'>
+          {isOwner() ? (         
+            <IconButton
+              color="inherit"
+              aria-label="home"
+              edge="start"
+              onClick={()=>navigate('/')}
+              sx={{display: { sm: 'none' } }}
+            >
+            <HomeIcon sx={{fontSize:'2rem'}} />
           </IconButton>
           
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          ):(  
+              <>
+              <Box>
+              <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: 'none' } }}
+            >
+            <MenuIcon />
+          </IconButton>  
+          <IconButton
+              color="inherit"
+              aria-label="home"
+              edge="start"
+              onClick={()=>navigate('/')}
+              sx={{display: { sm: 'none' } }}
+            >
+            <HomeIcon sx={{fontSize:'2rem'}} />
+          </IconButton>  
+          </Box>
+          </>     
+            )}
+          
+          <Typography variant="h6" noWrap component="div"textAlign='center' sx={{ flexGrow: 1 }}>
             {getPageTitle()}
           </Typography>
           
@@ -459,18 +591,26 @@ const MainLayout = () => {
 
                 >
                   {!userProfile?.photoURL && (
-                    (userProfile?.nombre?.[0] || user?.email?.[0] || 'U').toUpperCase()
+                    (iniciales(userProfile?.nombre) || user?.email?.[0] || 'U').toUpperCase()
                   )}
                 </Avatar>
               </IconButton>
-              <UserProfile 
-                open={profileOpen} 
-                onClose={() => setProfileOpen(false)}
-                loading={false} 
+              {isOwner() ? (
+                <OwnerProfile
+                  open={profileOpen} 
+                  onClose={() => setProfileOpen(false)}
+                  loading={false}
+                />
+              ):(<UserProfile 
+                  open={profileOpen} 
+                  onClose={() => setProfileOpen(false)}
+                  loading={false} 
 
-              />
+              /> 
+            )}
             </>
           )}
+          </Box>
         </Toolbar>
       </AppBar>
       

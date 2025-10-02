@@ -94,11 +94,10 @@ const {
       password, 
       nombre, 
       rol = 'user', 
-      vacaDias, 
-      vacaHoras,
+      vacaDisponibles,
       fechaIngreso,
+      puesto,
       nivel,
-      puesto
     } = requestData;
 
     // Validar datos requeridos
@@ -131,11 +130,13 @@ const {
     await admin.firestore().collection('USUARIOS').doc(email).set({
       nombre: nombre,
       rol: rol,
-      vacaDias: Number(vacaDias) || 0,
-      vacaHoras: Number(vacaHoras) || 0,
+      puesto: puesto,
+      vacaciones:{
+        disponibles: Number(vacaDisponibles) || 0,
+        pendientes: 0
+      },
       fechaIngreso: fechaIngreso || '', // String en formato YYYY-MM-DD
       nivel: Number(nivel) || null, // Número 1-21
-      puesto: puesto || '', // String del select
       favoritos: [],
     });
 

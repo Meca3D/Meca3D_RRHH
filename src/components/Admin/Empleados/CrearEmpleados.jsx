@@ -1,5 +1,5 @@
 // components/Admin/CrearEmpleado.jsx - CORREGIDO
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Box, TextField, Button, Typography, Alert,
@@ -11,28 +11,37 @@ import {
   Visibility,
   VisibilityOff,
   PersonAdd as PersonAddIcon,
+  GroupOutlined
 } from '@mui/icons-material';
+import { useUIStore } from '../../../stores/uiStore';
+import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
+import { useEmpleadosStore } from '../../../stores/empleadosStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 const CrearEmpleado = () => {
   const navigate = useNavigate();
-  
+  const {showSuccess,showError}=useUIStore()
+  const {getRol}=useAuthStore()
+  const {fetchEmpleados, empleados} = useEmpleadosStore()
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
     photoURL: '',
-    vacaDias: '',
-    vacaHoras: '',
+    vacaDisponibles: '',
     rol: 'user',
     fechaIngreso: new Date().toISOString().split('T')[0],
     nivel: '',
     puesto: ''
   });
-
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+      if (empleados.length === 0) {
+      fetchEmpleados();
+      }
+    }, [empleados.length]);
 
   const opcionesPuesto = [
     'Fresador',
@@ -41,14 +50,14 @@ const CrearEmpleado = () => {
     'Administrativo',
     'Diseñador',
     'Montador',
-    'Ayudante de Taller'
+    'Ayudante de Taller',
+    'Jefe'
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setMessage('');
+
 
     try {
       const response = await fetch('/api/create-employee', {
@@ -60,27 +69,24 @@ const CrearEmpleado = () => {
       const result = await response.json();
 
       if (response.ok) {
-        setMessage(result.message);
+        showSuccess(result.message);
         setFormData({ 
           nombre: '', 
           email: '', 
           password: '', 
           photoURL: '',
-          vacaDias: '',
-          vacaHoras: '', 
+          vacaDisponibles: '', 
           rol: 'user',
           fechaIngreso: new Date().toISOString().split('T')[0],
           nivel: '',
           puesto: ''
         });
-        setTimeout(() => {
-          navigate('/admin/empleados/lista');
-        }, 2000);
+
       } else {
-        setError(result.error);
+        showError(result.error);
       }
     } catch (error) {
-      setError(`Error de conexión: ${error}`);
+      showError(`Error de conexión: ${error}`);
     } finally {
       setLoading(false);
     }
@@ -96,6 +102,14 @@ const CrearEmpleado = () => {
       [field]: e.target.value
     }));
   };
+
+      if (loading && empleados.length === 0) {
+        return (
+          <Container sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+            <CircularProgress />
+          </Container>
+        );
+      }
 
   return (
     <>
@@ -145,7 +159,7 @@ const CrearEmpleado = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Registro de empleado
+              Registro y Lista de empleados
             </Typography>
           </Box>
 
@@ -164,20 +178,11 @@ const CrearEmpleado = () => {
 
       {/* Contenido principal */}
       <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
-        <Card elevation={0} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
-          <CardContent sx={{ p: 4 }}>
-            {message && (
-              <Alert severity="success" sx={{ mb: 3 }}>
-                {message}
-              </Alert>
-            )}
-            
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
-
+        <Card elevation={5} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography fontWeight="bold" textAlign='center' color='primary.main' sx={{mb:2, fontSize:'1.85rem'}}>
+                Nuevo Trabajador
+            </Typography>
             <Box component="form" onSubmit={handleSubmit}>
               <Grid container spacing={3}>
                 {/* Nombre */}
@@ -297,6 +302,7 @@ const CrearEmpleado = () => {
                     label="Nivel Salarial (1-21)"
                     value={formData.nivel}
                     onChange={handleChange('nivel')}
+                    onWheel={(e) => e.target.blur()}
                     slotProps={{ 
                       htmlInput:{
                         min: 1, max: 21
@@ -355,7 +361,7 @@ const CrearEmpleado = () => {
                     sx={{ 
                       textAlign:'center',
                       mb: 1, 
-                      color: 'azul.main', 
+                      color: 'primary.main', 
                       fontWeight: 600,
                       fontSize: '1.1rem'
                     }}
@@ -365,49 +371,29 @@ const CrearEmpleado = () => {
                   
                   <Grid container spacing={2}>
                     {/* Días de vacaciones */}
-                    <Grid size={{ xs: 6 }}>
-                      <TextField
-                        label="Días"
-                        type="number"
-                        value={formData.vacaDias}
-                        onChange={handleChange('vacaDias')}
-                        required
-                        fullWidth
-                        slotProps={{ 
-                          htmlInput:{
-                            min: 0 
-                         }
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'azul.main'
-                            },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'azul.main'
-                            }
-                          },
-                          '& .MuiInputLabel-root.Mui-focused': {
-                            color: 'azul.main'
-                          }
-                        }}
-                      />
-                    </Grid>
-
-                    {/* Horas de vacaciones */}
-                    <Grid size={{ xs: 6 }}>
+                    <Grid size={{ xs: 12 }}>
                       <TextField
                         label="Horas"
                         type="number"
-                        value={formData.vacaHoras}
-                        onChange={handleChange('vacaHoras')}
+                        value={formData.vacaDisponibles}
+                        onChange={handleChange('vacaDisponibles')}
                         required
                         fullWidth
-                        slotrops={{
-                          htmlInput:{
-                             min: 0, max:7
+                        onWheel={(e) => e.target.blur()}
+                        slotProps={{
+                          input: {
+                            endAdornment: <InputAdornment position="end">horas</InputAdornment>,
+                          },
+                          htmlInput:{ 
+                            min: 0, step: 1 
                           }
                         }}
+                        helperText=
+                          {formData.vacaDisponibles 
+                          ?  <Typography component="span" fontSize='1rem' sx={{fontWeight:700, color:'black' }}>{formatearTiempoVacasLargo(formData.vacaDisponibles)}</Typography>
+                          : <Typography component="span" fontSize='0.9rem'>Especifica la cantidad de horas</Typography>
+                          
+                        }
                         sx={{
                           '& .MuiOutlinedInput-root': {
                             '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -447,7 +433,9 @@ const CrearEmpleado = () => {
                     >
                       <MenuItem value="user">Empleado</MenuItem>
                       <MenuItem value="admin">Administrador</MenuItem>
+                      <MenuItem value="leaveAdmin">Administrador de Ausencias</MenuItem>
                       <MenuItem value="cocinero">Cocinero</MenuItem>
+                      <MenuItem value="owner">Jefe</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -481,18 +469,61 @@ const CrearEmpleado = () => {
               >
                 {loading ? 'Creando Empleado...' : 'Crear Empleado'}
               </Button>
-              {message && (
-              <Alert severity="success" sx={{ mb: 3 }}>
-                {message}
-              </Alert>
-            )}
-            
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
             </Box>
+          </CardContent>
+        </Card>
+        <Card 
+          elevation={5} 
+          sx={{ 
+            mt:2,
+            borderRadius: 4,
+            border: '1px solid rgba(0,0,0,0.08)'
+          }}
+        >
+          <CardContent sx={{   }}>
+              <Box display='flex' justifyContent="center" gap={2} sx={{ width: '100%', py: 1, bgcolor:'dorado.fondo' }}>
+                <GroupOutlined sx={{fontSize:'2rem'}} />
+                <Typography variant="h5" textAlign="center" fontWeight="bold">Empleados</Typography>
+              </Box>
+            
+            {/* Filas de datos */}
+            {empleados.map((empleado) => (
+              <Box 
+                key={empleado.id} 
+                sx={{ 
+                  px:1,
+                  py:2,
+                  display: 'flex', 
+                  justifyContent:'space-between',
+                  alignItems:'center',
+                  borderTop: '1px solid rgba(0, 0, 0, 0.5)',
+                  '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.06)' }
+                }}
+              >   
+              <Box sx={{                   
+                  display: 'flex', 
+                  flexDirection:'column',
+                  justifyContent:'center'
+              }}
+              >
+                  <Typography sx={{fontWeight:'bold'}} fontSize="1.1rem">{empleado.nombre}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">{empleado.puesto}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">Fecha Ingreso:{empleado.fechaIngreso}</Typography>
+                  <Typography sx={{}} fontSize="0.85rem">Nivel Salarial:{empleado.nivel}</Typography>
+              </Box>
+              <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection:'column',
+                  alignItems:'center',
+                  justifyContent:'center'
+              }}
+              >
+                <Typography sx={{}} fontSize="1rem">Vacaciones</Typography>
+                <Typography sx={{}} fontSize="1.2rem">{formatearTiempoVacas(empleado.vacaciones.disponibles)}</Typography>
+                <Typography sx={{mt:1}} fontSize="0.75rem">{getRol(empleado.rol)}</Typography>
+              </Box>
+              </Box>
+            ))}
           </CardContent>
         </Card>
       </Container>
