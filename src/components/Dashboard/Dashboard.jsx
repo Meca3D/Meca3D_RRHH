@@ -335,7 +335,7 @@ const Dashboard = () => {
               {userProfile?.puesto||'Operario'}
             </Typography>
             <Typography fontSize="1rem" noWrap sx={{ opacity: 0.9, mb: 1 }}>
-              Nv {userProfile?.nivel||'?'} 
+              Nv {mask(userProfile?.nivel)||'?'} 
             </Typography>
           </Box>
               <Box sx={{ position: 'absolute', bottom: -10, right: -8 }}>

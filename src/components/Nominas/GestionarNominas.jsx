@@ -24,7 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNominaStore } from '../../stores/nominaStore';
 import { useAuthStore } from '../../stores/authStore';
 import { formatCurrency, formatDate, convertirHorasDecimalesAHorasYMinutos } from '../../utils/nominaUtils';
-import { obtenerNumeroMes } from '../Helpers';
+import { obtenerNumeroMes, capitalizeFirstLetter } from '../Helpers';
 import { useUIStore } from '../../stores/uiStore';
 
 
@@ -353,7 +353,7 @@ const handleDeleteClick = (nomina, e) => {
                       {convertirHorasDecimalesAHorasYMinutos(h.horasDecimales)}
                     </Typography>
                     <Typography sx={{ flex: 1, textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
-                      {h.tipo}
+                      {h.esVenta?'Venta':capitalizeFirstLetter(h.tipo)}
                     </Typography>
                     <Typography sx={{ flex: 1, textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
                       {formatCurrency(h.importe)}

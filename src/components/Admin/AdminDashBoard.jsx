@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useAdminStats } from '../../hooks/useAdminStats';
 import { useUIStore} from '../../stores/uiStore';
+import SeedVacacionesData from './Vacaciones/SeedVacacionesData';
 
 // Iconos
 import MenuIcon from '@mui/icons-material/Menu';
@@ -393,6 +394,9 @@ const AdminDashboard = () => {
             </Grid>
           ))}
         </Grid>
+        <Box>
+          <SeedVacacionesData />
+        </Box>
       </Paper>
     </Container>
   );

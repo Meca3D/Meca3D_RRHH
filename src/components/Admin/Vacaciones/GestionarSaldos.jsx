@@ -419,7 +419,9 @@ const GestionarSaldos = () => {
         </Box>
       ) : (
         <Box sx={{ mb: 3 }}>
+          
           {empleadosFiltrados.map((empleado) => {
+            
             const saldo = empleado.saldoActual || { asignadas: 0, disponibles: 0, pendientes: 0 };
             const estaSeleccionado = empleadosSeleccionados.includes(empleado.email);
             

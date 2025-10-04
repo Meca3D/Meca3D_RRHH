@@ -376,8 +376,8 @@ const EstadisticasHorasExtras = () => {
         {/* Selector de período */}
         <Card elevation={0} sx={{ mb: 3, borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              <CalendarIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            <Typography variant="h6" sx={{mb:2, verticalAlign: 'middle'}}>
+              <CalendarIcon sx={{ mr: 1,  }} />
               Período de Análisis
             </Typography>
             
@@ -586,7 +586,7 @@ const EstadisticasHorasExtras = () => {
                             dataKey="importe" 
                             fill="#10B981"
                             name="Importe"
-                            maxBarSize={datosGraficos.evolucionMensual.length <= 2 ? 20 : 20}
+                            maxBarSize={20}
                           />
                         </ComposedChart>
                       </ResponsiveContainer>

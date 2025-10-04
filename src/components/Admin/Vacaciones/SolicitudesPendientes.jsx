@@ -9,6 +9,7 @@ import {
   Grid, CircularProgress, Fab, Collapse, Divider
 } from '@mui/material';
 import {
+  Euro as EuroIcon,
   ArrowBackIosNew as ArrowBackIosNewIcon,
   MarkEmailUnreadOutlined as MarkEmailUnreadOutlinedIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
@@ -25,8 +26,8 @@ import {
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
-import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
-import { formatearFechaCorta, formatearFechaEspanol2, ordenarFechas, esFechaPasadaOHoy } from '../../../utils/dateUtils';
+import {  formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
+import { formatearFechaCorta, formatearFechaEspanol2, ordenarFechas,} from '../../../utils/dateUtils';
 
 const SolicitudesPendientes = () => {
   const navigate = useNavigate();
@@ -505,9 +506,9 @@ useEffect(() => {
                         sx={{ mt: -1,ml:-1 }}
                       />
                       <Chip
-                        icon={<ScheduleIcon />}
-                        label={textoUrgencia}
-                        color={colorUrgencia}
+                        icon={solicitud.esVenta?<EuroIcon />:<ScheduleIcon />}
+                        label={solicitud.esVenta?'Venta de Vacaciones':textoUrgencia}
+                        color={solicitud.esVenta?'success':colorUrgencia}
                         size="small"
                         />
                     </Box>
@@ -528,11 +529,20 @@ useEffect(() => {
                           <Typography variant="body1"  gutterBottom>
                            Solicitado: {formatearFechaCorta(solicitud.fechaSolicitud)}
                           </Typography>
+                          {solicitud.esVenta && (
+                            <Box sx={{ display:'flex', justifyContent:'center', alignItems:'center', color:'success.dark',}}>
+                                  <EuroIcon sx={{fontSize:'1.4rem'}}/>
+                                  <Typography sx={{fontSize:'1.3rem', ml:1, fontWeight:'bold'}}>
+                                    Venta de Vacaciones
+                                  </Typography>
+                                  <EuroIcon sx={{fontSize:'1.4rem', ml:1}}/>
+                                </Box>
+                          ) }
                           <Typography variant="h5" fontWeight={600} gutterBottom>
                            {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
                           </Typography>
-                          {/* Fechas con botón colapsable */}
-                          {solicitud.fechas.length === 1 
+                          {!solicitud.esVenta && (
+                          solicitud.fechas.length === 1 
                                 ? (
                                 <Box sx={{ display:'flex', justifyContent:'center', alignItems:'center', color:'azul.main',}}>
                                   <CalendarTodayIcon sx={{fontSize:'1.4rem'}}/>
@@ -568,8 +578,8 @@ useEffect(() => {
                               </Box>
                             </Collapse>
                           </Box>
-                                )}
-
+                                )
+                              )}
                           {solicitud.comentariosSolicitante && (
                             <Typography variant="body1" sx={{ fontSize:'1.25rem', fontStyle: 'italic', mt:1 }}>
                               "{solicitud.comentariosSolicitante}"
@@ -626,7 +636,7 @@ useEffect(() => {
               <Typography variant="body1" sx={{ fontSize: '1.1rem', textAlign: 'center' }}>
                 <strong>{datosUsuarios[solicitudAccion.solicitante]?.nombre || solicitudAccion.solicitante}</strong>
                 <br />
-                {formatearTiempoVacasLargo(solicitudAccion.horasSolicitadas)} 
+                {solicitudAccion.esVenta===true && 'Vender '}{formatearTiempoVacasLargo(solicitudAccion.horasSolicitadas)} 
               </Typography>
             </Alert>
           ) : (

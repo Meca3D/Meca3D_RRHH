@@ -162,7 +162,8 @@ export default function SaldosVacaciones() {
       const fechasSolicFmt = formatFechasBloques(e.fechasSolicitadas, 4);
       const fechasCancFmt = formatFechasBloques(e.fechasCanceladas, 4);
       const detalle = e.tipo === 'ajuste'
-        ? (adminShort || '-')
+        ? (adminShort)
+        : e.esVenta ? ('Venta de vacaciones')
         : (['aprobacion','denegada'].includes(e.tipo) ? fechasSolicFmt : fechasCancFmt);
       const saldoAntesTxt = typeof e.saldoAntes === 'number' ? formatearTiempoVacas(e.saldoAntes) : '-';
       const saldoDespuesTxt = typeof e.saldoDespues === 'number' ? formatearTiempoVacas(e.saldoDespues) : '-';
@@ -349,7 +350,7 @@ export default function SaldosVacaciones() {
                 <Chip
                   sx={{fontSize:'1.2rem'}}
                   color={resumen.variacion >= 0 ? 'success' : 'error'}
-                  label={`Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(resumen.variacion))}`}
+                  label={`Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacas(Math.abs(resumen.variacion))}`}
                 />
                 <Box flexGrow={1} />
                 <Button sx={{p:1}} variant="outlined" size="small" startIcon={<PictureAsPdfIcon />} onClick={exportarPDF}>
@@ -366,9 +367,6 @@ export default function SaldosVacaciones() {
   <Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>
 ) : (
   <Box display="flex" flexDirection="column" gap={1.5}>
-    {eventos.length === 0 && (
-      <Typography variant="body1">No hay eventos en este periodo</Typography>
-    )}
     {eventos.map((e, idx) => {
       const esHorasSueltas=(e.horasSolicitadas<8 || Math.abs(e.deltaHoras)<8)
       const horasSolicitadas=e.horasSolicitadas
@@ -424,6 +422,7 @@ export default function SaldosVacaciones() {
             <CardContent>
               {e.tipo === 'aprobacion' && (
                 <>
+
                   {Array.isArray(e.fechasSolicitadas) && e.fechasSolicitadas.length > 0 && (
                     <Box sx={{mt:-2, border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1}}>
                     

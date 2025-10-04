@@ -5,6 +5,7 @@ import {
   Paper, Chip
 } from '@mui/material';
 import {
+  Euro as EuroIcon,
   BeachAccessOutlined as BeachIcon,
   EditCalendarOutlined as EditCalendarOutlinedIcon,
   ListAlt as ListAltIcon,
@@ -40,6 +41,17 @@ const Vacaciones = () => {
       route: '/vacaciones/crear'
     },
     {
+      id: 'vender',
+      title: 'Vender Vacaciones',
+      subtitle: 'Venta de horas',
+      description: 'Cambio de vacaciones por dinero',
+      label: 'Venta',
+      icon: EuroIcon,
+      color: 'verde.main',
+      bgColor: 'verde.fondo',
+      route: '/vacaciones/vender'
+    },
+    {
       id: 'mis-solicitudes',
       title: 'Mis Solicitudes',
       subtitle: 'Historial personal',
@@ -57,8 +69,8 @@ const Vacaciones = () => {
       description: 'Resumen y movimientos',
       label: 'Saldo',
       icon: TrendingDownIcon,
-      color: 'verde.main',
-      bgColor: 'verde.fondo',
+      color: 'dorado.main',
+      bgColor: 'dorado.fondo',
       route: '/vacaciones/saldo'
     },
 /*     {

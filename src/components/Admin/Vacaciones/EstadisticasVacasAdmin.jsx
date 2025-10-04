@@ -130,7 +130,7 @@ const EstadisticasVacasAdmin = () => {
                     lineHeight: 1.2
                   }}
                 >
-                  Estadísticas y Analytics
+                  Análisis y Estadísticas
                 </Typography>
                 <Typography 
                   variant="caption" 

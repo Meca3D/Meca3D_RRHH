@@ -596,14 +596,16 @@ export const useVacacionesStore = create((set, get) => {
         const solicitudRef = doc(db, 'VACACIONES', solicitudId);
         const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
 
-        // Usar transacción para actualizar estado y saldo atómicamente
+        // Usar transacción para actualizar estado, saldo y crear hora extra atómicamente
         await runTransaction(db, async (transaction) => {
           // Obtener saldo actual del empleado ANTES del cambio
           const userDoc = await transaction.get(userDocRef);
           if (!userDoc.exists()) {
             throw new Error('Usuario no encontrado');
           }
-          const saldoAntes = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
+          
+          const userData = userDoc.data();
+          const saldoAntes = userData.vacaciones || { disponibles: 0, pendientes: 0 };
 
           let saldoDespues = { ...saldoAntes };
 
@@ -633,7 +635,44 @@ export const useVacacionesStore = create((set, get) => {
             'vacaciones': saldoDespues,
             updatedAt: new Date()
           });
-        });
+      
+
+        // ✅ Si es una solicitud de venta aprobada, crear registro de horas extra
+        if (nuevoEstado === 'aprobada' && solicitud?.esVenta === true) {
+        const tarifaNormal = userData.tarifasHorasExtra?.normal;
+
+        // Solo crear registro si tiene tarifa configurada
+        if (tarifaNormal && tarifaNormal > 0) {
+          const fechaAprobacion = formatYMD(new Date());
+          const horasVendidas = solicitud.horasSolicitadas || 0;
+          const importe = horasVendidas * tarifaNormal;
+        
+          // Generar referencia del nuevo documento
+          const newHoraExtraRef = doc(collection(db, 'HORAS_EXTRA'));
+
+          const horaExtraData = {
+            empleadoEmail: solicitud.solicitante,
+            fecha: fechaAprobacion,
+            horas: horasVendidas,
+            minutos: 0,
+            horasDecimales: horasVendidas,
+            tipo: 'normal',
+            tarifa: tarifaNormal,
+            importe: importe,
+            esVenta: true,
+            vacacionesId: solicitudId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+
+          // Crear el documento dentro de la transacción
+          transaction.set(newHoraExtraRef, horaExtraData);
+          // Añadir el ID de hora extra a la solicitud de vacaciones
+          updateData.horasExtraId = newHoraExtraRef.id;
+          
+        }
+      }
+    })
 
         return true;
       } catch (error) {
@@ -693,7 +732,7 @@ export const useVacacionesStore = create((set, get) => {
         
         const solicitudesPendientesCaducadas = solicitudesVacaciones.filter(solicitud => {
           const primeraFecha = solicitud.fechas[0];
-          return solicitud.estado === 'pendiente' && esFechaPasadaOHoy(primeraFecha);
+          return solicitud.estado === 'pendiente' && esFechaPasadaOHoy(primeraFecha) && !solicitud.esVenta;
         });
 
         if (solicitudesPendientesCaducadas.length === 0) {
@@ -1997,14 +2036,15 @@ mapSolicitudToEventos: (solicitud) => {
   }
 
   // Aprobación (resta saldo disponible)
-  if (!solicitud.esAjusteSaldo && ['aprobada','cancelado'].includes(solicitud.estado) && solicitud.fechaAprobacionDenegacion) {
+  if ( !solicitud.esAjusteSaldo && ['aprobada','cancelado'].includes(solicitud.estado) && solicitud.fechaAprobacionDenegacion) {
     eventos.push({
       tipo: 'aprobacion',
       fecha: solicitud.fechaAprobacionDenegacion,
       deltaHoras: (solicitud.horasDisponiblesDespues ?? 0) - (solicitud.horasDisponiblesAntes ?? 0), // suele ser negativo
       saldoAntes: solicitud.horasDisponiblesAntes ?? null,
       saldoDespues: solicitud.horasDisponiblesDespues ?? null,
-      concepto: 'Solicitud aprobada',
+      concepto: solicitud.esVenta ? 'Venta Aprobada' : 'Solicitud aprobada',
+      esVenta: solicitud.esVenta || false,
       solicitudId: solicitud.id,
       ordenDia: rank.aprobacion,
       horasSolicitadas: solicitud.horasSolicitadas,
@@ -2056,8 +2096,9 @@ mapSolicitudToEventos: (solicitud) => {
       deltaHoras: 0,
       saldoAntes: solicitud.horasDisponiblesAlDenegar ?? null,
       saldoDespues: solicitud.horasDisponiblesAlDenegar ?? null,
-      concepto: 'Solicitud denegada',
+      concepto: solicitud.esVenta? 'Venta Denegada' : 'Solicitud denegada',
       solicitudId: solicitud.id,
+      esVenta: solicitud.esVenta || false,
       horasSolicitadas: solicitud.horasSolicitadas,
       ordenDia: rank.denegada,
       fechasSolicitadas: solicitud.fechasSeleccionadas || solicitud.fechas || null,

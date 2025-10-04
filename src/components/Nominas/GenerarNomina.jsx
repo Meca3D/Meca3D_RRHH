@@ -662,7 +662,7 @@ const GenerarNomina = () => {
                                     {formatDate(hora.fecha)}
                                   </Typography>
                                    <Typography sx={{ width: '20%', textAlign:'center', fontSize:'1rem', flex: 'none' }}>
-                                    {tipoInfo.short}
+                                    {hora.esVenta?'V' : tipoInfo.short}
                                   </Typography>                      
                                   <Typography sx={{ width: '25%', textAlign:'center', fontSize:'1rem', flex: 'none' }}>
                                     {formatearTiempo(hora.horas || 0, hora.minutos || 0)}

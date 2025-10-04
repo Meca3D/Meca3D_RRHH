@@ -49,6 +49,7 @@ import CrearSolicitudVacaciones from './components/Vacaciones/CrearSolicitudVaca
 import EditarSolicitudVacaciones from './components/Vacaciones/EditarSolicitudVacaciones';
 import MisSolicitudesVacaciones from './components/Vacaciones/MisSolicitudesVacaciones';
 import MiSaldoVacaciones from './components/Vacaciones/MiSaldoVacaciones';
+import VentaVacaciones from './components/Vacaciones/VentaVacaciones';
 import HorasExtras from './components/HorasExtras/HorasExtras';
 import RegistrarHorasExtras from './components/HorasExtras/RegistrarHorasExtras';
 import GestionarHorasExtras from './components/HorasExtras/GestionarHorasExtras';
@@ -109,6 +110,7 @@ const AppRoutes = () => {
         <Route path="/vacaciones/editar/:solicitudId" element={<NoOwnerRoute><EditarSolicitudVacaciones /></NoOwnerRoute>} />
         <Route path="/vacaciones/solicitudes" element={<NoOwnerRoute><MisSolicitudesVacaciones /></NoOwnerRoute>} />
         <Route path="/vacaciones/saldo" element={<NoOwnerRoute><MiSaldoVacaciones /></NoOwnerRoute>} />
+        <Route path="/vacaciones/vender" element={<NoOwnerRoute><VentaVacaciones /></NoOwnerRoute>} />
         <Route path="/vacaciones/estadisticas" element={<NoOwnerRoute></NoOwnerRoute>} />
         <Route path="/horas-extras" element={<NoOwnerRoute><HorasExtras /></NoOwnerRoute>} />
         <Route path="/horas-extras/registrar" element={<NoOwnerRoute><RegistrarHorasExtras /></NoOwnerRoute>} />

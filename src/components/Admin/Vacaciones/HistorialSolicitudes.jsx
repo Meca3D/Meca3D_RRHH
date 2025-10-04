@@ -9,6 +9,7 @@ import {
   DialogContent, DialogActions,
 } from '@mui/material';
 import {
+  Euro,
   ArrowBackIosNew,
   History,
   Search,
@@ -369,7 +370,7 @@ const HistorialSolicitudes = () => {
 
     return {
       puedeCancelarParcialmente: solicitud.estado === 'aprobada'
-        //&& !esHorasSueltas
+        && !solicitud.esVenta
         && !solicitud.esAjusteSaldo, // Admin sin restricción de fechas pasadas
       horasDisponibles:esHorasSueltas ? solicitud.horasSolicitadas : diasDisponibles,
       esHorasSueltas
@@ -470,6 +471,15 @@ const HistorialSolicitudes = () => {
                       Denegada: {formatearFechaCorta(solicitud.fechaAprobacionDenegacion)}
                     </Typography>
                   )}
+                  {solicitud.esVenta && (
+                    <Box sx={{display:'flex', alignItems:'center', justifyContent:'center', gap:0.5,color:"verde.main"}}>
+                    <Euro sx={{fontSize:'1.1rem'}}/> 
+                    <Typography variant="body1"  textAlign="center" fontWeight={600} sx={{ }}>
+                     Venta de Vacaciones
+                    </Typography>
+                    </Box>
+                      
+                    )}
                     {tieneCancelacionesParciales && (
               
                     <Typography variant="body1"  textAlign="center" fontWeight={600} sx={{color:"naranja.main"}}>
@@ -491,10 +501,14 @@ const HistorialSolicitudes = () => {
                            {capitalizeFirstLetter(solicitud.tipoAjuste)} {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
                            </Typography>
                           </>
-                          : <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mt:3 }}>
-                            Pedido Originalmente: {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
+                          : solicitud.esVenta ? (
+                           <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mt:3 }}>
+                            Venta de Vacaciones: {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
                           </Typography>
-                            }
+                           ):(
+                           <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mt:3 }}>
+                            Pedido Originalmente: {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
+                          </Typography>)}
                 {/*  Mostrar saldos en solicitudes aprobadas */}
                 {solicitud.horasDisponiblesAntes !== undefined && solicitud.horasDisponiblesAntes !=solicitud.horasDisponiblesDespues && (
                   <Box sx={{ mt: 1,  bgcolor: solicitud.esAjusteSaldo 
@@ -522,7 +536,7 @@ const HistorialSolicitudes = () => {
                 
   
             {/*  Lista de fechas con estados visuales */}
-            {!solicitud?.esAjusteSaldo && (
+            {!solicitud?.esAjusteSaldo && !solicitud.esVenta && (
             <>
             {solicitud.fechas.length === 1 ? (
               <Box  justifyContent='space-between' alignItems={'center'} sx={{

@@ -60,8 +60,8 @@ const Nominas = () => {
       description: 'Estadísticas del año',
       label: 'Totales',
       icon: AssessmentIcon,
-      color: 'verde.main',
-      bgColor: 'verde.fondo',
+      color: 'rojo.main',
+      bgColor: 'rojo.fondo',
       gradient: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
       route: '/nominas/estadisticas'
     },

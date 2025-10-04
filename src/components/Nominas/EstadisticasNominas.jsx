@@ -614,7 +614,7 @@ const yAxisDomain = [yAxisTicks[0], yAxisTicks[yAxisTicks.length - 1]];
                 lineHeight: 1.2
               }}
             >
-              Estadísticas y Analytics
+              Análisis y Estadísticas
             </Typography>
             <Typography 
               variant="caption" 
@@ -623,7 +623,7 @@ const yAxisDomain = [yAxisTicks[0], yAxisTicks[yAxisTicks.length - 1]];
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Análisis de Nóminas
+              Estudio detallado de tus nóminas
             </Typography>
           </Box>
           <IconButton

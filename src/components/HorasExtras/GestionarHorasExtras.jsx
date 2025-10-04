@@ -369,7 +369,9 @@ const GestionarHorasExtras = () => {
                 {horasExtra.map((hora) => {
                   const tipoInfo = getTipoInfo(hora.tipo);
                   return (
+
                     <Box key={hora.id} display="flex" alignItems="center" p={1} borderBottom="1px solid" borderColor="grey.200">
+                      {!hora.esVenta && (
                       <IconButton
                         size="small"
                         color="primary"
@@ -386,15 +388,17 @@ const GestionarHorasExtras = () => {
                       >
                         <EditIcon />
                       </IconButton>
+                      )}
                       <Typography sx={{ width: '25%', textAlign:'center', fontSize:'0.75rem', flex: 1 }}>
                         {formatDate(hora.fecha)}
                       </Typography>
                        <Typography sx={{ width: '25%', textAlign:'center', fontSize:'0.8rem', flex: 1 }}>
-                        {tipoInfo.label}
+                        {hora.esVenta ? 'Venta de Vacaciones' : tipoInfo.label}
                       </Typography>                      
                       <Typography sx={{ width: '25%', textAlign:'center', fontSize:'0.8rem', flex: 1 }}>
                         {formatearTiempo(hora.horas || 0, hora.minutos || 0)}
                       </Typography>
+                      {!hora.esVenta && (
                         <IconButton
                           size="small"
                           color="error"
@@ -410,7 +414,7 @@ const GestionarHorasExtras = () => {
                         >
                           <DeleteIcon />
                         </IconButton>
-                     
+                      )}
                     </Box>
                   );
                 })}

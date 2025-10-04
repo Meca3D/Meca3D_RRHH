@@ -149,6 +149,7 @@ export default function MiSaldoVacaciones() {
 
     const detalle = e.tipo === 'ajuste'
       ? (adminShort || '-')
+      : e.esVenta ? ('Venta de vacaciones')
       : (['aprobacion','denegada'].includes(e.tipo) ? fechasSolicFmt : fechasCancFmt);
 
     const saldoAntesTxt   = typeof e.saldoAntes === 'number'   ? formatearTiempoVacas(e.saldoAntes)   : '-';
@@ -192,7 +193,7 @@ autoTable(doc, {
       <AppBar  
         sx={{ 
           overflow:'hidden',
-          background: 'linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%)',
+          background: 'linear-gradient(135deg, #6D3B07 0%, #4A2505 50%, #2D1603 100%)',
           boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)',
           zIndex: 1100
         }}
@@ -313,7 +314,7 @@ autoTable(doc, {
                 <Chip
                   sx={{fontSize:'1.2rem'}}
                   color={resumen.variacion >= 0 ? 'success' : 'error'}
-                  label={`Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(resumen.variacion))}`}
+                  label={`Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacas(Math.abs(resumen.variacion))}`}
                 />
                 <Box flexGrow={1} />
                 <Button sx={{p:1}} variant="outlined" size="small" startIcon={<PictureAsPdfIcon />} onClick={exportarPDF}>
@@ -392,6 +393,7 @@ autoTable(doc, {
             <CardContent>
               {e.tipo === 'aprobacion' && (
                 <>
+                
                   {Array.isArray(e.fechasSolicitadas) && e.fechasSolicitadas.length > 0 && (
                     <Box sx={{mt:-2, border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1}}>
                     
