@@ -2,11 +2,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container, Typography, Box, Grid, Card, CardContent, TextField, Button,
+  Container, Typography, Box, Grid, Card, CardContent, TextField, Button, Divider,
   AppBar, Toolbar, IconButton, Alert, CircularProgress, Dialog, DialogTitle,
-  DialogContent, DialogActions, MenuItem, Chip, Paper
+  DialogContent, DialogActions, MenuItem, Chip, Paper, Menu, ListItemIcon,ListItemText
 } from '@mui/material';
 import {
+  MoreVert as MoreVertIcon,
   ArrowBackIosNew as ArrowBackIosNewIcon,
   EditOutlined as EditIcon,
   Delete as DeleteIcon,
@@ -51,6 +52,8 @@ const GestionarHorasExtras = () => {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, horaExtra: null });
   const [editFormData, setEditFormData] = useState({});
   const [saving, setSaving] = useState(false);
+  const [menuState, setMenuState] = useState({ anchorEl: null, horaExtra: null });
+
 
   // ✅ Cargar datos cuando cambien los filtros
   useEffect(() => {
@@ -148,6 +151,30 @@ const GestionarHorasExtras = () => {
     }
   };
 
+      const handleMenuOpen = (event, horaExtra) => {
+      event.stopPropagation();
+      setMenuState({ anchorEl: event.currentTarget, horaExtra });
+    };
+
+    const handleMenuClose = () => {
+      setMenuState({ anchorEl: null, horaExtra: null });
+    };
+
+    const handleMenuEdit = () => {
+      if (menuState.horaExtra) {
+        handleEdit(menuState.horaExtra);
+      }
+      handleMenuClose();
+    };
+
+    const handleMenuDelete = () => {
+      if (menuState.horaExtra) {
+        setDeleteDialog({ open: true, horaExtra: menuState.horaExtra });
+      }
+      handleMenuClose();
+    };
+
+
   // ✅ Actualizar tarifa según tipo en modal de edición
   const handleTipoChange = (tipo) => {
     const tarifas = userProfile?.tarifasHorasExtra || {};
@@ -241,7 +268,6 @@ const GestionarHorasExtras = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Contenido principal */}
       <Container maxWidth="lg" sx={{ mt: 2, mb: 4, overflow:'hidden' }}>
         {/* Filtros de período */}
         <Card elevation={5} sx={{ mb: 3, borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
@@ -312,13 +338,13 @@ const GestionarHorasExtras = () => {
         {/* Resumen de estadísticas */}
         {horasExtra.length > 0 && (
           <Paper elevation={5} sx={{p: 2, mb: 3, borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
-            <Grid container spacing={3}>
+            <Grid container spacing={1}>
               <Grid size={{ xs: 6, md: 3 }}>
                 <Box textAlign="center">
                   <Typography variant="h5" color="azul.main">
                     {horasExtra.length}
                   </Typography>
-                  <Typography variant="body2">Registros</Typography>
+                  <Typography variant="body1">Registros</Typography>
                 </Box>
               </Grid>
               <Grid size={{ xs: 6, md: 3 }}>
@@ -326,7 +352,7 @@ const GestionarHorasExtras = () => {
                   <Typography variant="h5" color="primary">
                     {formatearTiempo(horasTotales, minutosTotales)}
                   </Typography>
-                  <Typography variant="body2">Tiempo Total</Typography>
+                  <Typography variant="body1">Tiempo Total</Typography>
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -334,7 +360,7 @@ const GestionarHorasExtras = () => {
                   <Typography variant="h5" color="success.main">
                     {formatCurrency(totalImporte)}
                   </Typography>
-                  <Typography variant="body2">Importe Total</Typography>
+                  <Typography variant="body1">Importe Total</Typography>
                 </Box>
               </Grid>
             </Grid>
@@ -357,64 +383,51 @@ const GestionarHorasExtras = () => {
                 }
               </Alert>
             ) : (
+              
               <Box>
+                <Typography sx={{my:1, fontWeight:'bold' }} variant="h6" textAlign='center' color='azul.main'>
+                Pulsa para editar/borrar
+              </Typography>
                 {/* Header de tabla */}
-                <Box display="flex" p={1} fontWeight="bold" bgcolor="grey.100" borderRadius={2}>
-                  <Typography sx={{ flex: 1, width: '33%', textAlign: 'right', fontWeight:'bold' }}>Fecha</Typography>
-                  <Typography sx={{ flex: 1, width: '33%', textAlign: 'center', fontWeight:'bold'}}>Tipo</Typography>
-                  <Typography sx={{ flex: 1, width: '33%', textAlign: 'left', fontWeight:'bold' }}>Tiempo</Typography>
+                <Box display="flex" justifyContent='space-around' mb={1} py={1} fontWeight="bold" bgcolor="grey.100" borderRadius={0}>
+                  <Typography sx={{ fontWeight:'bold' }}>Fecha</Typography>
+                  <Typography sx={{ fontWeight:'bold'}}>Tipo</Typography>
+                  <Typography sx={{  fontWeight:'bold' }}>Tiempo</Typography>
                 </Box>
 
                 {/* Filas de datos */}
                 {horasExtra.map((hora) => {
                   const tipoInfo = getTipoInfo(hora.tipo);
                   return (
-
-                    <Box key={hora.id} display="flex" alignItems="center" p={1} borderBottom="1px solid" borderColor="grey.200">
-                      {!hora.esVenta && (
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleEdit(hora)}
-                        sx={{
-                          ml:-1,
-                          mr:1,
-                          flex: 0, 
-                          width:'12%', 
-                          display: 'flex',
-                          bgcolor: 'azul.fondo',
-                          '&:hover': { bgcolor: 'azul.fondoFuerte' }
-                        }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      )}
-                      <Typography sx={{ width: '25%', textAlign:'center', fontSize:'0.75rem', flex: 1 }}>
+                    <Box
+                      key={hora.id}
+                      onClick={(e) => !hora.esVenta && handleMenuOpen(e, hora)}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        p: 2,
+                        mb: 1,
+                        bgcolor: hora.esVenta? 'verde.fondo':'background.paper',
+                        borderRadius: 1,
+                        boxShadow: 1,
+                        cursor: hora.esVenta ? 'default' : 'pointer',
+                        '&:hover': {
+                          bgcolor: hora.esVenta ? 'verde.fondo' : 'action.hover',
+                          transform: hora.esVenta ? 'none' : 'translateX(4px)',
+                        },
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <Typography sx={{ flex: 1, fontSize: '0.9rem' }}>
                         {formatDate(hora.fecha)}
                       </Typography>
-                       <Typography sx={{ width: '25%', textAlign:'center', fontSize:'0.8rem', flex: 1 }}>
+                      <Typography sx={{ fontWeight:700, flex:1, textAlign:'center', fontSize:'0.9rem', color: hora.esVenta? 'black': tipoInfo.color }}>
                         {hora.esVenta ? 'Venta de Vacaciones' : tipoInfo.label}
-                      </Typography>                      
-                      <Typography sx={{ width: '25%', textAlign:'center', fontSize:'0.8rem', flex: 1 }}>
+                      </Typography>
+                      <Typography sx={{ flex: 1, textAlign: 'center', fontSize:'1rem' }}>
                         {formatearTiempo(hora.horas || 0, hora.minutos || 0)}
                       </Typography>
-                      {!hora.esVenta && (
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => setDeleteDialog({ open: true, horaExtra: hora })}
-                          sx={{
-                            mr:-1,
-                            flex: 0, 
-                            width:'12%', 
-                            display: 'flex',
-                            bgcolor: 'rojo.fondo',
-                            '&:hover': { bgcolor: 'rojo.fondoFuerte' }
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      )}
                     </Box>
                   );
                 })}
@@ -543,22 +556,22 @@ const GestionarHorasExtras = () => {
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, horaExtra: null })}>
         <DialogContent>
           <Box  textAlign="center">
-          <Typography>
+          <Typography variant='body1'>
             ¿Estás seguro de que quieres <Box component="span" sx={{ color: 'rojo.main', fontWeight: 'bold' }}>eliminar</Box> este registro?
           </Typography>
           </Box>
           {deleteDialog.horaExtra && (
             <Box sx={{ mt: 2, p: 2, bgcolor: 'rojo.fondo', borderRadius: 2 }}>
-              <Typography variant="body2">
+              <Typography variant="body1">
                 <strong>Fecha:</strong> {formatDate(deleteDialog.horaExtra.fecha)}
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body1">
                 <strong>Tipo:</strong> {getTipoInfo(deleteDialog.horaExtra.tipo).label}
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body1">
                 <strong>Tiempo:</strong> {formatearTiempo(deleteDialog.horaExtra.horas || 0, deleteDialog.horaExtra.minutos || 0)}
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body1">
                 <strong>Importe:</strong> {formatCurrency(deleteDialog.horaExtra.importe)}
               </Typography>
             </Box>
@@ -574,6 +587,35 @@ const GestionarHorasExtras = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Menú contextual */}
+      <Menu
+        anchorEl={menuState.anchorEl}
+        open={Boolean(menuState.anchorEl)}
+        onClose={handleMenuClose}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={handleMenuEdit}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText>Editar</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleMenuDelete}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText>Eliminar</ListItemText>
+        </MenuItem>
+      </Menu>
+
     </>
   );
 };

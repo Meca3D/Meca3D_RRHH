@@ -104,6 +104,7 @@ export const useAdminStats = () => {
           trabajadoresVacacionesMañana: trabajadoresMañana,
           solicitudesPendientes: pendientes,
           autoAprobacionActiva: autoAprobacion,
+          configVacaciones,
           loadingStats: false
         });
       } catch (error) {

@@ -11,6 +11,7 @@ import SeedVacacionesData from './Vacaciones/SeedVacacionesData';
 
 // Iconos
 import MenuIcon from '@mui/icons-material/Menu';
+import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import ConstructionOutlinedIcon from '@mui/icons-material/ConstructionOutlined';
 import PeopleIcon from '@mui/icons-material/People';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
@@ -22,7 +23,8 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import TodayIcon from '@mui/icons-material/Today';
+import TodayOutlinedIcon from '@mui/icons-material/TodayOutlined';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 
@@ -34,7 +36,8 @@ const AdminDashboard = () => {
     trabajadoresVacacionesMañana,
     solicitudesPendientes,
     autoAprobacionActiva,
-    loadingStats
+    loadingStats,
+    configVacaciones
   } = useAdminStats();
   const { showError, showSuccess } = useUIStore();
 
@@ -62,7 +65,7 @@ const AdminDashboard = () => {
       title: trabajadoresVacacionesHoy===1 ? 'Trabajador' : 'Trabajadores',
       value: loadingStats ? '...' : trabajadoresVacacionesHoy.toString(),
       subtitle: 'Vacaciones Hoy',
-      icon: BeachAccessIcon,
+      icon: TodayOutlinedIcon,
       ...getVacacionesColor(trabajadoresVacacionesHoy),
       action: () => navigate('/admin/vacaciones/calendario')
     },
@@ -70,7 +73,7 @@ const AdminDashboard = () => {
       title: trabajadoresVacacionesMañana===1 ? 'Trabajador' : 'Trabajadores',
       value: loadingStats ? '...' : trabajadoresVacacionesMañana.toString(),
       subtitle: 'Vacaciones Mañana',
-      icon: TodayIcon,
+      icon: EventOutlinedIcon,
       ...getVacacionesColor(trabajadoresVacacionesMañana),
       action: () => navigate('/admin/vacaciones/calendario')
     },
@@ -87,9 +90,9 @@ const AdminDashboard = () => {
     title: 'Solicitudes',
     value: loadingStats ? '...' : solicitudesPendientes.toString(),
     subtitle: 'Pendientes',
-    icon: BeachAccessIcon,
-    color: 'purpura.main',
-    bgColor: 'purpura.fondo',
+    icon: ListAltOutlinedIcon,
+    color: 'naranja.main',
+    bgColor: 'naranja.fondo',
     action: () => navigate('/admin/vacaciones/pendientes')
   },
 /*     {
@@ -189,7 +192,7 @@ const AdminDashboard = () => {
       }}
     >
       <CardContent sx={{ p: 3 }}>
-        <Box display="flex" alignItems="flex-start" justifyContent="space-between" mb={2}>
+        <Box display="flex" alignItems="flex-start" justifyContent="center" mb={2}>
           <Box 
             sx={{ 
               p: 1,
@@ -283,22 +286,23 @@ const AdminDashboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{mb: 4,mt:2 }}>
-      <Box display='flex' justifyContent='center' sx={{my:2}} >
-      <Chip
-          icon={<CheckCircleIcon />}
-          label={<Typography>
-            Auto-Aprobación Vacaciones: <strong>{autoAprobacionActiva ? 'ON' : 'OFF'}</strong>
-          </Typography>}
-          onClick={ () => navigate('/admin/configuracion/configuracionVacas')}
-          color={autoAprobacionActiva ? 'success' : 'default'}
-          size="medium"
-          sx={{
-            
-            fontWeight: 500,
-            fontSize: '0.95rem'
-          }}
-        />
-      </Box>
+      <Card onClick={ () => navigate('/admin/configuracion/configuracionVacas')}  
+       display='flex' elevation={0}
+        sx={{my:2, p:2, color:autoAprobacionActiva ? 'verde.main' : 'default', flexDirection:'column', alignItems:'center', justifyContent:'center'}} >
+      <Typography fontSize='1.1rem' textAlign="center" alignItems='center' color={autoAprobacionActiva ?"azul.main": 'default'} fontWeight="bold">
+        Auto-Aprobación Vacaciones: <strong>{autoAprobacionActiva ? 'ON' : 'OFF'}</strong>
+      </Typography>
+      <Typography fontSize='1rem' textAlign="center">
+      {configVacaciones?.autoAprobar?.habilitado ? `Modo: ${
+        configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
+        configVacaciones.autoAprobar.modo === 'noVentas' ? 'Todas menos las ventas' :
+        configVacaciones.autoAprobar.modo === 'porHoras' ? `Solicitudes ≤ ${configVacaciones.autoAprobar.maxHoras} horas` :
+        configVacaciones.autoAprobar.modo === 'sinConflictos' ? 'Solo si no hay conflictos de cobertura' :
+        configVacaciones.autoAprobar.modo === 'porHorasYsinConflictos' ? `≤ ${configVacaciones.autoAprobar.maxHoras} horas y sin conflictos` :
+        ''
+      }` : ''}
+      </Typography>
+      </Card>
       {/* Grid de estadísticas administrativas */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
         {adminStats.map((stat, index) => (
@@ -394,10 +398,10 @@ const AdminDashboard = () => {
             </Grid>
           ))}
         </Grid>
+      </Paper>
         <Box>
           <SeedVacacionesData />
         </Box>
-      </Paper>
     </Container>
   );
 };

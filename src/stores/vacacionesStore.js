@@ -1127,6 +1127,9 @@ export const useVacacionesStore = create((set, get) => {
 
           const modo = configVacaciones.autoAprobar.modo || 'todas';
           const maxHoras = parseInt(configVacaciones.autoAprobar.maxHoras || 0, 10);
+          const noEsVenta = (modo === 'noVentas') 
+            ? !solicitud.esVenta 
+            : true;
 
           const cumpleHoras = (modo === 'porHoras' || modo === 'porHorasYsinConflictos')
             ? (solicitud.horasSolicitadas || 0) <= maxHoras
@@ -1142,7 +1145,8 @@ export const useVacacionesStore = create((set, get) => {
               })()
             : true;
 
-          const aplicar = (modo === 'todas') ? true : (cumpleHoras && cumpleConflictos);
+          const aplicar = (modo === 'todas') ? true : (modo === 'noVentas')
+                      ? noEsVenta :(cumpleHoras && cumpleConflictos);
 
           return { aplicar, motivo: aplicar ? 'ok' : 'reglas no cumplidas' };
         },

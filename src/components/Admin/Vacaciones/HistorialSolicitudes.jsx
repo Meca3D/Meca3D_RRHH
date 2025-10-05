@@ -389,8 +389,8 @@ const HistorialSolicitudes = () => {
       const esExpandida = solicitudesExpanded[solicitud.id];
   
       return (
-        <Card sx={{ mb: 3, borderLeft: `4px solid ${colorEstado}.main` }}>
-          <CardContent>
+        <Card sx={{ mb: 2, borderLeft: `4px solid ${colorEstado}.main` }}>
+          <CardContent sx={{mb:-2}}>
           {/* Header de la solicitud */}
           <Box 
             sx={{ 
@@ -471,15 +471,6 @@ const HistorialSolicitudes = () => {
                       Denegada: {formatearFechaCorta(solicitud.fechaAprobacionDenegacion)}
                     </Typography>
                   )}
-                  {solicitud.esVenta && (
-                    <Box sx={{display:'flex', alignItems:'center', justifyContent:'center', gap:0.5,color:"verde.main"}}>
-                    <Euro sx={{fontSize:'1.1rem'}}/> 
-                    <Typography variant="body1"  textAlign="center" fontWeight={600} sx={{ }}>
-                     Venta de Vacaciones
-                    </Typography>
-                    </Box>
-                      
-                    )}
                     {tieneCancelacionesParciales && (
               
                     <Typography variant="body1"  textAlign="center" fontWeight={600} sx={{color:"naranja.main"}}>
@@ -489,6 +480,14 @@ const HistorialSolicitudes = () => {
                     )}
                   </Box>
                 </Box>
+                {solicitud.esVenta && (
+                <Box sx={{display:'flex', alignItems:'center', justifyContent:'center',color:"naranja.main", mt:2,mb:-2,}}>
+                <Euro sx={{fontSize:'1.2rem', mr:1}}/> 
+                <Typography textAlign="center" fontWeight={600} sx={{fontSize:'1.2rem' }}>
+                  Venta de Vacaciones
+                </Typography>
+                </Box>                    
+               )}
               <Collapse in={esExpandida}>
               <Divider sx={{ my: 2 }} />
               {solicitud?.esAjusteSaldo 

@@ -66,10 +66,18 @@ const GestionConfiguracion = () => {
             <Typography textAlign="center" color="purpura.main" variant="h5" fontWeight="bold" gutterBottom>
               Configuraciones
             </Typography>
-            <Box display="flex" alignItems="center" gap={1}>
-           <Typography variant="h6" textAlign="center" color="purpura.main" fontWeight="bold">{}
-           </Typography>
+            <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
            <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">Auto-Aprobación <strong>{configVacaciones?.autoAprobar?.habilitado ? 'ON' : 'OFF'}</strong>
+           </Typography>
+           <Typography variant="body2" textAlign="center" color="purpura.main" fontWeight="bold">
+            {configVacaciones?.autoAprobar?.habilitado ? `Modo: ${
+              configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
+              configVacaciones.autoAprobar.modo === 'noVentas' ? 'Todas menos las ventas' :
+              configVacaciones.autoAprobar.modo === 'porHoras' ? `Solicitudes ≤ ${configVacaciones.autoAprobar.maxHoras} horas` :
+              configVacaciones.autoAprobar.modo === 'sinConflictos' ? 'Solo si no hay conflictos de cobertura' :
+              configVacaciones.autoAprobar.modo === 'porHorasYsinConflictos' ? `≤ ${configVacaciones.autoAprobar.maxHoras} horas y sin conflictos` :
+              ''
+            }` : ''}
            </Typography>
            </Box>
                          

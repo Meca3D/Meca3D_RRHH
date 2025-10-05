@@ -7,6 +7,7 @@ import {
   DialogTitle, DialogContent, DialogActions, Button, TextField, CircularProgress
 } from '@mui/material';
 import {
+  Euro,
   ListAlt as ListAltIcon,
   ArrowBackIosNew as ArrowBackIcon,
   EventBusyOutlined as EventBusyOutlinedIcon,
@@ -91,11 +92,13 @@ const MisSolicitudesVacaciones = () => {
     });
     const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
     return {
-      puedeEditar: (solicitud.estado === 'pendiente'||solicitud.estado==="aprobada") && diasDisponibles.length === solicitud.fechas.length && !solicitud.esAjusteSaldo,
+      puedeEditar: (solicitud.estado === 'pendiente'||solicitud.estado==="aprobada") && diasDisponibles.length === solicitud.fechas.length && !solicitud.esAjusteSaldo && !solicitud.esVenta,
       puedeCancelar: (solicitud.estado === 'pendiente' || solicitud.estado === 'aprobada') 
+                     && !solicitud.esVenta
                      && diasDisponibles.length > 0 
                      && !solicitud.esAjusteSaldo,
-      puedeCancelarParcialmente: solicitud.estado === 'aprobada' 
+      puedeCancelarParcialmente: solicitud.estado === 'aprobada'
+                                && !solicitud.esVenta 
                                 && !esHorasSueltas 
                                 && diasDisponibles.length > 1,
       horasDisponibles:esHorasSueltas ? solicitud.horasSolicitadas : diasDisponibles,
@@ -253,8 +256,8 @@ const MisSolicitudesVacaciones = () => {
     
 
     return (
-      <Card sx={{ mb: 3, borderLeft: `4px solid ${colorEstado.color}` }}>
-        <CardContent>
+      <Card sx={{ mb: 2, borderLeft: `4px solid ${colorEstado.color}` }}>
+        <CardContent sx={{mb:-2}}>
           <Grid container spacing={2} alignItems="center">
             <Grid size={{xs:12, md:6}}>
               <Box sx={{ display: 'flex', justifyContent:"space-between", alignItems: 'center', gap: 1 }}>
@@ -282,6 +285,15 @@ const MisSolicitudesVacaciones = () => {
                   )}
                 </Box>
                 <Box>
+                {solicitud.esVenta && (
+                  <Box sx={{display:'flex', alignItems:'center', justifyContent:'center', gap:0.5,color:"verde.main"}}>
+                  <Euro sx={{fontSize:'1.1rem'}}/> 
+                  <Typography variant="body1"  textAlign="center" fontWeight={600} sx={{ }}>
+                    Venta de Vacaciones
+                  </Typography>
+                  </Box>
+                    
+                  )}
                 <Typography variant="body1" textAlign="center" fontWeight={600} sx={{color:"azul.main"}} >
                   Solicitada: {formatearFechaCorta(solicitud.fechaSolicitudOriginal||solicitud.fechaSolicitud)}
                 </Typography>
@@ -305,6 +317,7 @@ const MisSolicitudesVacaciones = () => {
                     Denegada: {formatearFechaCorta(solicitud.fechaAprobacionDenegacion)}
                   </Typography>
                 )}
+
                   {tieneCancelacionesParciales && (
             
                   <Typography variant="body1"  textAlign="center" fontWeight={600} sx={{color:"naranja.main"}}>
@@ -325,10 +338,15 @@ const MisSolicitudesVacaciones = () => {
              {capitalizeFirstLetter(solicitud.tipoAjuste)} {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
              </Typography>
             </>
-            : <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mt:3 }}>
+            : solicitud.esVenta ? (
+              <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mt:3 }}>
+                Venta de Vacaciones: {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
+              </Typography>
+            ):(
+              <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mt:3 }}>
               Pedido Originalmente: {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
             </Typography>
-              }
+              )}
               {/*  Mostrar saldos en solicitudes aprobadas */}
                 {solicitud.horasDisponiblesAntes !== undefined && solicitud.horasDisponiblesAntes !=solicitud.horasDisponiblesDespues && (
                 <Box sx={{ mt: 1, bgcolor: solicitud.esAjusteSaldo 
@@ -356,7 +374,7 @@ const MisSolicitudesVacaciones = () => {
               
 
           {/*  Lista de fechas con estados visuales */}
-          {!solicitud?.esAjusteSaldo && (
+          {!solicitud?.esAjusteSaldo && !solicitud.esVenta && (
             <>
           {solicitud.fechas.length === 1 ? (
             <Box  justifyContent='space-between' alignItems={'center'} sx={{

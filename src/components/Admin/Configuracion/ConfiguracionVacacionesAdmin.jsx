@@ -178,6 +178,7 @@ const ConfiguracionVacacionesAdmin = () => {
                   onChange={(e) => setAuto('modo', e.target.value)}
                 >
                   <FormControlLabel value="todas" control={<Radio />} label="Todas las solicitudes"  />
+                  <FormControlLabel value="noVentas" control={<Radio />} label="Todas menos las ventas"  />
                   <FormControlLabel value="porHoras" control={<Radio />} label="Solo solicitudes ≤ X horas" />
                   <FormControlLabel value="sinConflictos" control={<Radio />} label="Solo si no hay conflictos de cobertura" />
                   <FormControlLabel value="porHorasYsinConflictos" control={<Radio />} label="≤ X horas y sin conflictos" />

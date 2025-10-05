@@ -162,7 +162,7 @@ const VentaVacaciones = () => {
                     step: 1
                   }
                 }}
-                helperText={`Máximo disponible: ${formatearTiempoVacas(horasDisponiblesParaVender)}`}
+                helperText={`Máximo disponible: ${horasDisponiblesParaVender} horas`}
                 required
                 sx={{ 
                   '& .MuiOutlinedInput-root': {
