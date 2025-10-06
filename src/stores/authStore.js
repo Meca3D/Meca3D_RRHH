@@ -255,7 +255,7 @@ const loadUserProfileFunction = (userEmail, set) => {
         const userData = docSnap.data();
         set({ 
           userProfile: {
-            email: userEmail,
+            email: userEmail.toLowerCase(),
             nombre: userData.nombre,
             rol: userData.rol,
             fechaIngreso: userData.fechaIngreso,

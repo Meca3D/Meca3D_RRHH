@@ -85,7 +85,7 @@ const Dashboard = () => {
         ? formatCurrency(userSalaryInfo.salarioCompletoEstimado)
         : '0€'),
       subtitle: userSalaryInfo?.salarioCompletoEstimado 
-        ? `estimado ${userSalaryInfo.mesNomina}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
+        ? `${userSalaryInfo.mesNomina}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
@@ -97,7 +97,7 @@ const Dashboard = () => {
       title: 'Horas Extras',
       value: mask(formatCurrency(userSalaryInfo.totalImporteHorasMesActual)),
       subtitle:  (userProfile?.tarifasHorasExtra)
-        ? `estimado ${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
+        ? `${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
@@ -118,7 +118,7 @@ const Dashboard = () => {
       title: 'Horas Extras',
       value: userSalaryInfo?.totalTiempoMesActual,
       subtitle: (userProfile?.tarifasHorasExtra)
-        ? `estimado ${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
+        ? `${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: AccessTimeIcon,
       color: 'naranja.main', 
       bgColor: 'naranja.fondo',

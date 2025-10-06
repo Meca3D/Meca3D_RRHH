@@ -8,6 +8,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import {
+  Euro,
   ArrowBackIosNew,
   Rule,
   ThumbUpAlt,
@@ -38,6 +39,7 @@ const ConfiguracionVacacionesAdmin = () => {
       setLocalCfg(JSON.parse(JSON.stringify(configVacaciones)));
     } else {
       setLocalCfg({
+        ventaVacaciones: {habilitado: false},
         autoAprobar: { habilitado: false, modo: 'todas', maxHoras: 8, mensaje: 'Aprobado automáticamente por política activa.' },
         cobertura: {
           umbrales: {
@@ -53,6 +55,14 @@ const ConfiguracionVacacionesAdmin = () => {
       ...prev,
       autoAprobar: { ...prev.autoAprobar, [path]: value }
     }));
+  };
+
+    const setVenta = (path, value) => {
+    setLocalCfg(prev => ({
+      ...prev,
+      ventaVacaciones: { ...prev.ventaVacaciones, [path]: value }
+    }));
+
   };
 
   const setUmbral = (puesto, value) => {
@@ -131,7 +141,7 @@ const ConfiguracionVacacionesAdmin = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
                 }}
             >
-                Auto-aprobación y Cobertura
+                Vacaciones y Cobertura
             </Typography>
             </Box>
             <IconButton
@@ -154,6 +164,21 @@ const ConfiguracionVacacionesAdmin = () => {
                   <Typography fontSize='1.75rem' fontWeight={700} sx={{mb:2, textAlign:'center'}}>
                     Vacaciones
                     </Typography>
+                 <Typography fontSize='1.45rem' gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Euro color="success" /> Venta de Vacaciones
+                </Typography>
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={Boolean(localCfg.ventaVacaciones?.habilitado)}
+                      onChange={(e) => setVenta('habilitado', e.target.checked)}
+                    />
+                  }
+                  label="Habilitar Venta de Vacaciones"
+                />
+
+                <Divider sx={{ my: 2 }} />
                 <Typography fontSize='1.45rem' gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <ThumbUpAlt color="success" /> Auto-aprobación
                 </Typography>

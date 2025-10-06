@@ -60,7 +60,7 @@ const Login = () => {
 
     try {
       // Autenticar con Firebase
-      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      await signInWithEmailAndPassword(auth, formData.email.toLowerCase(), formData.password);
       showSuccess(`¡Bienvenido de nuevo!`);
       useAuthStore.getState().initAuthListener();
 

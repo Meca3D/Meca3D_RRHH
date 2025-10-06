@@ -99,7 +99,7 @@ export default async (request, context) => {
       );
     }
 
-    const emailTrimmed = email.trim();
+    const emailTrimmed = email.toLowerCase().trim();
     
     // ✅ Variables para tracking del proceso
     let authDeleted = false;

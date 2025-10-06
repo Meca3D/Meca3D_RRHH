@@ -14,19 +14,24 @@ import {
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
 import { formatearTiempoVacas } from '../../utils/vacacionesUtils';
+import { useVacacionesStore } from '../../stores/vacacionesStore';
+import { useEffect } from 'react';
+import { useUIStore } from '../../stores/uiStore';
 
 
 const Vacaciones = () => {
   const { userProfile } = useAuthStore();
   const navigate = useNavigate();
+  const { configVacaciones, loadConfigVacaciones } = useVacacionesStore();
+  const { showError } = useUIStore();
 
+  useEffect(() => {
+    configVacaciones ? null : loadConfigVacaciones();
+  }, [configVacaciones]);
 
   const vacacionesDisponibles = userProfile?.vacaciones?.disponibles || 0;
   const vacacionesPendientes = userProfile?.vacaciones?.pendientes || 0;
-  const diasDisponibles = Math.floor(vacacionesDisponibles / 8);
-  const horasRestantes = vacacionesDisponibles % 8;
-  const diasPendientes = Math.floor(vacacionesPendientes / 8);
-  const horasPendientesRestantes = vacacionesPendientes % 8;
+
 
   const quickActions = [
     {
@@ -49,7 +54,9 @@ const Vacaciones = () => {
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
-      route: '/vacaciones/vender'
+      route: '/vacaciones/vender',
+      disabled: !configVacaciones?.ventaVacaciones?.habilitado,
+      disabledInfo: 'La empresa no permite la venta de vacaciones en este momento'
     },
     {
       id: 'mis-solicitudes',
@@ -149,7 +156,7 @@ const Vacaciones = () => {
             <Grid size={{xs:6 ,sm:3}} key={action.id}>
               <Card
                 elevation={5}
-                onClick={() => navigate(action.route)}
+                onClick={() => action.disabled ? showError(action.disabledInfo): navigate(action.route)}
                 sx={{
                   height: '100%',
                   border: '1px solid',

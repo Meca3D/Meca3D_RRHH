@@ -115,10 +115,10 @@ const {
     }
 
     console.log(`📝 Creando usuario: ${email}`);
-
+    const emailTrimmed = email.toLowerCase().trim();
     // Crear usuario en Firebase Auth
     const userRecord = await admin.auth().createUser({
-      email: email,
+      email: emailTrimmed,
       password: password,
       displayName: nombre,
       emailVerified: false
@@ -127,7 +127,7 @@ const {
     console.log(`✅ Usuario creado en Auth: ${userRecord.uid}`);
 
     // Crear documento en Firestore
-    await admin.firestore().collection('USUARIOS').doc(email).set({
+    await admin.firestore().collection('USUARIOS').doc(emailTrimmed).set({
       nombre: nombre,
       rol: rol,
       puesto: puesto,
@@ -136,8 +136,9 @@ const {
         pendientes: 0
       },
       fechaIngreso: fechaIngreso || '', // String en formato YYYY-MM-DD
-      nivel: Number(nivel) || null, // Número 1-21
+      nivel: Number(nivel) || 1, // Número 1-21
       favoritos: [],
+      visible:true
     });
 
     console.log(`✅ Documento creado en Firestore para: ${email}`);

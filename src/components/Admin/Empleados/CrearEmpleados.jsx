@@ -81,6 +81,7 @@ const CrearEmpleado = () => {
           nivel: '',
           puesto: ''
         });
+        navigate('/admin/empleados');
 
       } else {
         showError(result.error);
