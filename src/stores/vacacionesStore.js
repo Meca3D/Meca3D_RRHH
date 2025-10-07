@@ -1,6 +1,6 @@
 // stores/vacacionesStore.js
 import { create } from 'zustand';
-import { collection, onSnapshot, doc, updateDoc, writeBatch, query, where, orderBy, getDoc, getDocs, setDoc, runTransaction } from 'firebase/firestore';
+import { arrayUnion, collection, onSnapshot, doc, updateDoc, writeBatch, query, where, orderBy, getDoc, getDocs, setDoc, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuthStore } from './authStore';
 import { formatYMD, esFinDeSemana, esFechaPasadaOHoy} from '../utils/dateUtils';
@@ -76,17 +76,21 @@ export const useVacacionesStore = create((set, get) => {
     
           let solicitudesQuery;
           
-          if (isAdminOrOwner()) {
-            solicitudesQuery = query(
-              collection(db, 'VACACIONES'),
-              orderBy('fechaSolicitud', 'desc')
-            );
-          } else {
+          if (userEmail) {   
             solicitudesQuery = query(
               collection(db, 'VACACIONES'),
               where('solicitante', '==', userEmail),
               orderBy('fechaSolicitud', 'desc')
+            );       
+            
+          } else if (isAdminOrOwner()) {
+            solicitudesQuery = query(
+              collection(db, 'VACACIONES'),
+              orderBy('fechaSolicitud', 'desc')
             );
+
+          } else { 
+            return []
           }
     
           unsubscribeSolicitudes = onSnapshot(
@@ -117,51 +121,6 @@ export const useVacacionesStore = create((set, get) => {
           };
         },
 
-    loadSolicitudesConCancelaciones: async (userEmail) => {
-      try {
-        const { isAuthenticated, user, isAdminOrOwner } = useAuthStore.getState();
-        if (!isAuthenticated || !user) {
-          return [];
-        }
-
-    let solicitudesQuery;
-    if (userEmail) {
-      // Always filter by userEmail if provided (for "mis solicitudes")
-      solicitudesQuery = query(
-        collection(db, 'VACACIONES'),
-        where('solicitante', '==', userEmail),
-        orderBy('fechaSolicitud', 'desc')
-      );
-    } else if (isAdminOrOwner()) {
-      // Load all if no userEmail and is admin (for historial)
-      solicitudesQuery = query(
-        collection(db, 'VACACIONES'),
-        orderBy('fechaSolicitud', 'desc')
-      );
-    } else {
-      return [];
-    }
-
-        const snapshot = await getDocs(solicitudesQuery);
-        const solicitudes = [];
-
-        // ✅ OBTENER cancelaciones parciales para cada solicitud
-        for (const docSnap of snapshot.docs) {
-          const solicitudData = { id: docSnap.id, ...docSnap.data() };
-          const cancelacionesParciales = await get().obtenerCancelacionesParciales(docSnap.id);
-          
-          solicitudes.push({
-            ...solicitudData,
-            cancelacionesParciales
-          });
-        }
-
-        return solicitudes;
-      } catch (error) {
-        console.error('Error cargando solicitudes con cancelaciones:', error);
-        return [];
-      }
-    },
 
     // Obtener días cancelados totales de todas las subcolecciones
     obtenerDiasCancelados: (cancelacionesParciales) => {
@@ -353,10 +312,8 @@ export const useVacacionesStore = create((set, get) => {
           throw new Error('Debes proporcionar un motivo para la cancelación');
         }
         // ✅ OBTENER cancelaciones parciales previas
-        const cancelacionesPrevias = await get().obtenerCancelacionesParciales(solicitud.id);
-        const diasYaCancelados = cancelacionesPrevias.reduce((acc, c) => {
-          return [...acc, ...c.fechasCanceladas];
-        }, []);
+        const cancelacionesPrevias = solicitud.cancelacionesParciales || [];
+        const diasYaCancelados = get().obtenerDiasCancelados(cancelacionesPrevias);
 
         // ✅ CALCULAR días restantes no cancelados y no disfrutados
         const diasDisponibles = solicitud.fechas.filter(fecha => {
@@ -530,41 +487,6 @@ export const useVacacionesStore = create((set, get) => {
   return fechasSolicitadas.filter(f => !canceladasSet.has(f)).sort();
     },
 
-    obtenerSolicitudPorId: async (solicitudId) => {
-      try {
-        const docSnap = await getDoc(doc(db, 'VACACIONES', solicitudId));
-        
-        if (docSnap.exists()) {
-          return {
-            id: docSnap.id,
-            ...docSnap.data()
-          };
-        } else {
-          throw new Error('Solicitud no encontrada');
-        }
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
-      }
-    },
-
-    obtenerCancelacionesParciales: async (solicitudId) => {
-      try {
-        const cancelacionesQuery = query(
-          collection(db, 'VACACIONES', solicitudId, 'cancelaciones_parciales'),
-          orderBy('fechaCancelacion', 'asc')
-        );
-        const snapshot = await getDocs(cancelacionesQuery);
-        return snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } catch (error) {
-        console.error('Error obteniendo cancelaciones parciales:', error);
-        return [];
-      }
-    },
-
     obtenerSolicitudCompleta: async (solicitudId) => {
       try {
         const solicitudDoc = await getDoc(doc(db, 'VACACIONES', solicitudId));
@@ -572,13 +494,8 @@ export const useVacacionesStore = create((set, get) => {
           throw new Error('Solicitud no encontrada');
         }
         
-        const cancelacionesParciales = await get().obtenerCancelacionesParciales(solicitudId);
-        
-        return {
-          id: solicitudDoc.id,
-          ...solicitudDoc.data(),
-          cancelacionesParciales
-        };
+        return { id: solicitudDoc.id, ...solicitudDoc.data() };
+
       } catch (error) {
         console.error('Error obteniendo solicitud completa:', error);
       }
@@ -997,7 +914,7 @@ export const useVacacionesStore = create((set, get) => {
         // ✅ OPTIMIZACIÓN: Obtener solicitudes aprobadas directamente desde Firestore
         // En lugar de usar solicitudesVacaciones que puede estar vacío
         const añoFecha = new Date(fecha).getFullYear();
-        const solicitudesAprobadas = await get().loadVacacionesAprobadasConCancelaciones(añoFecha);
+        const solicitudesAprobadas = await get().loadVacacionesAprobadas(añoFecha);
         
         // ✅ VALIDACIÓN: Asegurar que tenemos solicitudes válidas
         if (!Array.isArray(solicitudesAprobadas) || solicitudesAprobadas.length === 0) {
@@ -1194,28 +1111,22 @@ export const useVacacionesStore = create((set, get) => {
           });
         });
         
-        return solicitudesFiltradas.sort((a, b) => new Date(a.fechas[0]) - new Date(b.fechas[0]));
+        const base=solicitudesFiltradas.sort((a, b) => new Date(a.fechas[0]) - new Date(b.fechas[0]));
+        const result = [];
+        for (const s of base) {
+        const diasCancelados = get().obtenerDiasCancelados(s.cancelacionesParciales);
+        result.push({
+          ...s,
+          _diasCanceladosSet: new Set(diasCancelados),
+        });
+      }
+      return result;
         
       } catch (error) {
         console.error('Error cargando vacaciones aprobadas:', error);
         set({ error: error.message });
         return [];
       }
-    },
-
-    loadVacacionesAprobadasConCancelaciones: async (año = new Date().getFullYear()) => {
-      const base = await get().loadVacacionesAprobadas(año);
-      const result = [];
-      for (const s of base) {
-        const cancelacionesParciales = await get().obtenerCancelacionesParciales(s.id);
-        const diasCancelados = get().obtenerDiasCancelados(cancelacionesParciales);
-        result.push({
-          ...s,
-          cancelacionesParciales,
-          _diasCanceladosSet: new Set(diasCancelados),
-        });
-      }
-      return result;
     },
 
     // Cargar historial completo con filtros
@@ -1349,11 +1260,8 @@ export const useVacacionesStore = create((set, get) => {
         throw new Error('No se pueden cancelar parcialmente solicitudes de horas sueltas');
       }
 
-      // ✅ OBTENER cancelaciones previas para validar
-      const cancelacionesPrevias = await get().obtenerCancelacionesParciales(solicitud.id);
-      const diasYaCancelados = cancelacionesPrevias.reduce((acc, c) => {
-        return [...acc, ...c.fechasCanceladas];
-      }, []);
+      const cancelacionesPrevias = solicitud.cancelacionesParciales || [];
+      const diasYaCancelados = get().obtenerDiasCancelados(cancelacionesPrevias);
 
       // ✅ VALIDACIÓN: No cancelar días ya cancelados
       const diasDuplicados = diasACancelar.filter(dia => diasYaCancelados.includes(dia));
@@ -1393,25 +1301,30 @@ export const useVacacionesStore = create((set, get) => {
         saldoAntes = userDoc.data().vacaciones?.disponibles || 0;
         saldoDespues = saldoAntes + horasADevolver;
 
-        // ✅ CREAR subcolección de cancelación parcial
-        const cancelacionRef = doc(collection(db, 'VACACIONES', solicitud.id, 'cancelaciones_parciales'));
-        cancelacionId = cancelacionRef.id;
+
 
         const cancelacionData = {
+          id: doc(collection(db, 'temp')).id, // generar ID único client-side
           fechasCanceladas: diasACancelar.sort(),
           horasDevueltas: horasADevolver,
           motivoCancelacion: motivoCancelacion.trim(),
           fechaCancelacion: formatYMD(new Date()),
-          horasDisponiblesAntesCancelacion: saldoAntes,         
+          horasDisponiblesAntesCancelacion: saldoAntes,
           horasDisponiblesDespuesCancelacion: saldoDespues,
           procesadaPor: user?.email,
           esAdmin: esAdmin,
           createdAt: new Date()
         };
+        cancelacionId = cancelacionData.id;
 
-        transaction.set(cancelacionRef, cancelacionData);
+        // Actualizar la solicitud con arrayUnion
+        const solicitudRef = doc(db, 'VACACIONES', solicitud.id);
+        transaction.update(solicitudRef, {
+          cancelacionesParciales: arrayUnion(cancelacionData),
+          updatedAt: new Date()
+        });
 
-        // ✅ ACTUALIZAR saldo del empleado
+        //  ACTUALIZAR saldo del empleado
         transaction.update(userDocRef, {
           'vacaciones.disponibles': saldoDespues,
           updatedAt: new Date()
@@ -1953,8 +1866,7 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
       throw error;
     }
   },
-
-      // ✅ AÑADIR en vacacionesStore.js
+      //
     loadHistorialSolicitudesConCancelaciones: async (filtros = {}) => {
       try {
         const { isAdminOrOwner } = useAuthStore.getState();
@@ -1978,18 +1890,12 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
         }
 
         const querySnapshot = await getDocs(solicitudesQuery);
-        const solicitudes = [];
 
         // ✅ CARGAR cada solicitud con sus cancelaciones parciales
-        for (const docSnap of querySnapshot.docs) {
-          const solicitudData = { id: docSnap.id, ...docSnap.data() };
-          const cancelacionesParciales = await get().obtenerCancelacionesParciales(docSnap.id);
-          
-          solicitudes.push({
-            ...solicitudData,
-            cancelacionesParciales
-          });
-        }
+        let solicitudes = querySnapshot.docs.map(docSnap => ({
+              id: docSnap.id,
+              ...docSnap.data()
+            }));
 
         // Filtros adicionales en memoria
         let solicitudesFiltradas = solicitudes;

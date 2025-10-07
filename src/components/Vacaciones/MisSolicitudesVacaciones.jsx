@@ -32,7 +32,8 @@ const MisSolicitudesVacaciones = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { 
-    loadSolicitudesConCancelaciones, 
+    solicitudesVacaciones,
+    loadSolicitudesVacaciones, 
     cancelarSolicitudVacaciones,
     eliminarSolicitudVacaciones,
     cancelarSolicitudParcial,
@@ -41,7 +42,6 @@ const MisSolicitudesVacaciones = () => {
     loading 
   } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
-  const [solicitudesVacaciones, setSolicitudesVacaciones] = useState([]);
 
   // Estados principales
   const [tabActual, setTabActual] = useState(0);
@@ -65,19 +65,12 @@ const MisSolicitudesVacaciones = () => {
   const [procesandoCancelacionParcial, setProcesandoCancelacionParcial] = useState(false);
 
  useEffect(() => {
-    const cargarSolicitudes = async () => {
-      try {
-        const solicitudes = await loadSolicitudesConCancelaciones(user?.email);
-        setSolicitudesVacaciones(solicitudes);
-      } catch (error) {
-        showError('Error cargando solicitudes: ' + error.message);
-      }
-    };
-
-    if (user?.email) {
-      cargarSolicitudes();
-    }
-  }, [user?.email, loadSolicitudesConCancelaciones]);
+        if (!user?.email) return; 
+      const unsubscribe = loadSolicitudesVacaciones(user?.email);    
+      return () => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      };
+    }, [user?.email, loadSolicitudesVacaciones]);
 
   
  
@@ -148,10 +141,6 @@ const MisSolicitudesVacaciones = () => {
       setSolicitudACancelar(null);
       setMotivoCancelacion('');
       
-      //  RECARGAR solicitudes
-      const solicitudes = await loadSolicitudesConCancelaciones(user?.email);
-      setSolicitudesVacaciones(solicitudes);
-      
     } catch (error) {
       showError(`Error al ${solicitudACancelar.estado==="aprobada"?'cancelar':'eliminar'} la solicitud: ` + error.message);
     } finally {
@@ -198,8 +187,6 @@ const MisSolicitudesVacaciones = () => {
         `Cancelación parcial procesada correctamente. (${resultado.diasCancelados} días devueltos)`
       );
       
-      const solicitudes = await loadSolicitudesConCancelaciones(user?.email)
-      setSolicitudesVacaciones(solicitudes)
       setDialogoCancelacionParcial(false);
       setSolicitudParaCancelarParcial(null);
       setDiasACancelar([]);

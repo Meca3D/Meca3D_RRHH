@@ -481,7 +481,7 @@ const HistorialSolicitudes = () => {
                   </Box>
                 </Box>
                 {solicitud.esVenta && (
-                <Box sx={{display:'flex', alignItems:'center', justifyContent:'center',color:"naranja.main", mt:2,mb:-2,}}>
+                <Box sx={{display:'flex', alignItems:'center', justifyContent:'center',bgcolor:"verde.fondo", mt:2,mb:-1,}}>
                 <Euro sx={{fontSize:'1.2rem', mr:1}}/> 
                 <Typography textAlign="center" fontWeight={600} sx={{fontSize:'1.2rem' }}>
                   Venta de Vacaciones
@@ -894,7 +894,7 @@ const HistorialSolicitudes = () => {
                             fullWidth
                             
                             onClick={() => handleAbrirCancelacionParcial(solicitud)}
-                            sx={{ py:1, mb:-1, mt: 2, borderRadius:2 }}
+                            sx={{ py:1, mb:1, mt: 2, borderRadius:2 }}
                         >
                             <CancelOutlined sx={{fontSize:'1.5rem', mr:2}} />
                             {solicitud.horasSolicitadas<8 

@@ -33,7 +33,7 @@ const CalendarioVacacionesAdmin = () => {
     loadConfigVacaciones,
     configVacaciones,
     loadFestivos,
-    loadVacacionesAprobadasConCancelaciones,
+    loadVacacionesAprobadas,
     calcularDisponibilidadPorFecha,
     detectarConflictos,
     obtenerEmpleadosConSolicitudes,
@@ -72,7 +72,7 @@ const CalendarioVacacionesAdmin = () => {
       const unsubscribeFestivos = loadFestivos(año);
       
       // ✅ Cargar vacaciones aprobadas directamente desde Firestore
-      const vacaciones = await loadVacacionesAprobadasConCancelaciones(año);
+      const vacaciones = await loadVacacionesAprobadas(año);
       setVacacionesAprobadas(vacaciones);
       
       // Cargar próximas vacaciones usando la nueva función
@@ -107,7 +107,7 @@ const CalendarioVacacionesAdmin = () => {
   };
   
   cargarDatos();
-}, [mesActual, loadVacacionesAprobadasConCancelaciones, obtenerDatosUsuarios, loadFestivos]);
+}, [mesActual, loadVacacionesAprobadas, obtenerDatosUsuarios, loadFestivos]);
 
   
   // useEffect para detectar conflictos

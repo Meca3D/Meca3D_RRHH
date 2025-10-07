@@ -53,6 +53,7 @@ const VentaVacaciones = () => {
         fechas: [],
         horasSolicitadas: horas,
         esVenta: true,
+        cantidadARecibir: tarifaHoraExtra?cantidadARecibir:null,
         comentariosSolicitante: `Me gustaría vender ${formatearTiempoVacasLargo(horas)} de mis vacaciones.`,
       });
 
@@ -177,19 +178,20 @@ const VentaVacaciones = () => {
 
           {/* Resumen en cards */}
           {horasAVender && parseInt(horasAVender) > 0 && (
-            <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
               {/* Card: Horas a vender */}
               <Grid size={{ xs: 6, md: 4 }}>
                 <Card 
                   sx={{ 
+                    
                     bgcolor: 'success.light', 
                     color: 'success.contrastText',
                     boxShadow: 3,
                     height: '100%'
                   }}
                 >
-                  <CardContent>
-                    <Typography fontSize='1rem'  textAlign='center' sx={{ }}>
+                  <CardContent sx={{px:1,py:1}}>
+                    <Typography fontSize='1.1rem'  textAlign='center' sx={{ }}>
                       Vacaciones a Vender
                     </Typography>
                     <Typography variant="h6"  textAlign='center' sx={{ fontWeight: 700, mt: 1 }}>
@@ -209,8 +211,8 @@ const VentaVacaciones = () => {
                     height: '100%'
                   }}
                 >
-                  <CardContent>
-                    <Typography fontSize='1rem' textAlign='center' sx={{}}>
+                  <CardContent sx={{px:1,py:1}}>
+                    <Typography fontSize='1.1rem' textAlign='center' sx={{}}>
                       Vacaciones tras Aprobación
                     </Typography>
                     <Typography variant="h6" textAlign='center' sx={{ fontWeight: 700, mt: 1 }}>
@@ -231,7 +233,7 @@ const VentaVacaciones = () => {
                   }}
                 >
                   <CardContent>
-                    <Typography fontSize='1rem'  textAlign='center' sx={{ }}>
+                    <Typography fontSize='1.1rem'  textAlign='center' sx={{ }}>
                       Dinero a recibir
                     </Typography>
                     {tarifaHoraExtra ? (
@@ -240,20 +242,13 @@ const VentaVacaciones = () => {
                       </Typography>
                     ) : (
                       <Typography variant="body1"  textAlign='center' sx={{ mt: 1 }}>
-                        Configura los datos de horas extra para ver la cantidad
+                        Configura los datos de horas extra para ver la cantidad. Este dato es solo informativo y no impide enviar la solicitud.
                       </Typography>
                     )}
                   </CardContent>
                 </Card>
               </Grid>
             </Grid>
-          )}
-
-          {/* Mensaje informativo si no hay tarifa */}
-          {!tarifaHoraExtra && (
-            <Alert severity="warning" sx={{ mb: 3 }}>
-              No tienes configurada la tarifa de horas extra. Contacta con administración para configurar este dato y poder visualizar la cantidad a recibir.
-            </Alert>
           )}
 
           {/* Botón de envío */}

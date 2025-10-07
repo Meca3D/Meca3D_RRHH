@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react';
 import { 
   Grid, Card, CardContent, Typography, Box, 
   CardActionArea, Container, Fab, Paper,
@@ -16,8 +17,14 @@ import { useVacacionesStore } from '../../../stores/vacacionesStore';
 
 const GestionConfiguracion = () => {
   const navigate = useNavigate();
-  const { configVacaciones } = useVacacionesStore();
+  const { configVacaciones,loadConfigVacaciones } = useVacacionesStore();
 
+  // Cargar configuración al montar
+  useEffect(() => {
+    if (!configVacaciones) {
+      loadConfigVacaciones();
+    }
+  }, [configVacaciones]);
 
   const quickActions = [
         {
@@ -66,10 +73,13 @@ const GestionConfiguracion = () => {
             <Typography textAlign="center" color="purpura.main" variant="h5" fontWeight="bold" gutterBottom>
               Configuraciones
             </Typography>
-            <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
+            <Box display="flex" flexDirection="column" alignItems="center" sx={{mt:2}}>
+            <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold" sx={{mb:-0.5}}>
+            Venta de Vacaciones: <strong>{configVacaciones?.ventaVacaciones?.habilitado ? 'ON' : 'OFF'}</strong>
+          </Typography>
            <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">Auto-Aprobación <strong>{configVacaciones?.autoAprobar?.habilitado ? 'ON' : 'OFF'}</strong>
            </Typography>
-           <Typography variant="body2" textAlign="center" color="purpura.main" fontWeight="bold">
+           <Typography variant="body2" textAlign="center" color="dorado.main" fontWeight="bold" fontStyle='italic'sx={{mt:-0.5}}>
             {configVacaciones?.autoAprobar?.habilitado ? `Modo: ${
               configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
               configVacaciones.autoAprobar.modo === 'noVentas' ? 'Todas menos las ventas' :

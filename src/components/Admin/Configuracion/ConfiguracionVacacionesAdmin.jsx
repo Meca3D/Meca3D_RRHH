@@ -161,9 +161,11 @@ const ConfiguracionVacacionesAdmin = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                  <Typography fontSize='1.75rem' fontWeight={700} sx={{mb:2, textAlign:'center'}}>
+                <Box display='flex' justifyContent='center' alignItems='center' sx={{width:'100%', bgcolor:'grey.100',  mb:2}}>
+                  <Typography fontSize='1.75rem' fontWeight={700} sx={{ textAlign:'center'}}>
                     Vacaciones
                     </Typography>
+                  </Box>
                  <Typography fontSize='1.45rem' gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Euro color="success" /> Venta de Vacaciones
                 </Typography>
@@ -178,7 +180,7 @@ const ConfiguracionVacacionesAdmin = () => {
                   label="Habilitar Venta de Vacaciones"
                 />
 
-                <Divider sx={{ my: 2 }} />
+                <Divider sx={{  my: 2 }} />
                 <Typography fontSize='1.45rem' gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <ThumbUpAlt color="success" /> Auto-aprobación
                 </Typography>

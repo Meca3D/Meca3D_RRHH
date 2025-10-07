@@ -1,13 +1,13 @@
 // components/Admin/AdminDashboard.jsx
 import { 
   Grid, Card, CardContent, Typography, Box, Container, AppBar,Toolbar,
-  Avatar, Paper, IconButton, Chip, CircularProgress
+  Avatar, Paper, IconButton, Chip, CircularProgress,
+  Divider
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useAdminStats } from '../../hooks/useAdminStats';
-import { useUIStore} from '../../stores/uiStore';
-import SeedVacacionesData from './Vacaciones/SeedVacacionesData';
+import { useVacacionesStore } from '../../stores/vacacionesStore';
 
 // Iconos
 import MenuIcon from '@mui/icons-material/Menu';
@@ -26,20 +26,27 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import TodayOutlinedIcon from '@mui/icons-material/TodayOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useEffect } from 'react';
 
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isOwner, loading} = useAuthStore();
+  const { configVacaciones, loadConfigVacaciones } = useVacacionesStore();
   const {
     trabajadoresVacacionesHoy,
     trabajadoresVacacionesMañana,
     solicitudesPendientes,
     autoAprobacionActiva,
     loadingStats,
-    configVacaciones
   } = useAdminStats();
-  const { showError, showSuccess } = useUIStore();
+
+  useEffect(() => {
+    if (!configVacaciones) {
+      loadConfigVacaciones();
+    } 
+  }, [configVacaciones]);
+
 
     if (loading) {
       return (
@@ -286,13 +293,29 @@ const AdminDashboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{mb: 4,mt:2 }}>
+      
+      {/* Grid de estadísticas administrativas */}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        {adminStats.map((stat, index) => (
+          <Grid size={{ xs: 6, md: 4 }} key={index}>
+            <StatCard {...stat} />
+          </Grid>
+        ))}
+      </Grid>
       <Card onClick={ () => navigate('/admin/configuracion/configuracionVacas')}  
        display='flex' elevation={0}
-        sx={{my:2, p:2, color:autoAprobacionActiva ? 'verde.main' : 'default', flexDirection:'column', alignItems:'center', justifyContent:'center'}} >
-      <Typography fontSize='1.1rem' textAlign="center" alignItems='center' color={autoAprobacionActiva ?"azul.main": 'default'} fontWeight="bold">
+        sx={{mb:2, p:2, color:autoAprobacionActiva ? 'verde.main' : 'default', flexDirection:'column', alignItems:'center', justifyContent:'center'}} >
+      <Typography fontSize='1.1rem' textAlign="center" alignItems='center' color={'rojo.main'} fontWeight="bold">
+        CONFIGURACION DE VACACIONES
+      </Typography>
+      <Divider sx={{bgcolor:'black', mb:1}} />
+      <Typography fontSize='1.1rem' textAlign="center" alignItems='center' color={configVacaciones?.ventaVacaciones?.habilitado ?"azul.main": 'grey'} fontWeight="bold">
+        Venta de Vacaciones: <strong>{configVacaciones?.ventaVacaciones?.habilitado ? 'ON' : 'OFF'}</strong>
+      </Typography>
+       <Typography fontSize='1.1rem' textAlign="center" alignItems='center' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="bold">
         Auto-Aprobación Vacaciones: <strong>{autoAprobacionActiva ? 'ON' : 'OFF'}</strong>
       </Typography>
-      <Typography fontSize='1rem' textAlign="center">
+      <Typography fontSize='1rem' textAlign="center" sx={{mt:-0.5, fontWeight:'bold', fontStyle:'italic'}}>
       {configVacaciones?.autoAprobar?.habilitado ? `Modo: ${
         configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
         configVacaciones.autoAprobar.modo === 'noVentas' ? 'Todas menos las ventas' :
@@ -303,14 +326,6 @@ const AdminDashboard = () => {
       }` : ''}
       </Typography>
       </Card>
-      {/* Grid de estadísticas administrativas */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        {adminStats.map((stat, index) => (
-          <Grid size={{ xs: 6, md: 4 }} key={index}>
-            <StatCard {...stat} />
-          </Grid>
-        ))}
-      </Grid>
 
       {/* Grid de acciones rapidas para owner*/}
       {isOwner()&&
@@ -400,7 +415,6 @@ const AdminDashboard = () => {
         </Grid>
       </Paper>
         <Box>
-          <SeedVacacionesData />
         </Box>
     </Container>
   );

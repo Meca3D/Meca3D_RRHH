@@ -27,7 +27,7 @@ const EditarSolicitudVacaciones = () => {
   const { user, userProfile } = useAuthStore();
   const { 
     actualizarSolicitudVacaciones, 
-    obtenerSolicitudPorId,
+    obtenerSolicitudCompleta,
     loadFestivos, 
     esFechaSeleccionable,
     configVacaciones,
@@ -71,7 +71,7 @@ const EditarSolicitudVacaciones = () => {
         const unsubFestivos = loadFestivos();
         
         // Cargar solicitud
-        const solicitud = await obtenerSolicitudPorId(solicitudId);
+        const solicitud = await obtenerSolicitudCompleta(solicitudId);
         
         // Verificar permisos
         if (solicitud.solicitante !== user?.email) {

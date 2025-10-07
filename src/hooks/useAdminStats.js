@@ -11,7 +11,6 @@ export const useAdminStats = () => {
     configVacaciones,
     solicitudesVacaciones,
     loadSolicitudesVacaciones,
-    loadSolicitudesConCancelaciones,
     loadConfigVacaciones,
     obtenerDiasCancelados
   } = useVacacionesStore();
@@ -24,38 +23,17 @@ export const useAdminStats = () => {
     autoAprobacionActiva: false,
     loadingStats: true
   });
-  const [solicitudesFuente, setSolicitudesFuente] = useState([]);
-  const intervalRef = useRef(null);
 
-  // Cargar datos al montar y configurar recarga periódica
+  // Cargar datos al montar 
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const todas = await loadSolicitudesConCancelaciones();
-        setSolicitudesFuente(Array.isArray(todas) ? todas : []);
-      } catch (error) {
-        showError('Error cargando solicitudes para stats:', error);
-      }
-    };
-
-    // Carga inicial inmediata
-    cargarDatos();
-    loadSolicitudesVacaciones(); // Este ya tiene onSnapshot interno
-    loadConfigVacaciones(); // Este ya tiene onSnapshot interno
-
-    // Configurar recarga periódica cada 3 minutos (180000 ms)
-    intervalRef.current = setInterval(() => {
-      showInfo('🔄 Recargando stats automáticamente...');
-      cargarDatos();
-    }, 120000);
-
-    // Cleanup al desmontar
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []); // Sin dependencias: se ejecuta solo al montar/desmontar
+  const unsub1 = loadSolicitudesVacaciones();
+  const unsub2 = loadConfigVacaciones();
+  
+  return () => {
+    if (typeof unsub1 === 'function') unsub1();
+    if (typeof unsub2 === 'function') unsub2();
+  };
+  }, []); 
 
   // Calcular estadísticas cuando cambien los datos
   useEffect(() => {
@@ -65,7 +43,7 @@ export const useAdminStats = () => {
         const mañana = formatYMD(addDays(new Date(), 1));
 
         // Filtrar solo solicitudes aprobadas
-        const solicitudesAprobadas = solicitudesFuente.filter(
+        const solicitudesAprobadas = solicitudesVacaciones.filter(
           (sol) => sol.estado === 'aprobada'
         );
 
@@ -104,7 +82,6 @@ export const useAdminStats = () => {
           trabajadoresVacacionesMañana: trabajadoresMañana,
           solicitudesPendientes: pendientes,
           autoAprobacionActiva: autoAprobacion,
-          configVacaciones,
           loadingStats: false
         });
       } catch (error) {
@@ -114,10 +91,10 @@ export const useAdminStats = () => {
     };
 
     // Solo calcular si ya tenemos datos
-    if (solicitudesFuente && configVacaciones !== null) {
-      calcularStats();
-    }
-  }, [solicitudesVacaciones, configVacaciones, obtenerDiasCancelados, solicitudesFuente]);
+if (Array.isArray(solicitudesVacaciones) && solicitudesVacaciones.length >= 0 && configVacaciones !== null) {
+  calcularStats();}
+
+  }, [solicitudesVacaciones, configVacaciones]);
 
   return stats;
 };
