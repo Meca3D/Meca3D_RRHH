@@ -72,8 +72,20 @@ const MisSolicitudesVacaciones = () => {
       };
     }, [user?.email, loadSolicitudesVacaciones]);
 
-  
- 
+  // Función para verificar si una solicitud es la última aprobada
+  const esUltimaAprobada = (solicitud) => {
+    const aprobadas = solicitudesVacaciones.filter(s => s.estado === 'aprobada');
+    if (aprobadas.length === 0) return false;
+    
+    // Ordenar por fechaAprobacionDenegacion desc (o fechaSolicitud si prefieres)
+    const ordenadas = aprobadas.sort((a, b) => 
+      new Date(b.fechaAprobacionDenegacion || b.fechaSolicitud) - 
+      new Date(a.fechaAprobacionDenegacion || a.fechaSolicitud)
+    );
+    
+    return ordenadas[0].id === solicitud.id;
+  };
+
   const puedeGestionarSolicitud = (solicitud) => {
     const diasCancelados = obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
     const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
@@ -85,7 +97,7 @@ const MisSolicitudesVacaciones = () => {
     });
     const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
     return {
-      puedeEditar: (solicitud.estado === 'pendiente'||solicitud.estado==="aprobada") && diasDisponibles.length === solicitud.fechas.length && !solicitud.esAjusteSaldo && !solicitud.esVenta,
+      puedeEditar: (solicitud.estado === 'pendiente'||solicitud.estado==="aprobada" && esUltimaAprobada(solicitud)) && diasDisponibles.length === solicitud.fechas.length && !solicitud.esAjusteSaldo && !solicitud.esVenta,
       puedeCancelar: (solicitud.estado === 'pendiente' || solicitud.estado === 'aprobada') 
                      && !solicitud.esVenta
                      && diasDisponibles.length > 0 

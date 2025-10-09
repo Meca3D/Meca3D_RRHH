@@ -43,9 +43,9 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!configVacaciones) {
-      loadConfigVacaciones();
-    } 
-  }, [configVacaciones]);
+    const unsub = loadConfigVacaciones();
+    return () => { if (typeof unsub === 'function') unsub(); }}
+  }, [loadConfigVacaciones]);
 
 
     if (loading) {

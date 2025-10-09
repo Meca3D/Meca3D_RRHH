@@ -12,15 +12,13 @@ import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
 import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
-
+import { useAdminStats } from '../../../hooks/useAdminStats';
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
 
 const GestionVacaciones = () => {
   const navigate = useNavigate();
-  const { solicitudesVacaciones } = useVacacionesStore();
-  const pendientes = solicitudesVacaciones.filter(
-      (sol) => sol.estado === 'pendiente'
-    ).length;
+  const { solicitudesPendientes } = useAdminStats();
+
 
   const quickActions = [
     {
@@ -117,7 +115,7 @@ const GestionVacaciones = () => {
             <Box display="flex" alignItems="center" gap={1}>
            <Typography variant="h6" textAlign="center" color="purpura.main" fontWeight="bold">{}
            </Typography>
-           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">Solicitudes Pendientes: <strong>{pendientes}</strong>
+           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">Solicitudes Pendientes: <strong>{solicitudesPendientes}</strong>
            </Typography>
            </Box>
                          

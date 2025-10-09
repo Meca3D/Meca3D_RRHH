@@ -24,14 +24,18 @@ export const useAdminStats = () => {
     loadingStats: true
   });
 
+  useEffect(() => {
+    if (!configVacaciones){
+    const unsubscribe = loadConfigVacaciones();
+    return () => unsubscribe();} // Cleanup al desmontar
+  }, [loadConfigVacaciones, configVacaciones]);
+
   // Cargar datos al montar 
   useEffect(() => {
   const unsub1 = loadSolicitudesVacaciones();
-  const unsub2 = loadConfigVacaciones();
   
   return () => {
     if (typeof unsub1 === 'function') unsub1();
-    if (typeof unsub2 === 'function') unsub2();
   };
   }, []); 
 

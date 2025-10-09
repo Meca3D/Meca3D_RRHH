@@ -10,8 +10,12 @@ import {
 const DIAS = ['L','M','X','J','V','S','D'];
 
 const CalendarioVacaciones = ({
-  fechasSeleccionadas, onFechasChange,
-  tipoSolicitud, esFechaSeleccionable, horasLibres
+  fechasSeleccionadas,
+  onFechasChange,
+  tipoSolicitud,
+  esFechaSeleccionable,
+  horasLibres,
+  fechasYaPedidasSet = new Set() 
 }) => {
   const [mesActual, setMesActual] = useState(new Date());
   const { esFestivo } = useVacacionesStore();
@@ -21,7 +25,7 @@ const CalendarioVacaciones = ({
 
 const alternarDia = (dia) => {
   const fechaStr = formatYMD(dia);
-  
+  if (fechasYaPedidasSet.has(fechaStr)) return;
   if (!esFechaSeleccionable(fechaStr)) return;
 
   if (tipoSolicitud === 'horas') {
@@ -41,6 +45,7 @@ const alternarDia = (dia) => {
 
   const estiloDia = (dia) => {
     const fechaStr = formatYMD(dia);
+    const yaPedido = fechasYaPedidasSet.has(fechaStr); 
     const seleccionado = fechasSeleccionadas.includes(fechaStr);
     const fueraMes = dia.getMonth() !== mesActual.getMonth();
     const seleccionable = esFechaSeleccionable(fechaStr);
@@ -73,7 +78,20 @@ const alternarDia = (dia) => {
       };
     }
 
-    // Prioridad 2: No seleccionable
+    // PRIORIDAD 2: Ya pedido (día aprobado futuro/hoy sin cancelación parcial)
+    if (yaPedido) {
+      return {
+        ...base,
+        bgcolor: '#e3f2fd',  // azul muy claro
+        color: 'primary.main',
+        border: '2px dashed',
+        borderColor: 'primary.main',
+        cursor: 'not-allowed',
+        opacity: fueraMes ? 0.4 : 1  
+      };
+    }
+
+    // Prioridad 3: No seleccionable
      if (!seleccionable || sePasariaDelLimite) {
       let bgColor = '#f8f9fa';
       
@@ -89,7 +107,8 @@ const alternarDia = (dia) => {
       };
     }
 
-    // Prioridad 3: Fuera del mes pero seleccionable
+
+    // Prioridad 4: Fuera del mes pero seleccionable
     if (fueraMes) {
       return { 
         ...base, 
@@ -98,7 +117,7 @@ const alternarDia = (dia) => {
       };
     }
 
-    // Prioridad 4: Día normal seleccionable
+    // Prioridad 5: Día normal seleccionable
     return { 
       ...base, 
       '&:hover': { bgcolor: 'primary.50' } 
@@ -174,16 +193,20 @@ const alternarDia = (dia) => {
         justifyContent: 'center' 
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 12, height: 12, bgcolor: 'primary.main', borderRadius: 0.5 }} />
-          <Typography variant="subtitle2">Seleccionado</Typography>
+          <Box sx={{ width: 20, height: 20, bgcolor: 'primary.main', borderRadius: 0.5 }} />
+          <Typography variant="subtitle1">Seleccionado</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 12, height: 12, bgcolor: '#f58898ff', borderRadius: 0.5 }} />
-          <Typography variant="subtitle2">Festivo</Typography>
+          <Box sx={{ width: 20, height: 20, bgcolor: '#f58898ff', borderRadius: 0.5 }} />
+          <Typography variant="subtitle1">Festivo</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 12, height: 12, bgcolor: '#e1dfdfff', borderRadius: 0.5 }} />
-          <Typography variant="subtitle2">Fin de semana</Typography>
+          <Box sx={{ width: 20, height: 20, bgcolor: '#e1dfdfff', borderRadius: 0.5 }} />
+          <Typography variant="subtitle1">Fin de semana</Typography>
+        </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ width: 20, height: 20, bgcolor: '#e3f2fd', color: 'primary.main', border: '2px dashed', borderColor: 'primary.main', borderRadius: 0.5 }} />
+          <Typography variant="subtitle1">Ya pedido</Typography>
         </Box>
       </Box>
     </Box>

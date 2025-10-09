@@ -1,5 +1,5 @@
 // components/Vacaciones/CrearSolicitudVacaciones.jsx
-import React, { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardHeader, CardContent, AppBar, Toolbar,
@@ -19,13 +19,20 @@ import { useAuthStore } from '../../stores/authStore';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
 import { useUIStore } from '../../stores/uiStore';
 import { formatearTiempoVacas, formatearTiempoVacasLargo, validarSolicitudVacaciones } from '../../utils/vacacionesUtils';
-import { ordenarFechas, formatearFechaCorta } from '../../utils/dateUtils';
+import { ordenarFechas, formatearFechaCorta, formatYMD } from '../../utils/dateUtils';
 import CalendarioVacaciones from './CalendarioVacaciones';
 
 const CrearSolicitudVacaciones = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useAuthStore();
-  const { crearSolicitudVacaciones, loadFestivos, esFechaSeleccionable, configVacaciones,loadConfigVacaciones } = useVacacionesStore();
+  const { crearSolicitudVacaciones,
+     loadFestivos, 
+     esFechaSeleccionable, 
+     configVacaciones,
+     loadConfigVacaciones,
+     loadSolicitudesVacaciones,  
+     solicitudesVacaciones,      
+     obtenerDiasCancelados  } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
 
   const [tipoSolicitud, setTipoSolicitud] = useState('dias');
@@ -38,6 +45,12 @@ const CrearSolicitudVacaciones = () => {
   const vacasDisp = userProfile?.vacaciones?.disponibles || 0;
   const vacasPend = userProfile?.vacaciones?.pendientes || 0;
   const horasLibres = vacasDisp - vacasPend;
+
+  useEffect(() => {
+    if (!user?.email) return;
+    const unsub = loadSolicitudesVacaciones(user.email);
+    return () => { if (typeof unsub === 'function') unsub(); };
+  }, [user?.email, loadSolicitudesVacaciones]);
 
   useEffect(() => {
     if (!configVacaciones){
@@ -86,6 +99,26 @@ const CrearSolicitudVacaciones = () => {
       setSaving(false);
     }
   };
+  // AÑADIR cálculo de fechas ya pedidas:
+  const fechasYaPedidasSet = useMemo(() => {
+    const hoy = formatYMD(new Date());
+    const set = new Set();
+    
+    solicitudesVacaciones
+      .filter(s => s.estado === 'aprobada')
+      .forEach(s => {
+        const cancelados = obtenerDiasCancelados(s.cancelacionesParciales || []);
+        s.fechas?.forEach(f => {
+          const esHoyOFutura = f >= hoy;
+          const noCancelado = !cancelados.includes(f);
+          if (esHoyOFutura && noCancelado) {
+            set.add(f);
+          }
+        });
+      });
+    
+    return set;
+  }, [solicitudesVacaciones, obtenerDiasCancelados]);
 
   const horasTotales = tipoSolicitud === 'dias' 
     ? fechasSeleccionadas.length * 8 
@@ -209,7 +242,8 @@ const CrearSolicitudVacaciones = () => {
                 fechasSeleccionadas={fechasSeleccionadas}
                 onFechasChange={setFechasSeleccionadas}
                 esFechaSeleccionable={esFechaSeleccionable}
-                horasLibres={horasLibres} 
+                horasLibres={horasLibres}
+                fechasYaPedidasSet={fechasYaPedidasSet}
               />
             </CardContent>
           </Card>

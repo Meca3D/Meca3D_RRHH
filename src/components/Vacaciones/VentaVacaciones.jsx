@@ -1,6 +1,6 @@
 // components/Vacaciones/VentaVacaciones.jsx
 
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
@@ -19,7 +19,7 @@ import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../utils/vac
 const VentaVacaciones = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useAuthStore();
-  const { crearSolicitudVacaciones } = useVacacionesStore();
+  const { crearSolicitudVacaciones, configVacaciones, loadConfigVacaciones } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
 
   const [horasAVender, setHorasAVender] = useState('');
@@ -29,6 +29,13 @@ const VentaVacaciones = () => {
   const vacasPend = userProfile?.vacaciones?.pendientes || 0;
   const horasDisponiblesParaVender = vacasDisp - vacasPend;
   const tarifaHoraExtra = userProfile?.tarifasHorasExtra?.normal || null;
+
+  useEffect(() => {
+    if (!configVacaciones) {
+    const unsub = loadConfigVacaciones();
+    return () => { if (typeof unsub === 'function') unsub(); }}
+  }, [configVacaciones, loadConfigVacaciones]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,7 +64,7 @@ const VentaVacaciones = () => {
         comentariosSolicitante: `Me gustaría vender ${formatearTiempoVacasLargo(horas)} de mis vacaciones.`,
       });
 
-      showSuccess('Solicitud de venta enviada correctamente');
+      showSuccess((configVacaciones?.autoAprobar?.habilitado===true && configVacaciones?.autoAprobar?.modo==='todas')? 'Solicitud de venta enviada y aprobada' : 'Solicitud de venta enviada correctamente');
       navigate('/vacaciones');
     } catch (err) {
       showError(`Error: ${err.message}`);

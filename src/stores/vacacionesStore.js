@@ -382,6 +382,22 @@ export const useVacacionesStore = create((set, get) => {
     // Actualizar solicitud
  actualizarSolicitudVacaciones: async (solicitudId, datosActualizados, solicitudOriginal) => {
       try {
+
+    //  VALIDAR: si original era aprobada, debe ser la última aprobada del usuario
+    if (solicitudOriginal.estado === 'aprobada') {
+      const todasAprobadas = await getDocs(
+        query(
+          collection(db, 'VACACIONES'),
+          where('solicitante', '==', solicitudOriginal.solicitante),
+          where('estado', '==', 'aprobada'),
+          orderBy('fechaAprobacionDenegacion', 'desc')
+        )
+      );
+      
+      if (todasAprobadas.docs.length > 0 && todasAprobadas.docs[0].id !== solicitudId) {
+        throw new Error('Solo se puede editar la última solicitud aprobada. Cancela esta y crea una nueva si necesitas modificarla.');
+      }
+    }
         // Evaluar si se aplicará auto-aprobación después de la edición
         const solicitudTemp = { 
           id: solicitudId, 
@@ -424,42 +440,44 @@ export const useVacacionesStore = create((set, get) => {
           }
           const currentVacaciones = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
 
-          // Preparar datos finales con saldo si auto-aprobada
-          let solicitudFinal = { ...datosFinales };
-          if (resAuto.aplicar) {
-            solicitudFinal.horasDisponiblesAntes = currentVacaciones.disponibles;
-            solicitudFinal.horasDisponiblesDespues = currentVacaciones.disponibles - datosActualizados.horasSolicitadas;
-          }
+        // Preparar datos finales con saldo si auto-aprobada
+        let solicitudFinal = { ...datosFinales };
 
-          // Actualizar solicitud
-          transaction.update(solicitudRef, solicitudFinal);
+            // Calcular nuevo saldo
+            let newVacaciones = { ...currentVacaciones };
 
-          // Calcular nuevo saldo
-          let newVacaciones = { ...currentVacaciones };
-
-          if (solicitudOriginal.estado === 'pendiente') {
-            // Si era pendiente: ajustar solo pendientes
-            if (diferencia !== 0) {
-              newVacaciones.pendientes += diferencia;
+            if (solicitudOriginal.estado === 'pendiente') {
+              // Si era pendiente: ajustar solo pendientes
+              if (diferencia !== 0) {
+                newVacaciones.pendientes += diferencia;
+              }
+            } else if (solicitudOriginal.estado === 'aprobada') {
+              // Revertir aprobación completa: + horas_originales a disponibles
+              newVacaciones.disponibles += solicitudOriginal.horasSolicitadas;
+              newVacaciones.pendientes += solicitudOriginal.horasSolicitadas + diferencia;
             }
-          } else if (solicitudOriginal.estado === 'aprobada') {
-            // Revertir aprobación completa: + horas_originales a disponibles y pendientes
-            // Luego ajustar por diferencia en pendientes (si no auto-aprobada)
-            newVacaciones.disponibles += solicitudOriginal.horasSolicitadas;
-            newVacaciones.pendientes += solicitudOriginal.horasSolicitadas + diferencia;
-          }
 
-          if (resAuto.aplicar) {
-            // Si se auto-aprueba: restar horas_nuevas de disponibles y pendientes
-            newVacaciones.disponibles -= datosActualizados.horasSolicitadas;
-            newVacaciones.pendientes -= datosActualizados.horasSolicitadas;
-          }
+            // ✅ CALCULAR saldo post-cancelación ANTES de aplicar auto-aprobación
+            const saldoTrasCancelar = newVacaciones.disponibles;
 
-          // Actualizar saldo del usuario
-          transaction.update(userDocRef, {
-            'vacaciones': newVacaciones,
-            updatedAt: new Date()
-          });
+            if (resAuto.aplicar) {
+              // Si se auto-aprueba: calcular campos de saldo y restar de disponibles/pendientes
+              solicitudFinal.horasDisponiblesAntes = saldoTrasCancelar;
+              solicitudFinal.horasDisponiblesDespues = saldoTrasCancelar - datosActualizados.horasSolicitadas;
+              
+              // Restar las horas nuevas del saldo del usuario
+              newVacaciones.disponibles -= datosActualizados.horasSolicitadas;
+              newVacaciones.pendientes -= datosActualizados.horasSolicitadas;
+            }
+
+            // ✅ Actualizar solicitud CON los campos de saldo ya calculados
+            transaction.update(solicitudRef, solicitudFinal);
+
+            // Actualizar saldo del usuario
+            transaction.update(userDocRef, {
+              'vacaciones': newVacaciones,
+              updatedAt: new Date()
+            });
         });
 
         return true;

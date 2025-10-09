@@ -5,6 +5,7 @@ import { useProductsStore } from '../stores/productsStore';
 import { useNominaStore } from '../stores/nominaStore';
 import { useAuthStore } from '../stores/authStore';
 import { useHorasExtraStore } from '../stores/horasExtraStore';
+import { useVacacionesStore } from '../stores/vacacionesStore';
 import { convertirHorasDecimalesAHorasYMinutos} from '../utils/nominaUtils';
 import { capitalizeFirstLetter } from '../components/Helpers';
 
@@ -12,6 +13,7 @@ export const useGlobalData = () => {
   const { orders, fetchOrders, loading: ordersLoading } = useOrdersStore();
   const { products, fetchProducts, loading: productsLoading } = useProductsStore();
   const { isAuthenticated, user, userProfile } = useAuthStore();
+  const { configVacaciones, loadConfigVacaciones } = useVacacionesStore();
   const { 
     calcularTotalHorasExtra,
     calcularTotalHorasDecimales,
@@ -33,6 +35,13 @@ export const useGlobalData = () => {
     //const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
     //const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
 
+
+  useEffect(() => {
+    if (!configVacaciones){
+    const unsubscribe = loadConfigVacaciones();
+    return () => unsubscribe();} // Cleanup al desmontar
+  }, [loadConfigVacaciones, configVacaciones]);
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -40,6 +49,7 @@ export const useGlobalData = () => {
     // ✅ Cargar datos automáticamente 
     if (orders.length === 0 && !ordersLoading) {
       fetchOrders();
+      
     }
     if (products.length === 0 && !productsLoading) {
       fetchProducts();
