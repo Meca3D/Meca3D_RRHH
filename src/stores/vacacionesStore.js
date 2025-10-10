@@ -383,20 +383,9 @@ export const useVacacionesStore = create((set, get) => {
  actualizarSolicitudVacaciones: async (solicitudId, datosActualizados, solicitudOriginal) => {
       try {
 
-    //  VALIDAR: si original era aprobada, debe ser la última aprobada del usuario
-    if (solicitudOriginal.estado === 'aprobada') {
-      const todasAprobadas = await getDocs(
-        query(
-          collection(db, 'VACACIONES'),
-          where('solicitante', '==', solicitudOriginal.solicitante),
-          where('estado', '==', 'aprobada'),
-          orderBy('fechaAprobacionDenegacion', 'desc')
-        )
-      );
-      
-      if (todasAprobadas.docs.length > 0 && todasAprobadas.docs[0].id !== solicitudId) {
-        throw new Error('Solo se puede editar la última solicitud aprobada. Cancela esta y crea una nueva si necesitas modificarla.');
-      }
+    //  solo se pueden editar solicitudes pendientes
+    if (solicitudOriginal.estado !== 'pendiente') {
+      throw new Error('Solo se pueden editar solicitudes pendientes. Para modificar una solicitud aprobada o cancelada, cancélala y crea una nueva.');
     }
         // Evaluar si se aplicará auto-aprobación después de la edición
         const solicitudTemp = { 
@@ -451,19 +440,12 @@ export const useVacacionesStore = create((set, get) => {
               if (diferencia !== 0) {
                 newVacaciones.pendientes += diferencia;
               }
-            } else if (solicitudOriginal.estado === 'aprobada') {
-              // Revertir aprobación completa: + horas_originales a disponibles
-              newVacaciones.disponibles += solicitudOriginal.horasSolicitadas;
-              newVacaciones.pendientes += solicitudOriginal.horasSolicitadas + diferencia;
-            }
-
-            // ✅ CALCULAR saldo post-cancelación ANTES de aplicar auto-aprobación
-            const saldoTrasCancelar = newVacaciones.disponibles;
+            } 
 
             if (resAuto.aplicar) {
               // Si se auto-aprueba: calcular campos de saldo y restar de disponibles/pendientes
-              solicitudFinal.horasDisponiblesAntes = saldoTrasCancelar;
-              solicitudFinal.horasDisponiblesDespues = saldoTrasCancelar - datosActualizados.horasSolicitadas;
+        solicitudFinal.horasDisponiblesAntes = currentVacaciones.disponibles;
+        solicitudFinal.horasDisponiblesDespues = currentVacaciones.disponibles - datosActualizados.horasSolicitadas;
               
               // Restar las horas nuevas del saldo del usuario
               newVacaciones.disponibles -= datosActualizados.horasSolicitadas;
@@ -2040,7 +2022,6 @@ mapSolicitudToEventos: (solicitud) => {
 
 getEventosSaldoUsuarioPeriodo: async (usuarioEmail, inicioYMD, finYMD) => {
   const { solicitudesVacaciones, mapSolicitudToEventos, ordenarEventosPorDiaCadena } = get();
-  console.log(solicitudesVacaciones)
   
   // 1) Filtrar solicitudes del usuario desde el estado (ya con cancelacionesParciales)
   const solicitudesUsuario = solicitudesVacaciones.filter(s => s.solicitante === usuarioEmail);

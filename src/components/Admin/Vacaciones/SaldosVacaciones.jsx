@@ -79,7 +79,7 @@ export default function SaldosVacaciones() {
     
   }, [periodo]);
 
-  // ✅ AÑADIR: Cargar solicitudes del empleado seleccionado
+  // Cargar solicitudes del empleado seleccionado
 useEffect(() => {
   if (!empleadoEmail) return;
   

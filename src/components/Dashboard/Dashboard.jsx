@@ -310,7 +310,7 @@ const Dashboard = () => {
           }}
         />
         
-        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}>
+        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}   sx={{ width: '100%' }} >
           <Avatar 
             src={userProfile?.photoURL} 
             sx={{ 
@@ -327,7 +327,7 @@ const Dashboard = () => {
               (user?.email?.[0] || 'U').toUpperCase()
             }
           </Avatar>
-          <Box justifyItems="center" flex={1}sx={{ml:-5, minWidth:0}}>
+          <Box justifyItems="center" sx={{ml:-5, minWidth:0,  flex: '1 1 0%',}}>
             <Typography variant="h5" fontWeight="bold" gutterBottom noWrap>
               {formatearNombre(userProfile?.nombre)}
             </Typography>

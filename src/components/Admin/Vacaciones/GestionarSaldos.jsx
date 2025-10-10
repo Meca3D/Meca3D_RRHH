@@ -428,7 +428,9 @@ const GestionarSaldos = () => {
             return (
               <Card 
                 key={empleado.email} 
-                sx={{ 
+                  onClick={() => handleAbrirAjusteIndividual(empleado)}
+                  sx={{
+                  cursor: 'pointer',
                   mb: 3,
                   border: estaSeleccionado ? 2 : 1,
                   borderColor: estaSeleccionado ? 'azul.main' : 'azul.fondoFuerte',
@@ -437,43 +439,30 @@ const GestionarSaldos = () => {
                   transition: 'all 0.2s ease',
                   '&:hover': {
                     boxShadow: 3,
-                    transform: estaSeleccionado ? 'scale(1.03)' : 'scale(1.01)'
+                    transform: estaSeleccionado ? 'scale(1.03)' : 'scale(1.01)',
                   }
                 }}
               >
                 <CardContent sx={{ p: 1, mb:-2 }}>
                   {/* Header de la card */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt:1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt:1, width: '100%' }}>
                       <Checkbox 
                         checked={estaSeleccionado}
                         onChange={() => handleSeleccionarEmpleado(empleado.email)}
+                        onClick={(e) => e.stopPropagation()}
                         sx={{ 
                           ml:-1,
                           color: 'azul.main',
                           '&.Mui-checked': { color: 'azul.main' }
                         }}
                       />
-                        <Typography  fontSize='1.35rem' fontWeight={600}>
+                      <Box sx={{ flexGrow: 1, textAlign: 'center' }}>
+                        <Typography  fontSize='1.35rem'  fontWeight={600}>
                           {empleado.nombre}
                         </Typography>
+                      </Box>
+                    <Box sx={{ width: '40px' }} /> {/* Un placeholder que simula el ancho del Checkbox */}
 
-                    <IconButton
-                      size="small"
-                      onClick={() => handleAbrirAjusteIndividual(empleado)}
-                      sx={{ 
-                        border:'1px solid',
-                        borderColor: 'azul.main',
-                        color: 'azul.main',
-                        bgcolor: 'white',
-                        '&:hover': { 
-                          bgcolor: 'azul.fondo',
-                          transform: 'scale(1.1)'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <EditOutlined fontSize="medium"  />
-                    </IconButton>
                   </Box>
 
                   {/* Información del empleado */}
