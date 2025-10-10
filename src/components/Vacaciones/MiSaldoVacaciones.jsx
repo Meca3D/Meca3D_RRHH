@@ -48,6 +48,8 @@ export default function MiSaldoVacaciones() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
   const {userProfile}=useAuthStore()
+  const loadSolicitudesVacaciones = useVacacionesStore(s => s.loadSolicitudesVacaciones);
+
   const getEventosSaldoUsuarioPeriodo = useVacacionesStore(s => s.getEventosSaldoUsuarioPeriodo);
   const [expanded, setExpanded] = useState({});
   const [fechasExpandidas,setFechasExpandidas]=useState(null)
@@ -58,6 +60,12 @@ export default function MiSaldoVacaciones() {
   const [loading, setLoading] = useState(false);
   const [eventos, setEventos] = useState([]);
   const [saldoInicial, setSaldoInicial] = useState(null);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    const unsub = loadSolicitudesVacaciones(user.email);
+    return () => { if (typeof unsub === 'function') unsub(); };
+  }, [user?.email, loadSolicitudesVacaciones]);
 
   // Ajuste de fechas cuando cambia el periodo
   useEffect(() => {

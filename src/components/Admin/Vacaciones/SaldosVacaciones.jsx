@@ -49,6 +49,8 @@ export default function SaldosVacaciones() {
   const [empleadoEmail, setEmpleadoEmail] = useState('');
 
   // Eventos de saldo
+  const loadSolicitudesVacaciones = useVacacionesStore(s => s.loadSolicitudesVacaciones);
+
   const getEventosSaldoUsuarioPeriodo = useVacacionesStore(s => s.getEventosSaldoUsuarioPeriodo);
 
   // UI estado
@@ -76,6 +78,18 @@ export default function SaldosVacaciones() {
      } else if (periodo === 'pastyear') {setInicio(startOfYear(subYears(new Date(), 1))); setFin(lastDayOfYear(subYears(new Date(), 1)))}
     
   }, [periodo]);
+
+  // ✅ AÑADIR: Cargar solicitudes del empleado seleccionado
+useEffect(() => {
+  if (!empleadoEmail) return;
+  
+  const unsub = loadSolicitudesVacaciones(empleadoEmail);
+  
+  return () => {
+    if (typeof unsub === 'function') unsub();
+  };
+}, [empleadoEmail, loadSolicitudesVacaciones]);
+
 
   const cargar = useCallback(async () => {
     if (!empleadoEmail) return;

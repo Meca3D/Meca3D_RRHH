@@ -2039,19 +2039,21 @@ mapSolicitudToEventos: (solicitud) => {
 },
 
 getEventosSaldoUsuarioPeriodo: async (usuarioEmail, inicioYMD, finYMD) => {
-  const { loadSolicitudesConCancelaciones, mapSolicitudToEventos } = get();
-  // 1) Cargar solicitudes + parciales del usuario 
-  const solicitudes = await loadSolicitudesConCancelaciones(usuarioEmail);
-
+  const { solicitudesVacaciones, mapSolicitudToEventos, ordenarEventosPorDiaCadena } = get();
+  console.log(solicitudesVacaciones)
+  
+  // 1) Filtrar solicitudes del usuario desde el estado (ya con cancelacionesParciales)
+  const solicitudesUsuario = solicitudesVacaciones.filter(s => s.solicitante === usuarioEmail);
+  
   // 2) Aplanar a eventos
-  const todosEventos = solicitudes.flatMap(s => mapSolicitudToEventos(s));
-
+  const todosEventos = solicitudesUsuario.flatMap(s => mapSolicitudToEventos(s));
+  
   // 3) Filtrar por periodo [inicioYMD, finYMD]
   const enRango = todosEventos.filter(e => e.fecha >= inicioYMD && e.fecha <= finYMD);
-
-  // 4) Ordenar por fecha y por cadena de saldos (más fiable que solo por tipo)
-  const { eventosOrdenados, saldoInicial } = get().ordenarEventosPorDiaCadena(enRango, null);
-
+  
+  // 4) Ordenar por fecha y por cadena de saldos
+  const { eventosOrdenados, saldoInicial } = ordenarEventosPorDiaCadena(enRango, null);
+  
   // 5) Devolver
   return { eventos: eventosOrdenados, saldoInicial };
   },

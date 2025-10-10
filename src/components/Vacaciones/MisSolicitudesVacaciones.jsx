@@ -97,7 +97,7 @@ const MisSolicitudesVacaciones = () => {
     });
     const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
     return {
-      puedeEditar: (solicitud.estado === 'pendiente'||solicitud.estado==="aprobada" && esUltimaAprobada(solicitud)) && diasDisponibles.length === solicitud.fechas.length && !solicitud.esAjusteSaldo && !solicitud.esVenta,
+      puedeEditar: solicitud.estado === 'pendiente' && !solicitud.esAjusteSaldo && !solicitud.esVenta,
       puedeCancelar: (solicitud.estado === 'pendiente' || solicitud.estado === 'aprobada') 
                      && !solicitud.esVenta
                      && diasDisponibles.length > 0 
