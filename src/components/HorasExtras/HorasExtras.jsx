@@ -77,12 +77,14 @@ const HorasExtras = () => {
       <Paper 
         elevation={5} 
         sx={{ 
+          background: 'linear-gradient(135deg, #FFA726 0%, #FB8C00 40%, #E65100 100%)',
           border:'1px solid naranja.main',
           p: 1, 
           mb: 4, 
           borderRadius: 4,
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          color:'white'
         }}
       >
         {/* Decoración de fondo */}
@@ -95,36 +97,37 @@ const HorasExtras = () => {
             width: 150,
             height: 150,
             borderRadius: '50%',
-            bgcolor: 'naranja.fondo',
+            background: 'rgba(255,255,255,0.15)',
             zIndex: 0
           }}
         />
         
         <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}>
 
-            <TimeIcon sx={{ color:'naranja.main', fontSize: '4rem' }} />
+            <TimeIcon sx={{ fontSize: '4rem' }} />
 
           <Box flex={1}>
-            <Typography sx={{ml:-5}} color='naranja.main' variant="h4"  textAlign="center" fontWeight="bold" gutterBottom>
+            <Typography sx={{ml:-5}} variant="h4"  textAlign="center" fontWeight="bold" gutterBottom>
               Horas Extras
             </Typography>
             {!userProfile.tarifasHorasExtra ? (
                 <Chip
                   label="Falta Configuracion"
                   sx={{
-                    bgcolor: 'rojo.fondo',
+                    fontSize: '1rem',
+                    bgcolor: 'white',
                     color: 'rojo.main',
                     fontWeight: 700
                   }}
                 />
               ) : (
             <Box display="flex" flexDirection="column" alignContent="center" flexWrap="nowrap" sx={{mr:7}}>
-            <Typography   color="naranja.main" variant="h6" fontSize="1rem" textAlign='center' lineHeight={1.2} fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
+            <Typography  fontSize="1.1rem" textAlign='center' lineHeight={1.2} fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
               Estimado {userSalaryInfo.mesNomina || 'Mes Actual'} 
             </Typography>
-              <Typography textAlign="center" color="naranja.main"><strong>{(formatearTiempo(horasFormateadas, minutosFormateados))}</strong></Typography>
+              <Typography fontSize="1.1rem" textAlign="center"><strong>{(formatearTiempo(horasFormateadas, minutosFormateados))}</strong></Typography>
               
-              <Typography textAlign="center" color="naranja.main"><strong>{mask(formatCurrency(totalImporteEsteMes))}</strong></Typography>
+              <Typography fontSize="1.1rem" textAlign="center"><strong>{mask(formatCurrency(totalImporteEsteMes))}</strong></Typography>
 
             </Box>
               )}

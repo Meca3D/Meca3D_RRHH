@@ -34,7 +34,7 @@ import { useUIStore } from '../../../stores/uiStore';
 import SelectorDiasCancelacion from './SelectorDiasCancelacion';
 import { formatearFechaCorta,formatearFechaLarga, ordenarFechas } from '../../../utils/dateUtils';
 import { formatearNombre, capitalizeFirstLetter } from '../../Helpers';
-import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
+import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 
 
 const HistorialSolicitudes = () => {

@@ -16,9 +16,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import LocalCafeOutlinedIcon from '@mui/icons-material/LocalCafeOutlined';
 import PeopleIcon from '@mui/icons-material/People';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useAuthStore } from '../../stores/authStore';
 import { useOrdersStore } from '../../stores/ordersStore';
 import { useUIStore } from '../../stores/uiStore';
+import CountdownTimer from './CountDownTimer';
 
 const OrderList = () => {
   const { orders, loading, fetchOrders, deleteOrder } = useOrdersStore();
@@ -26,12 +28,25 @@ const OrderList = () => {
   const { showSuccess, showError } = useUIStore();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
+  // Función para verificar si el pedido está cerrado (20 min o menos antes de la reserva)
+  const isPedidoCerrado = (fechaReserva) => {
+    const deadlineTime = new Date(fechaReserva).getTime() - (20 * 60 * 1000);
+    const currentTime = new Date().getTime();
+    return currentTime >= deadlineTime;
+  };
 
-useEffect(() => {
-  if (!loading) {
-    fetchOrders();
-  }
-}, []);
+  // Función para verificar si el usuario puede acceder
+  const puedeAccederPedido = (order) => {
+    if (['admin','cocinero'].includes(userProfile?.rol)||(order.creadoPor === user?.email)) return true;
+    return !isPedidoCerrado(order.fechaReserva);
+  };
+
+
+  useEffect(() => {
+    if (!loading) {
+      fetchOrders();
+    }
+  }, []);
 
   const handleDeleteClick = (event, order) => {
     event.stopPropagation();
@@ -77,7 +92,7 @@ useEffect(() => {
         elevation={5} 
         sx={{ 
           mb: 4, 
-          background: 'linear-gradient(135deg, #6D3B07 0%, #4A2505 50%, #2D1603 100%)', // Dorado para desayunos
+          background: 'linear-gradient(135deg, #8D581A 0%, #63390C 50%, #402307 100%)',
           color: 'white',
           borderRadius: 4,
           position: 'relative',
@@ -88,8 +103,8 @@ useEffect(() => {
         <Box 
           sx={{
             position: 'absolute',
-            top: -50,
-            right: -50,
+            top: -60,
+            right: -60,
             width: 150,
             height: 150,
             borderRadius: '50%',
@@ -98,7 +113,7 @@ useEffect(() => {
           }}
         />
         
-        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1} sx={{py:1}}>
+        <Box display="flex" alignItems="center" justifyContent='space-between' position="relative" zIndex={1} sx={{width:'100%', py:1}}>
           <Avatar 
             sx={{ 
               width: 80, 
@@ -111,24 +126,18 @@ useEffect(() => {
           >
             <LocalCafeOutlinedIcon sx={{fontSize: '2rem' }} />
           </Avatar>
-          <Box flex={1} >
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
+          <Box flex={1} flexDirection='column' alignItems='center' justifyContent='center'>
+            <Typography variant="h5" textAlign='center' fontWeight="bold" gutterBottom>
               Desayunos Sábados
             </Typography>
-            <Typography variant="h6" sx={{ opacity: 0.9, mb: 1 }}>
-               Gestión de Pedidos
+            <Box display="flex" justifyContent="center" alignItems='center' sx={{mb:1}}>
+              <AssignmentOutlinedIcon sx={{mr:1}} />
+            <Typography fontSize='0.85rem' textAlign='center' fontWeight="bold">
+              {`${orders.length} pedidos disponibles`}
             </Typography>
-            <Chip 
-              icon={<AssignmentOutlinedIcon color='white'/>}
-              label={`${orders.length} pedidos disponibles`}
-              sx={{ 
-                bgcolor: 'rgba(255,255,255,0.2)', 
-                color: 'white',
-                fontWeight: 600,
-                mb:1
-              }} 
-            />
+            </Box>
           </Box>
+          <Box sx={{ width: 25, height: 25, mr:1 }} /> {/* Espaciador para centrar el contenido */}
         </Box>
       </Paper>
 
@@ -201,7 +210,7 @@ useEffect(() => {
                 }}
               >
                 {/* Botón de eliminar con estilo corporativo */}
-                {(order.creadoPor === user?.email || userProfile.rol==="admin") && (
+                {puedeAccederPedido(order) && (
                   <IconButton
                     size="small"
                     sx={{ 
@@ -226,15 +235,24 @@ useEffect(() => {
                 )}
 
                 <CardActionArea 
-                  component={RouterLink} 
-                  to={`/desayunos/orders/${order.id}`}
-                  sx={{ height: '100%' }}
+                  component={puedeAccederPedido(order) ? RouterLink : 'div'}
+                  to={puedeAccederPedido(order) ? `/desayunos/orders/${order.id}` : undefined}
+                  disabled={!puedeAccederPedido(order)}
+                  sx={{ height: '100%',
+                    cursor: !puedeAccederPedido(order) ? 'not-allowed' : 'pointer',
+                    opacity: !puedeAccederPedido(order) ? 0.6 : 1,
+                    '&:hover': {
+                      backgroundColor: !puedeAccederPedido(order) ? 'transparent' : undefined
+                    },
+                    pointerEvents: !puedeAccederPedido(order) ? 'none' : 'auto'
+                  }}
                 >
                   <CardContent sx={{ p: 3 }}>
+                  
                     {/* Header del pedido */}
                     <Box sx={{                    
                         textAlign: 'center', 
-                        mb: 2,
+                        my: 2,
                         p: 2,
                         borderRadius: 4,
                         background: 'linear-gradient(135deg, rgba(109, 59, 7, 0.05) 0%, rgba(109, 59, 7, 0.1) 100%)'
@@ -265,22 +283,22 @@ useEffect(() => {
                         {order.nombre}
                       </Typography>
                     </Box>
-
                     <Divider sx={{ my: 1 }} />
 
                     {/* Información del pedido */}
                     <Box sx={{ mb: 1 }}>
                       <Box display="flex" justifySelf="center" gap={1} mb={1}>
                         <CalendarTodayIcon sx={{ fontSize: 25, color: 'dorado.main' }} />
-                        <Typography variant="body1" color="dorado.main">
+                        <Typography fontSize='1.2rem' color="dorado.main">
                           Fecha de reserva
                         </Typography>
                         </Box>
-                      <Typography variant="body1" textAlign="center" fontWeight="600" color="dorado.main">
+                      <Typography fontSize='1.2rem' textAlign="center" fontWeight="600" color="dorado.main">
                         {formatDate(order.fechaReserva)}
                       </Typography>
                     </Box>
-                    <Divider />
+                    <CountdownTimer fechaReserva={order.fechaReserva} />
+                    <Divider sx={{mt:1}}/>
 
                     <Box sx={{ mt:1 }}>
                       <Box display="flex" justifySelf="center" gap={1} mb={1}>

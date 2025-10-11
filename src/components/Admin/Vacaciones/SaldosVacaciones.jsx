@@ -55,9 +55,8 @@ export default function SaldosVacaciones() {
 
   // UI estado
   const [expanded, setExpanded] = useState({});
-  const [fechasExpandidas, setFechasExpandidas] = useState(null);
   const [periodo, setPeriodo] = useState('year');
-  const [inicio, setInicio] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); d.setHours(0,0,0,0); return d; });
+  const [inicio, setInicio] = useState(() => { const d = new Date(); d.setDate(startOfYear(d)); d.setHours(0,0,0,0); return d; });
   const [fin, setFin] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [loading, setLoading] = useState(false);
   const [eventos, setEventos] = useState([]);
@@ -278,6 +277,7 @@ useEffect(() => {
 
       <Container maxWidth="sm" sx={{ pb: 3 }}>
         <Box sx={{ mt: 2 }}>
+          <Card sx={{p:2, my:2, border:'2px solid', borderColor:'primary.main', boxShadow: '0 4px 20px rgba(76, 76, 142, 0.3)' }}>          
           <Grid container spacing={2}>
             {/* Selector de empleado */}
             <Grid size={{ xs: 12 }}>
@@ -340,17 +340,10 @@ useEffect(() => {
               </>
             )}
           </Grid>
-        </Box>
-
-        <Box sx={{ mt: 2 }}>
             
-              {eventos.length === 0 ? (
-                <Card variant="outlined"><CardContent>
-                  <Typography variant="body2">No hay eventos en este periodo</Typography>
-                </CardContent></Card>
-              ) : (
+              {eventos.length > 0 && (
             <Grid size={{ xs: 12 }}>
-              <Box display="flex" gap={1} justifyContent='space-between' alignItems="center" flexWrap="wrap" sx={{mb:2}}>
+              <Box display="flex" gap={1} justifyContent='space-between' alignItems="center" flexWrap="wrap" sx={{mt:1, mb:2}}>
                 <Box display='flex' flexDirection='column' alignItems='center'>
                 <Typography fontSize='1.2rem'>Saldo Inicial</Typography> 
                 <Typography fontSize='1.2rem' fontWeight={600}>{formatearTiempoVacasLargo(resumen.saldoInicial)}</Typography>
@@ -375,12 +368,23 @@ useEffect(() => {
               </Box>
             </Grid>
            )}
+           </Card>
            </Box>
         <Box sx={{ mt: 2 }}>
 {loading ? (
   <Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>
-) : (
+) : (  
   <Box display="flex" flexDirection="column" gap={1.5}>
+    {eventos.length === 0 && (
+        <Card sx={{p:1}}>       
+              <Typography textAlign='center' variant="body1">No hay eventos en este periodo</Typography>
+          </Card>
+    )}
+    {eventos.length >0 && 
+      <Typography variant="h6" sx={{mt:2, mb:-1, textAlign:'center', fontWeight:'bold'}}>
+        EVOLUCION DEL SALDO
+      </Typography>
+    }
     {eventos.map((e, idx) => {
       const esHorasSueltas=(e.horasSolicitadas<8 || Math.abs(e.deltaHoras)<8)
       const horasSolicitadas=e.horasSolicitadas
@@ -390,7 +394,7 @@ useEffect(() => {
       const deltaTxt = `${e.deltaHoras >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(e.deltaHoras))}`;
       const chipColor = e.tipo === 'denegada' ? 'default' : (e.deltaHoras >= 0 ? 'success' : 'error');
       return (
-        <Card key={key} variant="outlined">
+        <Card key={key} sx={{border:'1px solid black'}} >
           <CardHeader
             title={
               <>

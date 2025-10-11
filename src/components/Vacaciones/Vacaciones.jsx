@@ -101,7 +101,7 @@ const Vacaciones = () => {
         <Paper 
         elevation={5} 
         sx={{ 
-          background: 'linear-gradient(135deg, #CE93D8 0%, #BA68C8 40%, #7B1FA2 100%)',
+          background: 'linear-gradient(135deg, #B39DDB 0%, #9575CD 40%, #673AB7 100%)',
           border:'1px solid purpura.main',
           p: 2, 
           mb: 4, 
@@ -116,10 +116,10 @@ const Vacaciones = () => {
             position: 'absolute',
             top: -50,
             right: -50,
-            width: 200,
-            height: 200,
+            width: 150,
+            height: 150,
             borderRadius: '50%',
-            background: 'rgba(255,255,255,0.1)',
+            background: 'rgba(255,255,255,0.15)',
           }}
         />
         

@@ -31,7 +31,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { loading, userSalaryInfo  } = useGlobalData();
   const { procesarSolicitudesCaducadas, loadConfigVacaciones, configVacaciones } = useVacacionesStore();
-  const { user, userProfile, toggleVisibility } = useAuthStore();
+  const { user, userProfile, toggleVisibility, getRol } = useAuthStore();
 
   useEffect(() => {
     if (!configVacaciones){
@@ -334,9 +334,14 @@ const Dashboard = () => {
             <Typography fontSize="1rem" noWrap sx={{ opacity: 0.9, mb: 0}}>
               {userProfile?.puesto||'Operario'}
             </Typography>
-            <Typography fontSize="1rem" noWrap sx={{ opacity: 0.9, mb: 1 }}>
+            <Typography fontSize="1rem" noWrap sx={{ opacity: 0.9, mb: 0 }}>
               Nv {mask(userProfile?.nivel)||'?'} 
             </Typography>
+            {userProfile?.rol !='user' &&
+             <Typography fontSize="0.8rem" fontStyle='italic' noWrap sx={{ opacity: 0.9, mb: 0.5 }}>
+              {getRol(userProfile.rol)} 
+            </Typography>
+            }
           </Box>
               <Box sx={{ position: 'absolute', bottom: -10, right: -8 }}>
                <Tooltip title={isVisible ? 'Ocultar datos' : 'Mostrar datos'} enterTouchDelay={0}>

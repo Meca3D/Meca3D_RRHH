@@ -47,13 +47,10 @@ const toYMD = (d) => {
 export default function MiSaldoVacaciones() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
-  const {userProfile}=useAuthStore()
   const loadSolicitudesVacaciones = useVacacionesStore(s => s.loadSolicitudesVacaciones);
 
   const getEventosSaldoUsuarioPeriodo = useVacacionesStore(s => s.getEventosSaldoUsuarioPeriodo);
   const [expanded, setExpanded] = useState({});
-  const [fechasExpandidas,setFechasExpandidas]=useState(null)
-
   const [periodo, setPeriodo] = useState('year'); // '3m' | '6m' | 'year' | 'custom'
   const [inicio, setInicio] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); d.setHours(0,0,0,0); return d; });
   const [fin, setFin] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
@@ -259,7 +256,7 @@ autoTable(doc, {
 
       <Container maxWidth="sm" sx={{ pb: 3 }}>
         <Box sx={{ mt: 2 }}>
-          <Card sx={{p:2, my:2}}>
+          <Card sx={{p:2, my:2, border:'2px solid', borderColor:'primary.main', boxShadow: '0 4px 20px rgba(76, 76, 142, 0.3)' }}>
             <Typography variant='h6' sx={{mb:2, mt:1, textAlign:'center', fontWeight:'bold'}}>
               Seleccione Periodo a Visualizar
 
@@ -342,8 +339,17 @@ autoTable(doc, {
 ) : (
   <Box display="flex" flexDirection="column" gap={1.5}>
     {eventos.length === 0 && (
-      <Typography variant="body1">No hay eventos en este periodo</Typography>
+        <Card sx={{p:1}}>       
+              <Typography textAlign='center' variant="body1">No hay eventos en este periodo</Typography>
+          </Card>
     )}
+
+    {eventos.length >0 && 
+      <Typography variant="h6" sx={{mt:2, mb:-1, textAlign:'center', fontWeight:'bold'}}>
+        EVOLUCION DEL SALDO
+      </Typography>
+  }
+
     {eventos.map((e, idx) => {
       const esHorasSueltas=(e.horasSolicitadas<8 || Math.abs(e.deltaHoras)<8)
       const horasSolicitadas=e.horasSolicitadas
@@ -353,7 +359,7 @@ autoTable(doc, {
       const deltaTxt = `${e.deltaHoras >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(e.deltaHoras))}`;
       const chipColor = e.tipo === 'denegada' ? 'default' : (e.deltaHoras >= 0 ? 'success' : 'error');
       return (
-        <Card key={key} variant="outlined">
+        <Card key={key} sx={{border:'1px solid black'}}>
           <CardHeader
             title={
               <>

@@ -100,7 +100,7 @@ export const useAuthStore = create((set, get) => ({
            'user':'Empleado',
            'admin':'Administrador',
            'leaveAdmin':'Admin de Ausencias',
-           'cocinero':'Cocinero',
+           'cocinero':'Admin de Desayunos',
            'owner':'Jefe'
       }    
       return rolEsp[rol];

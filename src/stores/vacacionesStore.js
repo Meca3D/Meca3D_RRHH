@@ -351,7 +351,7 @@ export const useVacacionesStore = create((set, get) => {
           transaction.update(solicitudRef, {
             estado: 'cancelado',
             fechaCancelacion: formatYMD(new Date()),
-            fechasCanceladas: diasDisponibles,
+            fechasCanceladas: solicitud.estado==="pendiente" ? solicitud.fechas : diasDisponibles,
             motivoCancelacion: motivo,
             horasDisponiblesAntesCancelacion: saldoAntes.disponibles, 
             horasDisponiblesDespuesCancelacion: saldoDespues,  
@@ -2021,10 +2021,20 @@ mapSolicitudToEventos: (solicitud) => {
 },
 
 getEventosSaldoUsuarioPeriodo: async (usuarioEmail, inicioYMD, finYMD) => {
-  const { solicitudesVacaciones, mapSolicitudToEventos, ordenarEventosPorDiaCadena } = get();
+  const { mapSolicitudToEventos, ordenarEventosPorDiaCadena } = get();
   
-  // 1) Filtrar solicitudes del usuario desde el estado (ya con cancelacionesParciales)
-  const solicitudesUsuario = solicitudesVacaciones.filter(s => s.solicitante === usuarioEmail);
+  // 1. Consultar directamente desde Firestore en lugar de memoria
+  const solicitudesQuery = query(
+    collection(db, 'VACACIONES'),
+    where('solicitante', '==', usuarioEmail),
+    orderBy('fechaSolicitud', 'desc')
+  );
+  
+  const querySnapshot = await getDocs(solicitudesQuery);
+  const solicitudesUsuario = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
   
   // 2) Aplanar a eventos
   const todosEventos = solicitudesUsuario.flatMap(s => mapSolicitudToEventos(s));

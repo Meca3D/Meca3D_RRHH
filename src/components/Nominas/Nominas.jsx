@@ -81,16 +81,18 @@ const Nominas = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
-      {/* Header corporativo con gradiente dorado */}
+      
       <Paper 
         elevation={5} 
         sx={{ 
+          background: 'linear-gradient(135deg, #66BB6A 0%, #4CAF50 40%, #1B5E20 100%)',
           border:'1px solid verde.main',
           p: 2, 
           mb: 4, 
           borderRadius: 4,
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          color:'white'
         }}
       >
         {/* Decoración de fondo */}
@@ -102,15 +104,15 @@ const Nominas = () => {
             width: 150,
             height: 150,
             borderRadius: '50%',
-            bgcolor: 'verde.fondo',
+            background: 'rgba(255,255,255,0.15)',
             zIndex: 0
           }}
         />
         
         <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
-            <WysiwygOutlinedIcon sx={{ fontSize: '4rem', color:'verde.main'}} />
+            <WysiwygOutlinedIcon sx={{ fontSize: '4rem'}} />
           <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{ml: 2}}>
-            <Typography sx={{ color:'verde.main'}} textAlign="center" variant="h4" fontWeight="bold" gutterBottom>
+            <Typography sx={{ }} textAlign="center" variant="h4" fontWeight="bold" gutterBottom>
               Nóminas
             </Typography>
             <Box display="flex" gap={1} flexWrap="nowrap">
@@ -120,17 +122,18 @@ const Nominas = () => {
                   <Chip
                     label="Falta fecha de ingreso"
                     sx={{
-                      bgcolor: 'rojo.fondo',
+                      fontSize: '1rem',
+                      bgcolor: 'white',
                       color: 'rojo.main',
                       fontWeight: 700
                     }}
                   />
                 ) : (
                   <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap" sx={{}}>
-                  <Typography  color="verde.main" variant="h6" fontSize=" 1rem" textAlign="center" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
+                  <Typography  fontSize=" 1.1rem" textAlign="center" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                     Estimado {userSalaryInfo.mesNomina || 'Mes Actual'}   
                   </Typography>
-                  <Typography textAlign="center" color="verde.main"><strong>{mask(formatCurrency(userSalaryInfo.salarioCompletoEstimado))}</strong></Typography>
+                  <Typography fontSize="1.1rem" textAlign="center" ><strong>{mask(formatCurrency(userSalaryInfo.salarioCompletoEstimado))}</strong></Typography>
                   </Box>
                 )}
                 </>
@@ -138,7 +141,8 @@ const Nominas = () => {
                 <Chip 
                   label="Falta configuración"
                   sx={{ 
-                    bgcolor: 'rojo.fondo', 
+                    fontSize: '1rem',
+                    bgcolor: 'white', 
                     color: 'rojo.main',
                     fontWeight: 700
                   }} 
