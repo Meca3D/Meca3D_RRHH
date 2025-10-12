@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// En tu vite.config.js, agregar optimizaciones PWA
 export default defineConfig({
   plugins: [react(),
     VitePWA({
@@ -16,6 +15,7 @@ export default defineConfig({
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#1976d2',
+        description: 'Aplicación de recursos humanos Mecaformas 3D',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -28,7 +28,9 @@ export default defineConfig({
       },
       devOptions: {
         enabled: false
-      }
+      },
+      manifestFilename: 'manifest.webmanifest'
+      
     })
   ],
   build: {

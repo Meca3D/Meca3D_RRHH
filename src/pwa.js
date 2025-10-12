@@ -2,31 +2,35 @@
 import { registerSW } from 'virtual:pwa-register'
 import { useUIStore } from './stores/uiStore'
 
-// Llama a initPWA() en src/main.jsx
+// Solo necesitas esto si usas injectRegister: 'none'
+// Con injectRegister: 'auto', esto es opcional
 export function initPWA() {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
-      const { hideSnackbar } = useUIStore.getState()
-      // Snackbar persistente con acción "Actualizar"
-      useUIStore.setState({
-        snackbar: {
-          open: true,
-          message: 'Nueva versión disponible',
-          severity: 'info',
-          actionText: 'Actualizar',
-          // Ejecuta la actualización y cierra el aviso
-          onAction: async () => {
-            hideSnackbar()
-            await updateSW(true)
-          },
-          persist: true
-        }
-      })
+      console.log('Nueva versión disponible')
+      const { showActionSnackbar, hideSnackbar } = useUIStore.getState()
+      
+      showActionSnackbar(
+        'Nueva versión disponible',
+        'Actualizar',
+        async () => {
+          hideSnackbar()
+          await updateSW(true)
+        },
+        'info',
+        true
+      )
     },
     onOfflineReady() {
-      // Aviso simple de offline listo
-      useUIStore.getState().showSuccess?.('Listo para usar sin conexión')
+      console.log('App lista para funcionar offline')
+      useUIStore.getState().showSuccess('Listo para usar sin conexión')
+    },
+    onRegistered(registration) {
+      console.log('Service Worker registrado:', registration)
+    },
+    onRegisterError(error) {
+      console.error('Error al registrar Service Worker:', error)
     }
   })
 
