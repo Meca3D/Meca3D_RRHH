@@ -95,11 +95,6 @@ export default function MiSaldoVacaciones() {
     return { saldoInicial: inicial, saldoFinal, variacion: (saldoFinal - inicial) };
   }, [eventos, saldoInicial]);
 
-    const colorChip = (tipo, delta) => {
-      if (tipo === 'denegada') return 'default';
-      if (tipo === 'ajuste') return delta >= 0 ? 'success' : 'error';
-      return delta >= 0 ? 'success' : 'error';
-    };
     const IconoDelta = ({ delta }) => delta >= 0 ? <TrendingUpIcon fontSize="small" /> : <TrendingDownIcon fontSize="small" />;
 
     const loadLogo = (src) => new Promise((resolve, reject) => {
@@ -319,7 +314,7 @@ autoTable(doc, {
                 <Chip
                   sx={{fontSize:'1.2rem'}}
                   color={resumen.variacion >= 0 ? 'success' : 'error'}
-                  label={`Variación: ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacas(Math.abs(resumen.variacion))}`}
+                  label={`Variación:  ${resumen.variacion >= 0 ? '+' : '-'}${formatearTiempoVacas(Math.abs(resumen.variacion))}`}
                 />
                 <Box flexGrow={1} />
                 <Button sx={{p:1}} variant="outlined" size="small" startIcon={<PictureAsPdfIcon />} onClick={exportarPDF}>
@@ -357,7 +352,7 @@ autoTable(doc, {
       const key = `${e.fecha}-${e.tipo}-${idx}`;
       const abierto = !!expanded[key];
       const deltaTxt = `${e.deltaHoras >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(e.deltaHoras))}`;
-      const chipColor = e.tipo === 'denegada' ? 'default' : (e.deltaHoras >= 0 ? 'success' : 'error');
+      const chipColor = (e.deltaHoras > 0 ? 'success' : e.deltaHoras < 0 ? 'error' : 'default');
       return (
         <Card key={key} sx={{border:'1px solid black'}}>
           <CardHeader

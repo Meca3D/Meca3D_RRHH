@@ -3,7 +3,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Avatar, TextField, Button, Box, Typography,
   IconButton, InputAdornment, Alert, CircularProgress,
-  MenuItem, Divider, Stack
+  MenuItem, Divider, Stack, FormControlLabel, Switch, Chip 
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -18,8 +18,12 @@ import {
   Person as PersonIcon,
   Work as WorkIcon,
   CalendarToday as CalendarIcon,
-  Badge as BadgeIcon
+  Badge as BadgeIcon,
+  Notifications as NotificationsIcon,
+  NotificationsOff as NotificationsOffIcon
 } from '@mui/icons-material';
+
+import { useNotifications } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +36,12 @@ const UserProfile = ({ open, onClose }) => {
   const navigate = useNavigate();
   const { userProfile, updateUserProfile, changePassword, logout } = useAuthStore();
   const { showSuccess, showError } = useUIStore();
+  const { permission, requestPermission } = useNotifications();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
+
+
 
   const [editMode, setEditMode] = useState(false);
   const [changePasswordMode, setChangePasswordMode] = useState(false);
@@ -55,6 +65,17 @@ const UserProfile = ({ open, onClose }) => {
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
+
+  // Verificar estado de notificaciones
+  useEffect(() => {
+    if (userProfile) {
+      const browserPermission = Notification.permission;
+      setNotificationsEnabled(
+        browserPermission === 'granted' && 
+        userProfile.notificationPreference === 'granted'
+      );
+    }
+  }, [userProfile]);
 
   // ✅ Inicializar datos del formulario
   useEffect(() => {
@@ -208,6 +229,60 @@ const UserProfile = ({ open, onClose }) => {
     });
   };
 
+  // Manejar activación/desactivación de notificaciones
+  const handleNotificationToggle = async (event) => {
+    const wantsEnable = event.target.checked;
+    
+    if (wantsEnable) {
+      // Usuario quiere activar notificaciones
+      setLoadingNotifications(true);
+      try {
+        await requestPermission();
+        setNotificationsEnabled(true);
+        showSuccess('Notificaciones activadas correctamente');
+      } catch (error) {
+        showError('No se pudieron activar las notificaciones', error);
+        setNotificationsEnabled(false);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    } else {
+      // Usuario quiere desactivar notificaciones
+      try {
+        const { updateNotificationPreference } = useAuthStore.getState();
+        await updateNotificationPreference('declined');
+        setNotificationsEnabled(false);
+        showSuccess('Notificaciones desactivadas');
+      } catch (error) {
+        showError('Error al desactivar notificaciones',error);
+      }
+    }
+  };
+
+// Enviar notificación de prueba
+const handleSendTestNotification = async () => {
+  if (!notificationsEnabled) {
+    showError('Debes activar las notificaciones primero');
+    return;
+  }
+
+  setSendingTest(true);
+    try {
+      const { sendTestNotification } = useAuthStore.getState();
+      const result = await sendTestNotification();
+      
+      if (result.success) {
+        showSuccess('Notificación enviada. Revisa tu dispositivo');
+      } else {
+        showError('No se pudo enviar la notificación');
+      }
+    } catch (error) {
+      showError('Error al enviar notificación de prueba',error);
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   if (!userProfile) {
     return (
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -246,7 +321,10 @@ const UserProfile = ({ open, onClose }) => {
         <Typography variant="h5" component="div" color="white" fontWeight={600}>
           Mi Perfil
         </Typography>
-        <Box onClick={onClose} display="flex" justifyContent="center" alignItems="center" sx={{width:35,height:35,borderRadius:'50%', border:'1px solid red', bgcolor:"white"}}>
+        <Box onClick={()=>{
+          setEditMode(false);
+          onClose()}} display="flex" justifyContent="center" alignItems="center" 
+          sx={{width:35,height:35,borderRadius:'50%', border:'1px solid red', bgcolor:"white"}}>
 
           <CloseIcon color="error" sx={{fontSize:'190%'}}  />
 
@@ -417,7 +495,57 @@ const UserProfile = ({ open, onClose }) => {
                   }
                 }}
               />
-              
+              <Divider />
+              {/* ✅ Sección de Notificaciones */}
+              {!changePasswordMode && (
+                <>                  
+                  <Box  sx={{ mb: 2 }}>
+                    <Typography variant="body1" sx={{display: 'flex', alignItems: 'center', gap: 1, mb:1 }}>
+                      <NotificationsIcon color={editMode?"primary":"action"} />
+                      Notificaciones Push
+                    </Typography>
+                    
+                    <Box
+                      display="flex"
+                      justifyContent="space-between" 
+                      alignItems="center"
+                      width="100%" 
+                    >
+
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={notificationsEnabled}
+                            onChange={handleNotificationToggle}
+                            disabled={!editMode || loadingNotifications}
+                            color={editMode ? "primary" : "action"}
+                          />
+                        }
+                        label="" 
+                      />
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color={editMode ? "primary" : "action"}
+                          onClick={handleSendTestNotification}
+                          disabled={sendingTest || !editMode || !notificationsEnabled}
+                          sx={{width:'65%', borderRadius:2}}
+                        >
+                          {sendingTest ? 'Enviando...' : 'Enviar notificación de prueba'}
+                        </Button>
+                      
+                    </Box>
+                    
+                    {permission === 'denied' && (
+                      <Alert severity="warning" sx={{ mt: 1, fontSize: '0.875rem' }}>
+                        Las notificaciones están bloqueadas en este navegador. 
+                        Ve a la configuración del navegador para habilitarlas.
+                      </Alert>
+                    )}
+                  </Box>
+                </>
+              )}
+
               
             </Stack>
           ) : (

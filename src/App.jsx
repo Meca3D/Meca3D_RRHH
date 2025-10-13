@@ -11,6 +11,8 @@ import SnackbarProvider from './components/UI/SnackbarProvider';
 import { ThemeProvider } from '@mui/material/styles';
 import { corporateTheme } from './theme/corporateTheme';
 import { standarTheme } from './theme/standardTheme';
+import { NotificationManager } from './components/NotificationManager';
+
 
 
 
@@ -31,6 +33,7 @@ const { loading: authLoading } = useAuthStore(); // ✅ Ya no necesitas initiali
       <CssBaseline />
       <BrowserRouter>
         <SnackbarProvider />
+        <NotificationManager /> 
         <AppRoutes />
       </BrowserRouter>
     </ThemeProvider>

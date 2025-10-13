@@ -5,8 +5,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   plugins: [react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'firebase-messaging-sw.js',
       registerType: 'autoUpdate',
-      injectRegister: 'none',
       includeAssets: ['icons/favicon.svg', 'robots.txt'],
       manifest: {
         name: 'Mecaformas 3D RRHH',
@@ -23,6 +25,10 @@ export default defineConfig({
           { src: '/icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
+      injectManifest: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+          maximumFileSizeToCacheInBytes: 5000000
+        },
       workbox: {
         navigateFallback: '/index.html'
       },

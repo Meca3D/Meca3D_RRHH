@@ -1,6 +1,6 @@
 import { Box, Typography, CircularProgress, Chip, Fade, Zoom } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import { useCountdown } from '../../hooks/useCountDown';
+import { useCountdown } from '../../hooks/useCountdown';
 
 const CountdownTimer = ({ fechaReserva }) => {
   const countdown = useCountdown(fechaReserva);

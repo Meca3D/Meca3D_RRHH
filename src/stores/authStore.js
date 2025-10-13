@@ -17,6 +17,7 @@ export const useAuthStore = create((set, get) => ({
   userProfile: null,
   loading: true, // Start as true to indicate initial auth check is in progress
   isAuthenticated: false,
+  notificationPromptShown: false,
 
   // Function to initialize the auth listener (called once, likely in App.jsx or main entry)
   // This ensures the listener is set up correctly when the app loads
@@ -204,6 +205,78 @@ export const useAuthStore = create((set, get) => ({
       return { success: true, visible: next };
     },
 
+    setNotificationPromptShown: (shown) => set({ notificationPromptShown: shown }),
+
+    updateNotificationPreference: async (preference) => {
+      const { userProfile } = get();
+      if (!userProfile?.email) return;
+      
+      try {
+        const userRef = doc(db, 'USUARIOS', userProfile.email);
+        await updateDoc(userRef, {
+          notificationPreference: preference
+        });
+        set({ 
+          userProfile: { 
+            ...userProfile, 
+            notificationPreference: preference 
+          } 
+        });
+      } catch (error) {
+        console.error('Error actualizando preferencia notificaciones:', error);
+      }
+    },
+
+        // Enviar notificación push a un empleado
+    sendNotification: async ({ empleadoEmail, title, body, url, type = 'general' }) => {
+      try {
+        const response = await fetch('/.netlify/functions/sendNotification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            empleadoEmail,
+            title,
+            body,
+            data: {
+              type,
+              url: url || '/',
+              timestamp: new Date().toISOString()
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Error al enviar notificación');
+        }
+
+        const result = await response.json();
+        return { success: true, ...result };
+      } catch (error) {
+        console.error('Error enviando notificación:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    // Enviar notificación de prueba al usuario actual
+    sendTestNotification: async () => {
+      const { userProfile } = get();
+      if (!userProfile?.email) {
+        return { success: false, error: 'Usuario no autenticado' };
+      }
+
+      return await get().sendNotification({
+        empleadoEmail: userProfile.email,
+        title: '🔔 Notificación de prueba',
+        body: 'Si ves esto, las notificaciones funcionan correctamente',
+        url: '/',
+        type: 'test'
+      });
+    },
+
+
+
 logout: async () => {
 
     await signOut(auth);
@@ -255,6 +328,9 @@ const loadUserProfileFunction = (userEmail, set) => {
         const userData = docSnap.data();
         set({ 
           userProfile: {
+            fcmTokens: userData.fcmTokens || null,
+            notificationPreference: userData.notificationPreference || 'not-set', // 'granted', 'denied', 'not-set'
+
             email: userEmail.toLowerCase(),
             nombre: userData.nombre,
             rol: userData.rol,
@@ -303,6 +379,7 @@ const loadUserProfileFunction = (userEmail, set) => {
         userRole: 'user',
         loading: false
       });
-    }
+    }    
   );
 };
+
