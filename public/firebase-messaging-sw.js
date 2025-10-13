@@ -4,6 +4,8 @@
 importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging-compat.js');
 
+const manifest = self.__WB_MANIFEST;
+
 // Inicializar Firebase (con tus claves reales, NO variables de entorno)
 firebase.initializeApp({
   apiKey: "AIzaSyDDLCk8bc1veL5mxRXDuItbtJUhMiOntHc",
