@@ -266,7 +266,47 @@ export const useVacacionesStore = create((set, get) => {
       });
     });
 
-    return solicitudId;
+          // Transacción completada, enviar notificaciones
+      try {
+        if (res.aplicar) {
+          // ✅ Auto-aprobada: Notificar al solicitante
+          const { sendNotification, userProfile } = useAuthStore.getState();
+          const nombreSolicitante = formatearNombre(userProfile?.nombre || solicitudData.solicitante);
+  
+          await sendNotification({
+            empleadoEmail: nombreSolicitante,
+            title: '✅ Solicitud de vacaciones aprobada',
+            body: solicitudData.esVenta 
+              ? `Tu venta de ${formatearTiempoVacasLargo(solicitudData.horasSolicitadas)} ha sido aprobada automáticamente`
+              : `Tu solicitud de ${formatearTiempoVacasLargo(solicitudData.horasSolicitadas)} ha sido aprobada automáticamente`,
+            url: '/vacaciones/solicitudes',
+            type: 'vacaciones_aprobada'
+          });
+        } else {
+          // solicitud en estado endiente: Notificar a admins via Cloud Function
+          const { userProfile } = useAuthStore.getState();
+          const nombreSolicitante = formatearNombre(userProfile?.nombre || solicitudData.solicitante);
+
+          await fetch('/.netlify/functions/notifyAdmins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              solicitante: solicitudData.solicitante, // Email (para buscar en Firestore)
+              nombreSolicitante: nombreSolicitante, 
+              diasSolicitados: formatearTiempoVacasLargo(solicitudData.horasSolicitadas),
+              esVenta: solicitudData.esVenta,
+              horasSolicitadas: solicitudData.horasSolicitadas
+            })
+          });
+        }
+      } catch (notifError) {
+        console.error('Error enviando notificaciones:', notifError);
+        // No bloquear la creación de la solicitud
+      }
+
+      return solicitudId;
+
+
   } catch (error) {
     set({ error: error.message });
     throw error;

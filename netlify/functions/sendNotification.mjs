@@ -121,18 +121,19 @@ export const handler = async (event) => {
 
     // Preparar mensaje
     const tokens = validTokens.map(t => t.token);
+
     const message = {
-      notification: { 
-        title, 
-        body: messageBody 
-      },
+
       data: {
         ...data,
+        title: title,      
+        body: messageBody,   
         url: data?.url || '/',
         timestamp: new Date().toISOString()
       },
       tokens
     };
+
 
     console.log('Mensaje preparado:');
     console.log('  Título:', title);

@@ -48,7 +48,7 @@ export const NotificationPrompt = ({ open, onClose }) => {
         </Typography>
       </DialogContent>
       <DialogActions sx={{display:'flex', justifyContent:'space-between'}}>
-        <Button onClick={handleDecline} color="inherit">
+        <Button onClick={handleDecline} variant='outlined' color="inherit">
           No, gracias
         </Button>
         <Button onClick={handleAccept} variant="contained" disabled={loading}>

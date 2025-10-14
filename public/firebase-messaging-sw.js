@@ -21,16 +21,17 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('Mensaje recibido en segundo plano:', payload);
   
-  const notificationTitle = payload.notification?.title || 'Meca3D';
+  const notificationTitle = payload.data?.title || 'Meca3D';
   const notificationOptions = {
-    body: payload.notification?.body || 'Nueva notificación',
+    body: payload.data?.body || 'Nueva notificación',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data: payload.data || {}
+    data: payload.data
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
 
 // Manejar clics en notificaciones
 self.addEventListener('notificationclick', (event) => {

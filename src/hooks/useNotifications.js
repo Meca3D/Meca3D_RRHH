@@ -107,22 +107,24 @@ const requestPermission = async () => {
 
 
 
-  useEffect(() => {
-    if (!messaging) return;
+useEffect(() => {
+  if (!messaging) return;
 
-    const unsubscribe = onMessage(messaging, (payload) => {
-      
-      if (Notification.permission === 'granted') {
-        new Notification(payload.notification.title, {
-          body: payload.notification.body,
-          icon: '/icons/icon-192.png',
-          data: payload.data
-        });
-      }
-    });
+  const unsubscribe = onMessage(messaging, (payload) => {
+    console.log('Mensaje recibido (foreground):', payload);
+    
+    if (Notification.permission === 'granted') {
+      // ✅ Leer desde data en lugar de notification
+      new Notification(payload.data?.title || 'Meca3D', {
+        body: payload.data?.body || 'Nueva notificación',
+        icon: '/icons/icon-192.png',
+        data: payload.data
+      });
+    }
+  });
 
-    return () => unsubscribe();
-  }, []);
+  return () => unsubscribe();
+}, []);
 
   return { permission, requestPermission };
 };
