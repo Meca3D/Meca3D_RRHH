@@ -3,13 +3,11 @@ import react from '@vitejs/plugin-react-swc'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  plugins: [react(),
+  plugins: [
+    react(),
     VitePWA({
-      strategies: 'injectManifest',
-      srcDir: 'public',
-      filename: 'firebase-messaging-sw.js',
       registerType: 'autoUpdate',
-      includeAssets: ['icons/favicon.svg', 'robots.txt'],
+      includeAssets: ['icons/favicon.svg', 'robots.txt', 'firebase-messaging-sw.js'],
       manifest: {
         name: 'Mecaformas 3D RRHH',
         short_name: 'Meca3D',
@@ -25,31 +23,26 @@ export default defineConfig({
           { src: '/icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
-      injectManifest: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
-          maximumFileSizeToCacheInBytes: 5000000
-        },
       workbox: {
-        navigateFallback: '/index.html'
+        navigateFallback: '/index.html',
+        // No cachear el service worker de Firebase
+        navigateFallbackDenylist: [/firebase-messaging-sw\.js$/]
       },
       devOptions: {
         enabled: false
       },
       manifestFilename: 'manifest.webmanifest'
-      
     })
   ],
   build: {
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          mui: ['@mui/material', '@mui/icons-material'],
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore']
+          'vendor': ['react', 'react-dom'],
+          'mui': ['@mui/material', '@mui/icons-material'],
+          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore']
         }
       }
     }
   }
 })
-
-
