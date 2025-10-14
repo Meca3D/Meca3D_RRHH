@@ -24,54 +24,138 @@ if (!admin.apps.length) {
 }
 
 export const handler = async (event) => {
+  console.log('=== INICIO sendNotification ===');
+  console.log('Método:', event.httpMethod);
+  
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers, body: '' };
+  }
+
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
   try {
-    const { empleadoEmail, title, body, data } = JSON.parse(event.body);
+    const body = JSON.parse(event.body);
+    console.log('Body recibido:', JSON.stringify(body, null, 2));
+    
+    const { empleadoEmail, title, body: messageBody, data } = body;
 
-    // Obtener todos los tokens del usuario
+    if (!empleadoEmail || !title || !messageBody) {
+      console.error('Parámetros faltantes');
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Faltan parámetros: empleadoEmail, title, body' })
+      };
+    }
+
+    console.log(`Buscando usuario: ${empleadoEmail}`);
+
+    // Obtener tokens del empleado
     const userDoc = await admin.firestore()
       .collection('USUARIOS')
       .doc(empleadoEmail)
       .get();
     
-    const fcmTokens = userDoc.data()?.fcmTokens || [];
+    if (!userDoc.exists) {
+      console.error('Usuario no encontrado');
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'Usuario no encontrado' })
+      };
+    }
+
+    const userData = userDoc.data();
+    console.log('Usuario encontrado:', empleadoEmail);
+    
+    const fcmTokens = userData?.fcmTokens || [];
+    console.log(`Tokens encontrados: ${fcmTokens.length}`);
+    fcmTokens.forEach((t, i) => {
+      console.log(`  Token ${i}: ${t.browser}/${t.device} - ${t.token.substring(0, 20)}...`);
+    });
     
     if (fcmTokens.length === 0) {
+      console.warn('Usuario sin tokens');
       return {
         statusCode: 200,
-        body: JSON.stringify({ message: 'Usuario sin tokens FCM' })
+        headers,
+        body: JSON.stringify({ 
+          message: 'Usuario sin dispositivos registrados',
+          successCount: 0 
+        })
       };
     }
 
-    // Filtrar tokens válidos (menos de 60 días)
-    const SIXTY_DAYS = 1000 * 60 * 60 * 24 * 60;
+    // Filtrar tokens válidos (< 60 días)
+    const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
     const validTokens = fcmTokens.filter(t => {
-      const tokenAge = Date.now() - t.timestamp.toMillis();
-      return tokenAge < SIXTY_DAYS;
+      const tokenTimestamp = t.timestamp?.toMillis ? t.timestamp.toMillis() : t.timestamp;
+      const tokenAge = now - tokenTimestamp;
+      const isValid = tokenAge < SIXTY_DAYS_MS;
+      console.log(`  Token ${t.device}/${t.browser}: ${isValid ? 'VÁLIDO' : 'EXPIRADO'} (${Math.floor(tokenAge / (24 * 60 * 60 * 1000))} días)`);
+      return isValid;
     });
 
-    // Extraer solo los strings de tokens
-    const tokens = validTokens.map(t => t.token);
+    console.log(`Tokens válidos: ${validTokens.length} de ${fcmTokens.length}`);
 
-    if (tokens.length === 0) {
+    if (validTokens.length === 0) {
+      console.warn('Todos los tokens expirados');
       return {
         statusCode: 200,
-        body: JSON.stringify({ message: 'Tokens expirados' })
+        headers,
+        body: JSON.stringify({ 
+          message: 'Todos los tokens han expirado',
+          successCount: 0 
+        })
       };
     }
 
-    // Enviar a múltiples dispositivos
+    // Preparar mensaje
+    const tokens = validTokens.map(t => t.token);
     const message = {
-      notification: { title, body },
-      data: data || {},
-      tokens: tokens 
+      notification: { 
+        title, 
+        body: messageBody 
+      },
+      data: {
+        ...data,
+        url: data?.url || '/',
+        timestamp: new Date().toISOString()
+      },
+      tokens
     };
 
+    console.log('Mensaje preparado:');
+    console.log('  Título:', title);
+    console.log('  Cuerpo:', messageBody);
+    console.log('  Destinos:', tokens.length);
+
+    // Enviar a múltiples dispositivos
+    console.log('Enviando notificación...');
     const response = await admin.messaging().sendEachForMulticast(message);
     
+    console.log(`✅ Éxitos: ${response.successCount}`);
+    console.log(`❌ Fallos: ${response.failureCount}`);
+
+    // Analizar respuestas individuales
+    response.responses.forEach((resp, idx) => {
+      const tokenInfo = validTokens[idx];
+      if (resp.success) {
+        console.log(`  ✅ ${tokenInfo.device}/${tokenInfo.browser}: Enviado`);
+      } else {
+        console.error(`  ❌ ${tokenInfo.device}/${tokenInfo.browser}: ${resp.error?.code} - ${resp.error?.message}`);
+      }
+    });
+
     // Limpiar tokens inválidos si hay fallos
     if (response.failureCount > 0) {
       const failedTokens = [];
@@ -81,7 +165,8 @@ export const handler = async (event) => {
         }
       });
       
-      // Remover tokens fallidos
+      console.log(`Eliminando ${failedTokens.length} token(s) inválido(s)`);
+      
       const updatedTokens = fcmTokens.filter(t => !failedTokens.includes(t.token));
       await admin.firestore()
         .collection('USUARIOS')
@@ -89,18 +174,34 @@ export const handler = async (event) => {
         .update({ fcmTokens: updatedTokens });
     }
     
+    console.log('=== FIN sendNotification ===');
+    
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify({ 
-        success: true, 
+        success: true,
         successCount: response.successCount,
-        failureCount: response.failureCount 
+        failureCount: response.failureCount,
+        message: `Notificación enviada a ${response.successCount} de ${tokens.length} dispositivo(s)`,
+        details: response.responses.map((resp, idx) => ({
+          device: `${validTokens[idx].device}/${validTokens[idx].browser}`,
+          success: resp.success,
+          error: resp.error?.message
+        }))
       })
     };
+
   } catch (error) {
+    console.error('❌ ERROR CRÍTICO:', error);
+    console.error('Stack:', error.stack);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      headers,
+      body: JSON.stringify({ 
+        error: error.message,
+        stack: error.stack 
+      })
     };
   }
 };

@@ -47,7 +47,7 @@ export const NotificationPrompt = ({ open, onClose }) => {
           Incluso cuando no estés usando la aplicación.
         </Typography>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{display:'flex', justifyContent:'space-between'}}>
         <Button onClick={handleDecline} color="inherit">
           No, gracias
         </Button>

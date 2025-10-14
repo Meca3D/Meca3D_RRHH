@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
-import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, getDoc, getDocs } from 'firebase/firestore';
 import { messaging, vapidKey, db } from '../firebase/config';
 import { useAuthStore } from '../stores/authStore';
 
@@ -8,7 +8,7 @@ export const useNotifications = () => {
   const [permission, setPermission] = useState(Notification.permission);
   const { userProfile, updateNotificationPreference } = useAuthStore();
 
-  const requestPermission = async () => {
+const requestPermission = async () => {
   try {
     const permission = await Notification.requestPermission();
     setPermission(permission);
@@ -18,43 +18,84 @@ export const useNotifications = () => {
       
       if (token && userProfile?.email) {
         // Obtener info del dispositivo
+        // Detectar si realmente es móvil (tiene touch) o solo está en modo responsive de DevTools
+        const isRealMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isMobileUA = /Mobile|Android|iPhone|iPod/.test(navigator.userAgent);
+        const isTabletUA = /iPad|Tablet/.test(navigator.userAgent);
+
+        // Determinar tipo de dispositivo
+        let deviceType = 'Desktop';
+        if (isTabletUA) {
+          deviceType = 'Tablet';
+        } else if (isRealMobile && isMobileUA) {
+          deviceType = 'Mobile';
+        }
+
+        // Detectar navegador
+        let browserName = 'Other';
+        if (navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg')) {
+          browserName = 'Chrome';
+        } else if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
+          browserName = 'Safari';
+        } else if (navigator.userAgent.includes('Firefox')) {
+          browserName = 'Firefox';
+        } else if (navigator.userAgent.includes('Edg')) {
+          browserName = 'Edge';
+        }
+
         const deviceInfo = {
           token: token,
-          device: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) 
-            ? 'Mobile' 
-            : 'Desktop',
-          browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : 
-                   navigator.userAgent.includes('Firefox') ? 'Firefox' : 
-                   navigator.userAgent.includes('Safari') ? 'Safari' : 'Other',
+          device: deviceType,
+          browser: browserName,
           timestamp: new Date(),
           userAgent: navigator.userAgent
         };
+
         
         const userRef = doc(db, 'USUARIOS', userProfile.email);
         const userDoc = await getDoc(userRef);
         const existingTokens = userDoc.data()?.fcmTokens || [];
         
-        // Verificar si el token ya existe (mismo dispositivo renovando)
-        const tokenExists = existingTokens.find(t => t.token === token);
+        // Verificar si el token ya existe en este usuario
+        const tokenIndex = existingTokens.findIndex(t => t.token === token);
         
-        if (!tokenExists) {
-          // Agregar nuevo token al array
+        if (tokenIndex === -1) {
+          // Token nuevo, agregarlo
           await updateDoc(userRef, {
             fcmTokens: arrayUnion(deviceInfo)
           });
         } else {
-          // Actualizar timestamp del token existente
-          const updatedTokens = existingTokens.map(t => 
-            t.token === token ? { ...t, timestamp: new Date() } : t
-          );
+          // Token existente, actualizar timestamp
+          const updatedTokens = [...existingTokens];
+          updatedTokens[tokenIndex] = {
+            ...updatedTokens[tokenIndex],
+            timestamp: new Date()
+          };
           await updateDoc(userRef, {
             fcmTokens: updatedTokens
           });
         }
         
+        // Después de guardar el token
         await updateNotificationPreference('granted');
+
+        // Limpiar tokens duplicados en otros usuarios (backend)
+        try {
+          await fetch('/.netlify/functions/cleanDuplicateTokens', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: token,
+              currentUserEmail: userProfile.email
+            })
+          });
+        } catch (error) {
+          console.warn('No se pudo limpiar tokens duplicados:', error);
+        }
+
+        console.log('Token FCM guardado:', token);
         return token;
-      }
+              }
     } else if (permission === 'denied') {
       await updateNotificationPreference('denied');
     }
@@ -63,6 +104,7 @@ export const useNotifications = () => {
     throw error;
   }
 };
+
 
 
   useEffect(() => {
