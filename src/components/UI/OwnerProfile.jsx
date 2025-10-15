@@ -3,7 +3,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Avatar, TextField, Button, Box, Typography,
   IconButton, InputAdornment, Alert, CircularProgress,
-  MenuItem, Divider, Stack
+  MenuItem, Divider, Stack,FormControlLabel,Switch,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -18,7 +18,9 @@ import {
   Person as PersonIcon,
   Work as WorkIcon,
   CalendarToday as CalendarIcon,
-  Badge as BadgeIcon
+  Badge as BadgeIcon,
+  Notifications as NotificationsIcon,
+  NotificationsOff as NotificationsOffIcon
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -27,6 +29,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import axios from 'axios';
 import { iniciales } from '../Helpers';
+import { useNotifications } from '../../hooks/useNotifications';
 
 const opcionesPuesto = [
   'Fresador',

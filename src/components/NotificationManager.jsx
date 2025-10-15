@@ -42,13 +42,15 @@ export const NotificationManager = () => {
       // Mostrar prompt si:
       // 1. Navegador nunca preguntó ('default')
       // 2. Usuario no rechazó globalmente
+      if (!userProfile.notificationPreference || userProfile.notificationPreference === 'not-set') {
       const timer = setTimeout(() => {
         setShowPrompt(true);
         setNotificationPromptShown(true);
       }, 3000);
 
       return () => clearTimeout(timer);
-    };
+    }
+  }
 
     checkNotificationStatus();
   }, [isAuthenticated, userProfile, loading, notificationPromptShown]);
