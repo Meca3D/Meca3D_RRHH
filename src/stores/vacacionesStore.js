@@ -283,7 +283,7 @@ export const useVacacionesStore = create((set, get) => {
             type: 'vacaciones_aprobada'
           });
         } else {
-          // solicitud en estado endiente: Notificar a admins via Cloud Function
+          // solicitud en estado pendiente: Notificar a admins via Cloud Function
           const { userProfile } = useAuthStore.getState();
           const nombreSolicitante = formatearNombre(userProfile?.nombre || solicitudData.solicitante);
 
