@@ -113,18 +113,37 @@ useEffect(() => {
   const unsubscribe = onMessage(messaging, (payload) => {
     console.log('Mensaje recibido (foreground):', payload);
     
-    if (Notification.permission === 'granted') {
-      // ✅ Leer desde data en lugar de notification
-      new Notification(payload.data?.title || 'Meca3D', {
-        body: payload.data?.body || 'Nueva notificación',
+    // ✅ Mostrar notificación cuando la app está abierta
+    if (Notification.permission === 'granted' && payload.data) {
+      const notificationTitle = payload.data.title || 'Meca3D';
+      const notificationOptions = {
+        body: payload.data.body || 'Nueva notificación',
         icon: '/icons/icon-192.png',
-        data: payload.data
-      });
+        badge: '/icons/icon-192.png',
+        data: payload.data,
+        tag: payload.messageId || 'default', // Evita duplicados
+        requireInteraction: false
+      };
+
+      // Crear notificación del navegador
+      const notification = new Notification(notificationTitle, notificationOptions);
+      
+      // Manejar clic en la notificación
+      notification.onclick = (event) => {
+        event.preventDefault();
+        window.focus();
+        
+        const url = payload.data.url || '/';
+        if (window.location.pathname !== url) {
+          window.location.href = url;
+        }
+      };
     }
   });
 
   return () => unsubscribe();
 }, []);
+
 
   return { permission, requestPermission };
 };
