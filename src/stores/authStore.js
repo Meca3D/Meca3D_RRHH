@@ -269,7 +269,7 @@ export const useAuthStore = create((set, get) => ({
       return await get().sendNotification({
         empleadoEmail: userProfile.email,
         title: '🔔 Notificación de prueba',
-        body: 'Si ves esto, las notificaciones funcionan correctamente',
+        body: `${userProfile.nombre}, si ves esto, las notificaciones funcionan correctamente`,
         url: '/',
         type: 'test'
       });
