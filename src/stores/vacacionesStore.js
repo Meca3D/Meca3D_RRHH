@@ -413,8 +413,8 @@ export const useVacacionesStore = create((set, get) => {
         });
         // Notificaciones según quién canceló
         try {
-          const { sendNotification } = useAuthStore.getState();
-          const nombreSolicitante = formatearNombre(solicitud.solicitante);
+          const { sendNotification, userProfile } = useAuthStore.getState();
+          const nombreSolicitante = formatearNombre(userProfile);
           
           if (esAdmin && solicitud.solicitante !== useAuthStore.getState().user?.email) {
             // Caso 1: Admin cancela solicitud de un empleado → Notificar al empleado
@@ -429,7 +429,7 @@ export const useVacacionesStore = create((set, get) => {
             // Caso 2: Trabajador cancela su propia solicitud → Notificar a admins
             const diasSolicitados = solicitud.esVenta 
               ? `${formatearTiempoVacasLargo(solicitud.horasSolicitadas)}` 
-              : `${Math.round(solicitud.horasSolicitadas / 8)} día(s)`;
+              : `${formatearTiempoVacasLargo(solicitud.horasSolicitadas)}`;
             
             await fetch('/.netlify/functions/notifyAdmins', {
               method: 'POST',
@@ -1438,8 +1438,8 @@ export const useVacacionesStore = create((set, get) => {
       });
       // Notificaciones según quién canceló
       try {
-        const { sendNotification } = useAuthStore.getState();
-        const nombreSolicitante = formatearNombre(solicitud.solicitante);
+        const { sendNotification, userProfile } = useAuthStore.getState();
+        const nombreSolicitante = formatearNombre(userProfile.nombre);
         
         if (esAdmin && solicitud.solicitante !== empleadoActual) {
           // Caso 1: Admin cancela parcialmente solicitud de un empleado → Notificar al empleado
@@ -1488,7 +1488,7 @@ export const useVacacionesStore = create((set, get) => {
   // Obtener todos los empleados con sus saldos actuales
   obtenerEmpleadosConSaldos: async () => {
     try {
-      const { isAdminOrOwner, isLeaveAdmin } = useAuthStore.getState();
+      const { isAdminOrOwner} = useAuthStore.getState();
       
       if (!isAdminOrOwner()) {
         throw new Error('Sin permisos para acceder a los saldos');
