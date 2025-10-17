@@ -1,12 +1,15 @@
 # netlify.toml
 [build]
-  functions = "netlify/functions"
   command = "npm run build"
   publish = "dist"
 
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["firebase-admin"]
+
+# Scheduled function 
+[functions."dailyVacationsReport"]
+  schedule = "0 5 * * 1-5"
 
 [[redirects]]
   from = "/*"
