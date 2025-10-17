@@ -159,7 +159,7 @@ const Vacaciones = () => {
                 elevation={5}
                 onClick={() => action.disabled ? showError(action.disabledInfo): navigate(action.route)}
                 sx={{
-                  opacity:action.disabled?0.5:1,
+                  opacity:action.disabled?0.35:1,
                   height: '100%',
                   border: '1px solid',
                   borderColor: 'rgba(0,0,0,0.08)',

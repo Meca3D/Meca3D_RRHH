@@ -411,8 +411,45 @@ export const useVacacionesStore = create((set, get) => {
             });
           }
         });
+        // Notificaciones según quién canceló
+        try {
+          const { sendNotification } = useAuthStore.getState();
+          const nombreSolicitante = formatearNombre(solicitud.solicitante);
+          
+          if (esAdmin && solicitud.solicitante !== useAuthStore.getState().user?.email) {
+            // Caso 1: Admin cancela solicitud de un empleado → Notificar al empleado
+            await sendNotification({
+              empleadoEmail: solicitud.solicitante,
+              title: '⚠️ Solicitud de vacaciones cancelada',
+              body: `Tu solicitud ha sido cancelada por el administrador. Motivo: ${motivoCancelacion}`,
+              url: '/vacaciones/solicitudes',
+              type: 'vacaciones_cancelada_admin'
+            });
+          } else if (!esAdmin) {
+            // Caso 2: Trabajador cancela su propia solicitud → Notificar a admins
+            const diasSolicitados = solicitud.esVenta 
+              ? `${formatearTiempoVacasLargo(solicitud.horasSolicitadas)}` 
+              : `${Math.round(solicitud.horasSolicitadas / 8)} día(s)`;
+            
+            await fetch('/.netlify/functions/notifyAdmins', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                solicitante: solicitud.solicitante,
+                nombreSolicitante: nombreSolicitante,
+                diasSolicitados: diasSolicitados,
+                esVenta: solicitud.esVenta,
+                accion: 'cancelacion',
+                mensaje: `${nombreSolicitante} ha cancelado su solicitud de ${diasSolicitados}${solicitud.esVenta ? '' : ' de vacaciones'}`
+              })
+            });
+          }
+        } catch (notifError) {
+          console.error('Error enviando notificación:', notifError);
+        }
 
         return true;
+
       } catch (error) {
         set({ error: error.message });
         throw error;
@@ -630,28 +667,37 @@ export const useVacacionesStore = create((set, get) => {
         }
 
       }
-      // Transacción completada, enviar notificaciones
-      try {
-          const { sendNotification } = useAuthStore.getState();
-  
-          await sendNotification({
-            empleadoEmail: solicitud.Solicitante,
-            title: '✅ Solicitud de vacaciones aprobada',
-            body: solicitud.esVenta 
-              ? `Tu venta de ${formatearTiempoVacasLargo(solicitud.horasSolicitadas)} ha sido aprobada${solicitud.cantidadARecibir?'. Disfruta los '+solicitud.cantidadARecibir:''}`
-              : `Tu solicitud de ${formatearTiempoVacasLargo(solicitud.horasSolicitadas)} ha sido aprobada`,
-            url: '/vacaciones/solicitudes',
-            type: 'vacaciones_aprobada'
-          })}
-       catch (notifError) {
-        console.error('Error enviando notificaciones:', notifError);
-        // No bloquear la creación de la solicitud
-      }
     })
+    // Notificar al solicitante del cambio de estado
+    try {
+      const { sendNotification } = useAuthStore.getState();
+      
+      if (nuevoEstado === 'aprobada') {
+        await sendNotification({
+          empleadoEmail: solicitud.solicitante,
+          title: `✅ Solicitud de ${solicitud.esVenta?'venta de ':''}vacaciones aprobada`,
+          body: solicitud.esVenta
+            ? `Tu venta de ${formatearTiempoVacasLargo(solicitud.horasSolicitadas)} ha sido aprobada ${solicitud.cantidadARecibir?'. Disfruta los '+solicitud.cantidadARecibir+'€':''}`
+            : `Tu solicitud de ${formatearTiempoVacasLargo(solicitud.horasSolicitadas)} ha sido aprobada`,
+          url: '/vacaciones/solicitudes',
+          type: 'vacaciones_aprobada'
+        });
+      } else if (nuevoEstado === 'denegada') {
+        await sendNotification({
+          empleadoEmail: solicitud.solicitante,
+          title: `❌ Solicitud de ${solicitud.esVenta?'venta de ':''}vacaciones denegada`,
+          body: comentariosAdmin || 'Tu solicitud ha sido denegada',
+          url: '/vacaciones/solicitudes',
+          type: 'vacaciones_denegada'
+        });
+      }
+    } catch (notifError) {
+      console.error('Error enviando notificación:', notifError);
+      // No bloquear el cambio de estado
+    }
 
-    
+    return true;
 
-        return true;
       } catch (error) {
         set({ error: error.message });
         throw error;
@@ -1390,6 +1436,38 @@ export const useVacacionesStore = create((set, get) => {
           updatedAt: new Date()
         });
       });
+      // Notificaciones según quién canceló
+      try {
+        const { sendNotification } = useAuthStore.getState();
+        const nombreSolicitante = formatearNombre(solicitud.solicitante);
+        
+        if (esAdmin && solicitud.solicitante !== empleadoActual) {
+          // Caso 1: Admin cancela parcialmente solicitud de un empleado → Notificar al empleado
+          await sendNotification({
+            empleadoEmail: solicitud.solicitante,
+            title: '⚠️ Cancelación parcial de vacaciones',
+            body: `El administrador ha cancelado ${diasACancelar.length} día(s) de tu solicitud. Motivo: ${motivoCancelacion}`,
+            url: '/vacaciones/solicitudes',
+            type: 'vacaciones_cancelada_parcial'
+          });
+        } else if (!esAdmin) {
+          // Caso 2: Trabajador cancela parcialmente su propia solicitud → Notificar a admins
+          await fetch('/.netlify/functions/notifyAdmins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              solicitante: solicitud.solicitante,
+              nombreSolicitante: nombreSolicitante,
+              diasSolicitados: `${diasACancelar.length} día(s)`,
+              esVenta: false,
+              accion: 'cancelacion_parcial',
+              mensaje: `${nombreSolicitante} ha cancelado ${diasACancelar.length} día(s) de su solicitud`
+            })
+          });
+        }
+      } catch (notifError) {
+        console.error('Error enviando notificación:', notifError);
+      }
 
       return {
         exito: true,
@@ -1516,6 +1594,27 @@ export const useVacacionesStore = create((set, get) => {
 
         transaction.set(newAjusteRef, solicitudAjuste);
       });
+      // Notificar al empleado del ajuste de saldo
+      try {
+        const { sendNotification } = useAuthStore.getState();
+        
+        const emoji = tipoAjuste === 'añadir' ? '📈' : tipoAjuste === 'reducir' ? '📉' : '🔄';
+        
+        await sendNotification({
+          empleadoEmail: empleadoEmail,
+          title: `${emoji} Ajuste de saldo de vacaciones`,
+          body: tipoAjuste === 'añadir' 
+            ? `Se han añadido ${formatearTiempoVacasLargo(horas)} a tu saldo. Saldo actual: ${formatearTiempoVacasLargo(nuevoSaldo.disponibles)}`
+            : tipoAjuste === 'reducir' 
+              ? `Se han reducido ${formatearTiempoVacasLargo(horas)} de tu saldo. Saldo actual: ${formatearTiempoVacasLargo(nuevoSaldo.disponibles)}`
+               : `Se ha ajustado tu saldo a ${formatearTiempoVacasLargo(horas)}`,
+          url: '/vacaciones',
+          type: 'ajuste_saldo'
+        });
+      } catch (notifError) {
+        console.error('Error enviando notificación:', notifError);
+      }
+
 
       return {
         exito: true,

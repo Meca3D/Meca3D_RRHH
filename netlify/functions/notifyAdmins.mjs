@@ -26,9 +26,10 @@ export const handler = async (event) => {
   }
 
   try {
-    const { nombreSolicitante, solicitante, diasSolicitados, esVenta, horasSolicitadas } = JSON.parse(event.body);
+    const { solicitante, nombreSolicitante, diasSolicitados, esVenta, horasSolicitadas, accion, mensaje } = JSON.parse(event.body);
 
-    console.log(`Notificando admins sobre solicitud de ${nombreSolicitante}`);
+    console.log(`Notificando admins sobre ${accion || 'solicitud'} de ${nombreSolicitante} (${solicitante})`);
+
 
     // Obtener todos los usuarios con roles admin, owner o leaveAdmin
     const usuariosSnapshot = await admin.firestore()
@@ -38,11 +39,26 @@ export const handler = async (event) => {
 
     console.log(`${usuariosSnapshot.size} administrador(es) encontrado(s)`);
 
-    // Construir mensaje
-    const body = esVenta
-      ? `${nombreSolicitante} solicita vender ${horasSolicitadas}h`
-      : `${nombreSolicitante} solicita ${diasSolicitados} de vacaciones`;
+    // Construir mensaje según la acción
+    let body;
+    if (mensaje) {
+      // Si viene un mensaje personalizado, usarlo
+      body = mensaje;
+    } else {
+      // Mensaje por defecto para solicitudes nuevas
+      body = esVenta
+        ? `${nombreSolicitante} solicita vender ${horasSolicitadas}h`
+        : `${nombreSolicitante} solicita ${diasSolicitados} día(s) de vacaciones`;
+    }
 
+    // Definir título según acción
+    const titles = {
+      'cancelacion': '🔴 Cancelación de vacaciones',
+      'cancelacion_parcial': '🟡 Cancelación parcial de vacaciones',
+      'solicitud': '📬 Nueva solicitud de vacaciones'
+    };
+
+    const notificationTitle = titles[accion] || titles.solicitud;
     // Enviar notificación a cada admin
     const notificaciones = [];
     
@@ -72,10 +88,10 @@ export const handler = async (event) => {
       
       const message = {
         data: {
-          title: '📬 Nueva solicitud de vacaciones',
+          title: notificationTitle,
           body: body,
-          url: '/admin/vacaciones/pendientes',
-          type: 'vacaciones_pendiente',
+          url: '/gestion-vacaciones',
+          type: accion || 'vacaciones_pendiente',
           timestamp: new Date().toISOString()
         },
         tokens
