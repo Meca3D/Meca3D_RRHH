@@ -414,7 +414,7 @@ export const useVacacionesStore = create((set, get) => {
         // Notificaciones según quién canceló
         try {
           const { sendNotification, userProfile } = useAuthStore.getState();
-          const nombreSolicitante = formatearNombre(userProfile);
+          const nombreSolicitante = formatearNombre(userProfile.nombre);
           
           if (esAdmin && solicitud.solicitante !== useAuthStore.getState().user?.email) {
             // Caso 1: Admin cancela solicitud de un empleado → Notificar al empleado
@@ -440,7 +440,7 @@ export const useVacacionesStore = create((set, get) => {
                 diasSolicitados: diasSolicitados,
                 esVenta: solicitud.esVenta,
                 accion: 'cancelacion',
-                mensaje: `${nombreSolicitante} ha cancelado su solicitud de ${diasSolicitados}${solicitud.esVenta ? '' : ' de vacaciones'}`
+                mensaje: `${nombreSolicitante} ha cancelado su solicitud de vacaciones. Cancelado: ${formatearTiempoVacasLargo(horasADevolver)} `
               })
             });
           }
