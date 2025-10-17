@@ -12,6 +12,8 @@ import { ThemeProvider } from '@mui/material/styles';
 import { corporateTheme } from './theme/corporateTheme';
 import { standarTheme } from './theme/standardTheme';
 import { NotificationManager } from './components/NotificationManager';
+import { useNotifications } from './hooks/useNotifications';
+
 
 
 
@@ -20,8 +22,8 @@ import { NotificationManager } from './components/NotificationManager';
     useEffect(() => {
       useAuthStore.getState().initAuthListener();
     }, []);
-  
-const { loading: authLoading } = useAuthStore(); // ✅ Ya no necesitas initializeAuth
+  useNotifications();
+  const { loading: authLoading } = useAuthStore(); 
   const { loading: uiLoading } = useUIStore();
 
   if (authLoading || uiLoading) {
