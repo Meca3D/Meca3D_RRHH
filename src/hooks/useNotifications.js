@@ -110,39 +110,33 @@ const requestPermission = async () => {
 useEffect(() => {
   if (!messaging) return;
 
-  const unsubscribe = onMessage(messaging, (payload) => {
+  const unsubscribe = onMessage(messaging, async (payload) => {
     console.log('Mensaje recibido (foreground):', payload);
-    
-    // ✅ Mostrar notificación cuando la app está abierta
-    if (Notification.permission === 'granted' && payload.data) {
-      const notificationTitle = payload.data.title || 'Meca3D';
-      const notificationOptions = {
-        body: payload.data.body || 'Nueva notificación',
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
-        data: payload.data,
-        tag: payload.messageId || 'default', // Evita duplicados
-        requireInteraction: false
-      };
 
-      // Crear notificación del navegador
-      const notification = new Notification(notificationTitle, notificationOptions);
-      
-      // Manejar clic en la notificación
-      notification.onclick = (event) => {
-        event.preventDefault();
-        window.focus();
+    if ('serviceWorker' in navigator && Notification.permission === 'granted' && payload.data) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
         
-        const url = payload.data.url || '/';
-        if (window.location.pathname !== url) {
-          window.location.href = url;
-        }
-      };
+        const notificationTitle = payload.data.title || 'Meca3D';
+        const notificationOptions = {
+          body: payload.data.body || 'Nueva notificación',
+          icon: '/icons/icon-192.png',
+          badge: '/icons/icon-192.png',
+          data: payload.data,
+          tag: payload.messageId || 'default',
+          requireInteraction: false
+        };
+
+        await registration.showNotification(notificationTitle, notificationOptions);
+      } catch (error) {
+        console.error('Error mostrando notificación:', error);
+      }
     }
   });
 
   return () => unsubscribe();
 }, []);
+
 
 
   return { permission, requestPermission };
