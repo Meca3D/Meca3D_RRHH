@@ -421,7 +421,8 @@ export const useVacacionesStore = create((set, get) => {
             await sendNotification({
               empleadoEmail: solicitud.solicitante,
               title: '⚠️ Solicitud de vacaciones cancelada',
-              body: `Tu solicitud ha sido cancelada por el administrador. Motivo: ${motivoCancelacion}`,
+              body: `❌ Tus vacaciones han sido canceladas por el administrador.
+              \n\n 📅 Cancelado: ${diasDisponibles.join(", ")} \n\n💬 Motivo: ${motivoCancelacion}`,
               url: '/vacaciones/solicitudes',
               type: 'vacaciones_cancelada_admin'
             });
@@ -440,7 +441,7 @@ export const useVacacionesStore = create((set, get) => {
                 diasSolicitados: diasSolicitados,
                 esVenta: solicitud.esVenta,
                 accion: 'cancelacion',
-                mensaje: `${nombreSolicitante} ha cancelado su solicitud de vacaciones. Cancelado: ${formatearTiempoVacasLargo(horasADevolver)} `
+                mensaje: ` ${nombreSolicitante} ha cancelado su solicitud de vacaciones.\n\n📅 Cancelado: ${formatearTiempoVacasLargo(horasADevolver)}\n\n💬 Motivo: ${motivoCancelacion}`
               })
             });
           }
@@ -1446,7 +1447,7 @@ export const useVacacionesStore = create((set, get) => {
           await sendNotification({
             empleadoEmail: solicitud.solicitante,
             title: '⚠️ Cancelación parcial de vacaciones',
-            body: `El administrador ha cancelado ${diasACancelar.length} día(s) de tu solicitud. Motivo: ${motivoCancelacion}`,
+            body: `❌ El administrador ha cancelado ${horasADevolver} de tus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`,
             url: '/vacaciones/solicitudes',
             type: 'vacaciones_cancelada_parcial'
           });
@@ -1458,10 +1459,10 @@ export const useVacacionesStore = create((set, get) => {
             body: JSON.stringify({
               solicitante: solicitud.solicitante,
               nombreSolicitante: nombreSolicitante,
-              diasSolicitados: `${diasACancelar.length} día(s)`,
+              diasSolicitados: `${formatearTiempoVacasLargo(horasADevolver)}`,
               esVenta: false,
               accion: 'cancelacion_parcial',
-              mensaje: `${nombreSolicitante} ha cancelado ${diasACancelar.length} día(s) de su solicitud`
+              mensaje: `❌ ${nombreSolicitante} ha cancelado ${formatearTiempoVacasLargo(horasADevolver)} de sus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`
             })
           });
         }
