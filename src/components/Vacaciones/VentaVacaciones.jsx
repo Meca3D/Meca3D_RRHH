@@ -74,7 +74,7 @@ const VentaVacaciones = () => {
   };
 
   const cantidadARecibir = tarifaHoraExtra && horasAVender && parseInt(horasAVender) > 0
-    ? (parseInt(horasAVender) * tarifaHoraExtra).toFixed(2)
+    ? Number((parseInt(horasAVender) * tarifaHoraExtra).toFixed(2))
     : null;
 
   const horasRestantes = horasAVender && parseInt(horasAVender) > 0

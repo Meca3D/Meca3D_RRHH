@@ -26,8 +26,9 @@ const Vacaciones = () => {
   const { showError } = useUIStore();
 
   useEffect(() => {
-    configVacaciones ? null : loadConfigVacaciones();
-  }, [configVacaciones]);
+    const unsub = loadConfigVacaciones();
+    return () => { if (typeof unsub === 'function') unsub(); };
+  }, [loadConfigVacaciones]);
 
   const vacacionesDisponibles = userProfile?.vacaciones?.disponibles || 0;
   const vacacionesPendientes = userProfile?.vacaciones?.pendientes || 0;
@@ -158,6 +159,7 @@ const Vacaciones = () => {
                 elevation={5}
                 onClick={() => action.disabled ? showError(action.disabledInfo): navigate(action.route)}
                 sx={{
+                  opacity:action.disabled?0.5:1,
                   height: '100%',
                   border: '1px solid',
                   borderColor: 'rgba(0,0,0,0.08)',

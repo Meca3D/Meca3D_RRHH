@@ -628,8 +628,28 @@ export const useVacacionesStore = create((set, get) => {
           updateData.horasExtraId = newHoraExtraRef.id;
           
         }
+
+      }
+      // Transacción completada, enviar notificaciones
+      try {
+          const { sendNotification } = useAuthStore.getState();
+  
+          await sendNotification({
+            empleadoEmail: solicitud.Solicitante,
+            title: '✅ Solicitud de vacaciones aprobada',
+            body: solicitud.esVenta 
+              ? `Tu venta de ${formatearTiempoVacasLargo(solicitud.horasSolicitadas)} ha sido aprobada${solicitud.cantidadARecibir?'. Disfruta los '+solicitud.cantidadARecibir:''}`
+              : `Tu solicitud de ${formatearTiempoVacasLargo(solicitud.horasSolicitadas)} ha sido aprobada`,
+            url: '/vacaciones/solicitudes',
+            type: 'vacaciones_aprobada'
+          })}
+       catch (notifError) {
+        console.error('Error enviando notificaciones:', notifError);
+        // No bloquear la creación de la solicitud
       }
     })
+
+    
 
         return true;
       } catch (error) {

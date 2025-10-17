@@ -479,6 +479,16 @@ const MisSolicitudesVacaciones = () => {
                 </Typography>
                 </Box>
               )}
+
+              {solicitud.esVenta && solicitud.cantidadARecibir && (
+                <Box  sx={{mt:1, p:1, bgcolor:'verde.fondo'}}>
+
+                <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
+                  "Cantidad a Recibir: {solicitud.cantidadARecibir}€"
+                </Typography>
+                </Box>
+              )}
+
             {solicitud.comentariosAdmin && (
                 <Alert 
                   severity={solicitud.esAjusteSaldo
