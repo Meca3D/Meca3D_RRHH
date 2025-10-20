@@ -56,6 +56,15 @@ const handler = async () => {
     
     const emailsEmpleados = Array.from(empleadosVacacionesHoy);
     console.log(`Empleados de vacaciones: ${emailsEmpleados.length}`);
+
+    // Si no hay nadie de vacaciones, terminar
+    if (emailsEmpleados.length === 0) {
+      console.log('No hay empleados de vacaciones hoy');
+      return new Response(
+        JSON.stringify({ message: 'No hay empleados de vacaciones hoy', empleados: 0 }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     
     // 3. Obtener nombres usando los emails
     const datosUsuarios = {};
@@ -187,28 +196,30 @@ const handler = async () => {
     
     console.log('=== Reporte completado ===');
     
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
+    return new Response(
+      JSON.stringify({
         success: true,
         fecha: fechaHoy,
-        empleadosVacaciones: emailsEmpleados.length,
-        empleados: emailsEmpleados.map(email => ({
-          email,
-          nombre: datosUsuarios[email].nombre,
-          puesto: datosUsuarios[email].puesto
-        })),
+        empleadosVacaciones: empleadosConNombre.length,
+        empleados: empleadosConNombre.map(e => e.nombre),
         ownersNotificados: exitosos,
-        mensaje
-      })
-    };
+        mensaje: mensaje
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
     
   } catch (error) {
     console.error('Error generando reporte:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 };
 
