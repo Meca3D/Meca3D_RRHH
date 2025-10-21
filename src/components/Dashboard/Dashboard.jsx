@@ -327,14 +327,27 @@ const Dashboard = () => {
               (user?.email?.[0] || 'U').toUpperCase()
             }
           </Avatar>
-          <Box justifyItems="center" sx={{ml:-5, minWidth:0,  flex: '1 1 0%',}}>
-            <Typography variant="h5" fontWeight="bold" gutterBottom noWrap>
+            <Box 
+              sx={{
+                flex: 1,
+                minWidth: 0, 
+                overflow: 'hidden',
+                display: 'flex',           
+                flexDirection: 'column',   
+                justifyContent: 'center',  
+                alignItems: 'center'   
+              }}
+            >
+            <Typography variant="h5" fontWeight="bold" gutterBottom noWrap sx={{}}>
               {formatearNombre(userProfile?.nombre)}
             </Typography>
             <Typography fontSize="1rem" noWrap sx={{ opacity: 0.9, mb: 0}}>
               {userProfile?.puesto||'Operario'}
             </Typography>
-            <Typography fontSize="1rem" noWrap sx={{ opacity: 0.9, mb: 0 }}>
+            <Typography fontSize="1rem" noWrap sx={{ 
+              opacity: 0.9, 
+              mb: 0,
+            }}>
               Nv {mask(userProfile?.nivel)||'?'} 
             </Typography>
             {userProfile?.rol !='user' &&
@@ -343,6 +356,10 @@ const Dashboard = () => {
             </Typography>
             }
           </Box>
+            <Box sx={{width:10,flex: 0,
+                minWidth: 0, 
+                overflow: 'hidden',
+                display: 'flex',}}></Box>
               <Box sx={{ position: 'absolute', bottom: -10, right: -8 }}>
                <Tooltip title={isVisible ? 'Ocultar datos' : 'Mostrar datos'} enterTouchDelay={0}>
                  <IconButton
