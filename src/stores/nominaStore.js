@@ -1,6 +1,6 @@
 // stores/nominaStore.js
 import { create } from 'zustand';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where, getDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { convertirHorasMinutosADecimal } from '../utils/nominaUtils'
 import { useAuthStore } from './authStore';
@@ -86,6 +86,157 @@ export const useNominaStore = create((set, get) => {
         }
       };
     },
+
+    // Cargar niveles salariales de un año específico con onSnapshot
+    loadNivelesSalarialesAno: (año) => {
+      if (unsubscribeNiveles) {
+        unsubscribeNiveles();
+        unsubscribeNiveles = null;
+      }
+
+      set({ loading: true });
+
+      const docRef = doc(db, 'NIVELES_SALARIALES', año.toString());
+
+      unsubscribeNiveles = onSnapshot(
+        docRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            set({ nivelesSalariales: data.niveles || {}, loading: false });
+          } else {
+            set({ nivelesSalariales: {}, loading: false });
+          }
+        },
+        (error) => {
+          console.error('Error cargando niveles salariales:', error);
+          set({ nivelesSalariales: {}, loading: false, error: error.message });
+        }
+      );
+
+      return () => {
+        if (unsubscribeNiveles) {
+          unsubscribeNiveles();
+          unsubscribeNiveles = null;
+        }
+      };
+    },
+
+    // Obtener años disponibles con niveles salariales
+    obtenerAñosConNiveles: async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'NIVELES_SALARIALES'));
+        const años = querySnapshot.docs.map(doc => parseInt(doc.id)).sort((a, b) => b - a);
+        return años;
+      } catch (error) {
+        console.error('Error obteniendo años con niveles:', error);
+        return [];
+      }
+    },
+
+    // Copiar niveles de un año a otro
+    copiarNivelesAño: async (añoOrigen, añoDestino) => {
+      try {
+        const docRefOrigen = doc(db, 'NIVELES_SALARIALES', añoOrigen.toString());
+        const docSnapOrigen = await getDoc(docRefOrigen);
+
+        if (!docSnapOrigen.exists()) {
+          throw new Error(`No hay niveles salariales configurados para ${añoOrigen}`);
+        }
+
+        const nivelesOrigen = docSnapOrigen.data().niveles || {};
+        
+        if (Object.keys(nivelesOrigen).length === 0) {
+          throw new Error(`No hay niveles para copiar del año ${añoOrigen}`);
+        }
+
+        const docRefDestino = doc(db, 'NIVELES_SALARIALES', añoDestino.toString());
+        await setDoc(docRefDestino, { 
+          niveles: nivelesOrigen,
+          updatedAt: new Date(),
+          updatedBy: useAuthStore.getState().user?.email || 'system'
+        });
+
+        return { copiados: Object.keys(nivelesOrigen).length };
+      } catch (error) {
+        set({ error: error.message });
+        throw error;
+      }
+    },
+
+    // Editar un nivel específico
+    editarNivelSalarial: async (año, numeroNivel, nuevosDatos) => {
+      try {
+        const docRef = doc(db, 'NIVELES_SALARIALES', año.toString());
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          throw new Error('No se encontraron niveles para este año');
+        }
+
+        const nivelesActuales = docSnap.data().niveles || {};
+
+        // Validar que el nivel existe
+        if (!nivelesActuales[numeroNivel]) {
+          throw new Error(`El nivel ${numeroNivel} no existe`);
+        }
+
+        // Actualizar el nivel específico
+        await updateDoc(docRef, {
+          [`niveles.${numeroNivel}`]: nuevosDatos,
+          updatedAt: new Date(),
+          updatedBy: useAuthStore.getState().user?.email || 'system'
+        });
+
+        return true;
+      } catch (error) {
+        set({ error: error.message });
+        throw error;
+      }
+    },
+
+    // Aplicar incremento masivo por porcentaje
+    aplicarIncrementoMasivo: async (año, porcentaje, aplicarASueldoBase = true, aplicarATrienio = false) => {
+      try {
+        const docRef = doc(db, 'NIVELES_SALARIALES', año.toString());
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          throw new Error('No se encontraron niveles para este año');
+        }
+
+        const nivelesActuales = docSnap.data().niveles || {};
+        const nivelesActualizados = {};
+
+        // Aplicar incremento a cada nivel
+        Object.keys(nivelesActuales).forEach(nivel => {
+          const nivelActual = nivelesActuales[nivel];
+          nivelesActualizados[nivel] = {
+            sueldoBase: aplicarASueldoBase 
+              ? parseFloat((nivelActual.sueldoBase * (1 + porcentaje / 100)).toFixed(2))
+              : nivelActual.sueldoBase,
+            valorTrienio: aplicarATrienio
+              ? parseFloat((nivelActual.valorTrienio * (1 + porcentaje / 100)).toFixed(2))
+              : nivelActual.valorTrienio
+          };
+        });
+
+        await updateDoc(docRef, {
+          niveles: nivelesActualizados,
+          updatedAt: new Date(),
+          updatedBy: useAuthStore.getState().user?.email || 'system'
+        });
+
+        return { 
+          actualizados: Object.keys(nivelesActualizados).length,
+          porcentaje
+        };
+      } catch (error) {
+        set({ error: error.message });
+        throw error;
+      }
+    },
+
 
     getHorasExtraByPeriod: (empleadoEmail, fechaInicio, fechaFin) => {
       if (unsubscribeHorasExtra) {

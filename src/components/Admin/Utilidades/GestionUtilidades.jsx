@@ -10,7 +10,7 @@ import MarkEmailUnreadOutlinedIcon from '@mui/icons-material/MarkEmailUnreadOutl
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
-import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
 
 const GestionUtilidades = () => {
@@ -27,6 +27,15 @@ const GestionUtilidades = () => {
       route: '/admin/utilidades/festivos',
       color: 'rojo.main',
       bgColor: 'rojo.fondo',
+    },
+    {
+      id: 'nivelesSalariales',
+      title: 'Niveles Salariales',
+      description: 'Gestiona los Niveles Salariales',
+      icon: WorkspacePremiumIcon,
+      route: '/admin/utilidades/niveles_salariales',
+      color: 'verde.main',
+      bgColor: 'verde.fondo',
     },
       
   ];
