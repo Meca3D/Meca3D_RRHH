@@ -310,7 +310,7 @@ const Dashboard = () => {
           }}
         />
         
-        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}   sx={{ width: '100%' }} >
+        <Box display="flex" alignItems="center" justifyContent='space-between' gap={2} position="relative" zIndex={1}   sx={{ width: '100%' }} >
           <Avatar 
             src={userProfile?.photoURL} 
             sx={{ 
@@ -356,10 +356,10 @@ const Dashboard = () => {
             </Typography>
             }
           </Box>
-            <Box sx={{width:10,flex: 0,
+            <Box sx={{width:'10',flex: 0,mr:3,
                 minWidth: 0, 
                 overflow: 'hidden',
-                display: 'flex',}}></Box>
+                }}></Box>
               <Box sx={{ position: 'absolute', bottom: -10, right: -8 }}>
                <Tooltip title={isVisible ? 'Ocultar datos' : 'Mostrar datos'} enterTouchDelay={0}>
                  <IconButton
