@@ -129,15 +129,18 @@ const handler = async () => {
     
     if (ownersSnapshot.size === 0) {
       console.log('No hay owners para notificar');
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
+      return new Response(
+        JSON.stringify({
           success: true,
           mensaje,
           empleadosVacaciones: emailsEmpleados.length,
           ownersNotificados: 0
-        })
-      };
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
     
     // 6. Enviar notificación a cada owner
@@ -200,8 +203,8 @@ const handler = async () => {
       JSON.stringify({
         success: true,
         fecha: fechaHoy,
-        empleadosVacaciones: empleadosConNombre.length,
-        empleados: empleadosConNombre.map(e => e.nombre),
+        empleadosVacaciones: emailsEmpleados.length,
+        empleados: emailsEmpleados.map(email => datosUsuarios[email].nombre),
         ownersNotificados: exitosos,
         mensaje: mensaje
       }),
