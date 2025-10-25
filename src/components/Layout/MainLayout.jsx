@@ -63,7 +63,7 @@ const MainLayout = () => {
       color: 'purpura',
     },
         { 
-      name: 'Permisos', 
+      name: 'Permisos y Bajas', 
       path: '/permisos-bajas', 
       icon: AssignmentOutlinedIcon, 
       color: 'rojo',
