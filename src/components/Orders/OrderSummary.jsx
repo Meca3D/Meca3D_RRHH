@@ -41,7 +41,7 @@ const OrderSummary = ({order, canManageOrder}) => {
   const productSummary = useMemo(() => {
     if ( !order.usuarios || !products.length) return [];
     
-    // Primero vamos a extraer todos los productos de todos los participantes
+    // extraer todos los productos de todos los participantes
     const allProducts = [];
     order.usuarios.forEach(usuario => {
       if (usuario.productos && usuario.productos.length > 0) {

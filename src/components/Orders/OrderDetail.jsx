@@ -453,7 +453,7 @@ useEffect(() => {
         </Typography>
         </DialogTitle>
         <DialogContent dividers>
-          <OrderSummary order={order} canManageOrder={user.email==order.creadoPor||userProfile.rol=='admin'} />
+          <OrderSummary order={order} canManageOrder={user.email==order.creadoPor||userProfile.rol=='admin'||userProfile.rol=='cocinero'} />
         </DialogContent>
         <DialogActions>
           <Button 

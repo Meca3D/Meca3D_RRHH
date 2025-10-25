@@ -13,6 +13,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { es } from 'date-fns/locale';
+import { setHours, setMinutes } from 'date-fns';
 
 import { useAuthStore } from '../../stores/authStore';
 import { useOrdersStore } from '../../stores/ordersStore';
@@ -21,7 +22,12 @@ import { PostAddOutlined } from '@mui/icons-material';
 
 const CreateOrder = () => {
   const [orderName, setOrderName] = useState('');
-  const [fechaReserva, setFechaReserva] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const [fechaReserva, setFechaReserva] = useState(() => {
+    const hoy = new Date(); 
+    let fechaFijada = setHours(hoy, 9);
+    fechaFijada = setMinutes(fechaFijada, 30);
+    return fechaFijada;
+  });
   const { user } = useAuthStore();
   const { createOrder, loading } = useOrdersStore();
   const { showSuccess, showError } = useUIStore();
@@ -233,7 +239,7 @@ const CreateOrder = () => {
                 sx={{
                   py: 2,
                   borderRadius: 3,
-                  fontSize: '1.1rem',
+                  fontSize: '1.2rem',
                   fontWeight: 600,
                   textTransform: 'none',
                   border: '2px solid',
@@ -259,13 +265,13 @@ const CreateOrder = () => {
                 sx={{
                   py: 2,
                   borderRadius: 3,
-                  background: 'linear-gradient(to bottom, #003399, #3366CC, #003399)', // Igual que OrderList
+                  background: 'linear-gradient(to bottom, #003399, #3366CC, #003399)',
                   fontSize: '1.2rem',
                   fontWeight: 600,
                   textTransform: 'none',
                   boxShadow: '0 4px 15px rgba(0, 51, 153, 0.3)',
                   '&:hover': {
-                    background: 'linear-gradient(to right, #004080, #007BFF, #004080)', // Igual que OrderList
+                    background: 'linear-gradient(to right, #004080, #007BFF, #004080)',
                     boxShadow: '0 6px 20px rgba(0, 51, 153, 0.4)',
                     transform: 'translateY(-2px)'
                   },
