@@ -30,6 +30,7 @@ import EliminarEmpleados from './components/Admin/Empleados/EliminarEmpleados';
 import GestionVacaciones from './components/Admin/Vacaciones/GestionVacaciones';
 import GestionarSaldos from './components/Admin/Vacaciones/GestionarSaldos';
 import GestionFestivos from './components/Admin/Utilidades/GestionFestivos';
+import CalculadoraAjusteCalendario from './components/Admin/Utilidades/CalculadoraAjusteCalendario';
 import GestionNivelesSalariales from './components/Admin/Utilidades/GestionNivelesSalariales';
 import SolicitudesPendientes from './components/Admin/Vacaciones/SolicitudesPendientes';
 import CalendarioVacacionesAdmin from './components/Admin/Vacaciones/CalendarioVacacionesAdmin';
@@ -149,6 +150,7 @@ const AppRoutes = () => {
         <Route path="admin/utilidades" element={<AusenciasRoute><GestionUtilidades /></AusenciasRoute>} />
         <Route path="admin/utilidades/festivos" element={<AusenciasRoute><GestionFestivos /></AusenciasRoute>} />
         <Route path="admin/utilidades/niveles_salariales" element={<AdminRoute><GestionNivelesSalariales /></AdminRoute>} />
+        <Route path="admin/utilidades/ajuste_calendario" element={<AdminRoute><CalculadoraAjusteCalendario /></AdminRoute>} />
 
         {/* Rutas de configuracion */}
         <Route path="admin/configuracion" element={<AusenciasRoute><GestionConfiguracion /></AusenciasRoute>} />

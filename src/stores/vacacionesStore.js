@@ -346,7 +346,7 @@ export const useVacacionesStore = create((set, get) => {
         },
 
         // Cancelar Solicitudes de Vacaciones
-        cancelarSolicitudVacaciones: async (solicitud, motivoCancelacion, esAdmin = false) => {
+        cancelarSolicitudVacaciones: async (solicitud, motivoCancelacion, esAdmin = false, esAuto = false) => {
       try {
         if (!motivoCancelacion || motivoCancelacion.trim() === '') {
           throw new Error('Debes proporcionar un motivo para la cancelación');
@@ -416,7 +416,7 @@ export const useVacacionesStore = create((set, get) => {
           const { sendNotification, userProfile } = useAuthStore.getState();
           const nombreSolicitante = formatearNombre(userProfile.nombre);
           
-          if (esAdmin && solicitud.solicitante !== useAuthStore.getState().user?.email) {
+          if ((esAdmin || esAuto )&& solicitud.solicitante !== useAuthStore.getState().user?.email) {
             // Caso 1: Admin cancela solicitud de un empleado → Notificar al empleado
             await sendNotification({
               empleadoEmail: solicitud.solicitante,
@@ -426,7 +426,7 @@ export const useVacacionesStore = create((set, get) => {
               url: '/vacaciones/solicitudes',
               type: 'vacaciones_cancelada_admin'
             });
-          } else if (!esAdmin) {
+          } else if (!esAdmin && !esAuto) {
             // Caso 2: Trabajador cancela su propia solicitud → Notificar a admins
             const diasSolicitados = solicitud.esVenta 
               ? `${formatearTiempoVacasLargo(solicitud.horasSolicitadas)}` 
@@ -768,10 +768,12 @@ export const useVacacionesStore = create((set, get) => {
         let procesadas = 0;
         for (const solicitud of solicitudesPendientesCaducadas) {
           try {
-            // ✅ CORRECCIÓN: pasar el objeto solicitud completo y el motivo
+            // ✅ pasar el objeto solicitud completo y el motivo
             await get().cancelarSolicitudVacaciones(
               solicitud, 
-              'Solicitud cancelada automáticamente. No pudo ser revisada antes de las fechas solicitadas.'
+              'Solicitud cancelada automáticamente. No pudo ser revisada antes de las fechas solicitadas.',
+              false,
+              true
             );
             procesadas++;
           } catch (error) {
@@ -2293,7 +2295,84 @@ ordenarEventosPorDiaCadena: (eventos, saldoInicialPeriodo = null) => {
   }
 
   return { eventosOrdenados: salida, saldoInicial: saldoInicialDetectado };
+  },
+
+    // Calcular días laborables de un año (lunes a viernes menos festivos)
+calcularDiasLaborables: (año, todosLosFestivos) => {
+  // Filtrar solo los festivos del año específico
+  const festivosDelAño = todosLosFestivos.filter(f => {
+    // Las fechas vienen como "YYYY-MM-DD"
+    return f.fecha && f.fecha.startsWith(año.toString());
+  });
+  
+  // Convertir festivos a Set de cadenas para búsqueda rápida
+  const fechasFestivasSet = new Set(festivosDelAño.map(f => f.fecha));
+  
+  let count = 0;
+  
+  // Fechas de inicio y fin del año
+  const startDate = new Date(año, 0, 1); // 1 de enero
+  const endDate = new Date(año, 11, 31); // 31 de diciembre
+  const curDate = new Date(startDate);
+  
+  while (curDate <= endDate) {
+    const dayOfWeek = curDate.getDay();
+    
+    // Si NO es sábado (6) ni domingo (0)
+    if (!((dayOfWeek === 6) || (dayOfWeek === 0))) {
+      // Convertir curDate a formato "YYYY-MM-DD" para comparar
+      const año = curDate.getFullYear();
+      const mes = String(curDate.getMonth() + 1).padStart(2, '0');
+      const dia = String(curDate.getDate()).padStart(2, '0');
+      const fechaStr = `${año}-${mes}-${dia}`;
+      
+      // Si NO es festivo, contar
+      if (!fechasFestivasSet.has(fechaStr)) {
+        count++;
+      }
+    }
+    
+    curDate.setDate(curDate.getDate() + 1);
+  }
+  
+  return count;
 },
+
+
+  // Obtener cálculo de exceso de jornada de un año
+  obtenerCalculoExcesoJornada: async (año) => {
+    try {
+      const docRef = doc(db, 'EXCESO_JORNADA', año.toString());
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return docSnap.data();
+      }
+      return null;
+    } catch (error) {
+      console.error('Error obteniendo cálculo de exceso de jornada:', error);
+      throw error;
+    }
+  },
+
+  // Guardar cálculo de exceso de jornada
+  guardarCalculoExcesoJornada: async (año, datos) => {
+    try {
+      const docRef = doc(db, 'EXCESO_JORNADA', año.toString());
+      
+      await setDoc(docRef, {
+        ...datos,
+        fechaCalculo: new Date(),
+        calculadoPor: useAuthStore.getState().user?.email || 'system'
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error guardando cálculo de exceso de jornada:', error);
+      set({ error: error.message });
+      throw error;
+    }
+  },
 
 
 

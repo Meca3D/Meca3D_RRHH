@@ -26,7 +26,7 @@ import {
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
-import {  formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
+import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 import { formatearFechaCorta, formatearFechaEspanol2, ordenarFechas,} from '../../../utils/dateUtils';
 
 const SolicitudesPendientes = () => {

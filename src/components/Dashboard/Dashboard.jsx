@@ -30,7 +30,7 @@ import { formatCurrency } from '../../utils/nominaUtils';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { loading, userSalaryInfo  } = useGlobalData();
-  const { procesarSolicitudesCaducadas, loadConfigVacaciones, configVacaciones } = useVacacionesStore();
+  const { loadConfigVacaciones, configVacaciones } = useVacacionesStore();
   const { user, userProfile, toggleVisibility, getRol } = useAuthStore();
 
   useEffect(() => {
@@ -39,26 +39,6 @@ const Dashboard = () => {
     return () => unsubscribe();} // Cleanup al desmontar
   }, [loadConfigVacaciones, configVacaciones]);
 
-  useEffect(() => {
-    const procesarCaducadas = async () => {
-      try {
-        const resultado = await procesarSolicitudesCaducadas();
-        
-        if (resultado.procesadas > 0) {
-          console.log(`🔄 Dashboard: ${resultado.procesadas} solicitudes caducadas procesadas automáticamente`);
-          
-        }
-      } catch (error) {
-        console.error('❌ Error procesando solicitudes caducadas en Dashboard:', error);
-      }
-    };
-
-    if (user?.email && !loading) {
-      const timeoutId = setTimeout(procesarCaducadas, 1000);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [user?.email, loading, procesarSolicitudesCaducadas]);
   
   if (loading) {
     return (

@@ -23,9 +23,10 @@ import {
 } from '@mui/icons-material';
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
 import { useUIStore } from '../../../stores/uiStore';
-import { formatearNombre } from '../../Helpers';
+import { capitalizeFirstLetter } from '../../Helpers';
 import { formatearFechaCorta, formatYMD, obtenerDiasCalendario, navegarMes, formatearMesAno, esFinDeSemana, formatearFechaLarga } from '../../../utils/dateUtils';
 import { formatearTiempoVacas } from '../../../utils/vacacionesUtils';
+
 
 const CalendarioVacacionesAdmin = () => {
   const navigate = useNavigate();
@@ -356,7 +357,7 @@ const CalendarioVacacionesAdmin = () => {
               }}
             >
               <Typography variant="h6" gutterBottom>
-                {mes.fecha.toLocaleDateString('es-ES', { month: 'long' })}
+                {capitalizeFirstLetter(mes.fecha.toLocaleDateString('es-ES', { month: 'long' }))}
               </Typography>
               <Chip 
                 label={`${mes.personasUnicas} personas`}
@@ -548,7 +549,7 @@ const CalendarioVacacionesAdmin = () => {
                   </Box>
                   </Grid>
                   <Grid size={{xs:12,  md:6}}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: { xs: 2, md: 0 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1}}>
                   {vistaActual === 'mensual' && (
                     <Box display='flex' alignItems="center" width="100%">
                       <IconButton onClick={() => handleCambiarMes(-1)} sx={{fontSize:'3rem'}}>
@@ -556,7 +557,7 @@ const CalendarioVacacionesAdmin = () => {
                       </IconButton>
                       
                       <Typography fontWeight={600} sx={{ fontSize:'1.6rem', flex:1, minWidth: 160, textAlign: 'center' }}>
-                        {formatearMesAno(mesActual)}
+                        {capitalizeFirstLetter(formatearMesAno(mesActual))}
                       </Typography>
                       
                       <IconButton onClick={() => handleCambiarMes(1)} size="small">

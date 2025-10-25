@@ -31,8 +31,8 @@ import { useEffect } from 'react';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { isOwner, loading} = useAuthStore();
-  const { configVacaciones, loadConfigVacaciones } = useVacacionesStore();
+  const { isOwner, loading, user} = useAuthStore();
+  const { configVacaciones, loadConfigVacaciones, procesarSolicitudesCaducadas } = useVacacionesStore();
   const {
     trabajadoresVacacionesHoy,
     trabajadoresVacacionesMañana,
@@ -47,6 +47,26 @@ const AdminDashboard = () => {
     return () => { if (typeof unsub === 'function') unsub(); }}
   }, [loadConfigVacaciones]);
 
+  useEffect(() => {
+    const procesarCaducadas = async () => {
+      try {
+        const resultado = await procesarSolicitudesCaducadas();
+        
+        if (resultado.procesadas > 0) {
+          console.log(`🔄 Dashboard: ${resultado.procesadas} solicitudes caducadas procesadas automáticamente`);
+          
+        }
+      } catch (error) {
+        console.error('❌ Error procesando solicitudes caducadas en Dashboard:', error);
+      }
+    };
+
+    if (user?.email && !loading) {
+      const timeoutId = setTimeout(procesarCaducadas, 1000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user?.email, loading, procesarSolicitudesCaducadas]);
 
     if (loading) {
       return (

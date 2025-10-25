@@ -37,6 +37,15 @@ const GestionUtilidades = () => {
       color: 'verde.main',
       bgColor: 'verde.fondo',
     },
+    {
+      id: 'ajusteCalendario',
+      title: 'Ajuste Calendario',
+      description: 'Averigua los dias de ajuste de Calendario',
+      icon: CalendarMonthOutlinedIcon,
+      route: '/admin/utilidades/ajuste_calendario',
+      color: 'purpura.main',
+      bgColor: 'purpura.fondo',
+    },
       
   ];
 
@@ -72,14 +81,9 @@ const GestionUtilidades = () => {
         <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
             <ConstructionOutlinedIcon sx={{ color:'verde.main', fontSize: '4rem' }} />
           <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap">
-            <Typography textAlign="center" color="verde.main" variant="h4" fontWeight="bold" gutterBottom>
+            <Typography textAlign="center" color="verde.main" variant="h4" fontWeight="bold">
               Utilidades
-            </Typography>
-            <Box display="flex" alignItems="center" gap={1}>
-           <Typography variant="h6" textAlign="center" color="verde.main" fontWeight="bold">
-           </Typography>
-           </Box>
-                         
+            </Typography>             
             </Box>
           </Box>
       </Paper>
