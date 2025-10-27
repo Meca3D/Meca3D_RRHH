@@ -275,14 +275,14 @@ const CrearSolicitudVacaciones = () => {
                 <Typography variant="body1" textAlign="center">
                     {tipoSolicitud === 'horas' ? 'Total horas Solicitadas' : 'Total Días Solicitados'}
                     </Typography>
-                <Typography variant="h5" textAlign="center" fontWeight={600} sx={{mt:1}}>
+                <Typography variant="h6" textAlign="center" fontWeight={600} sx={{mt:1}}>
                     {formatearTiempoVacasLargo(horasTotales)}</Typography>
                 </Card>           
             </Grid>
             <Grid size={{ xs: 7, md: 4 }}>
                 <Card sx={{p:2}}> 
                 <Typography variant="body1" textAlign="center">Vacaciones tras aprobación</Typography>
-                <Typography variant="h5" textAlign="center" sx={{mt:1}} fontWeight={600}>
+                <Typography variant="h6" textAlign="center" sx={{mt:1}} fontWeight={600}>
                     {formatearTiempoVacasLargo(horasLibres-horasTotales)}      
                 </Typography>
                 </Card>           
@@ -308,7 +308,7 @@ const CrearSolicitudVacaciones = () => {
                                   px:2,
                                   border: '1px solid',
                                   borderColor: 'naranja.main',
-                                  bgcolor: 'naranja.fondo', // Un fondo para que parezca un chip
+                                  bgcolor: 'naranja.fondo',
                                   borderRadius: 3,
                                   cursor: 'pointer',
                                   '&:hover': {
@@ -328,11 +328,13 @@ const CrearSolicitudVacaciones = () => {
                               </Box>
                               </Box>
                           <Collapse in={mostrarListaFechas}>
-                          <Box sx={{ mt: 1 }}>
+                          <Grid container sx={{ mt: 1 }}>
                               {ordenarFechas(fechasSeleccionadas).map(f => (
-                              <Typography key={f} variant="h5" display="block">• {formatearFechaCorta(f)}</Typography>
+                              <Grid key={f} size={{xs:6}}>
+                              <Typography variant="h6" textAlign={'center'}>• {formatearFechaCorta(f)}</Typography>
+                              </Grid>
                               ))}
-                          </Box>
+                          </Grid>
                           </Collapse>
                       </Box>
                       )

@@ -133,11 +133,11 @@ const Dashboard = () => {
       onClick: () => navigate('/vacaciones/crear')
     },
     {
-      label: 'Registrar Permiso',
+      label: 'Registrar Ausencia',
       icon: AssignmentOutlinedIcon,
       color: 'rojo.main',
       bgColor: 'rojo.fondo',
-      onClick: () => navigate('/permisos-bajas')
+      onClick: () => navigate('/ausencias/crear')
     },
     {
       label: 'Pedidr Desayuno',

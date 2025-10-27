@@ -64,7 +64,7 @@ const MainLayout = () => {
     },
         { 
       name: 'Permisos y Bajas', 
-      path: '/permisos-bajas', 
+      path: '/ausencias', 
       icon: AssignmentOutlinedIcon, 
       color: 'rojo',
     },

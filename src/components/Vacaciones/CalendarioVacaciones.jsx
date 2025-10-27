@@ -1,6 +1,6 @@
 // components/Vacaciones/CalendarioVacaciones.jsx
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, Paper } from '@mui/material';
+import { Box, Typography, IconButton, Paper, Divider } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
 import { 
@@ -66,7 +66,8 @@ const alternarDia = (dia) => {
       cursor: (seleccionable && !sePasariaDelLimite) ? 'pointer' : 'default', 
       borderRadius: 1,
       transition: 'all .2s ease',
-      fontSize: '0.875rem'
+      fontSize: '0.875rem',
+      opacity: fueraMes ? 0.4 : 1  
     };
 
     // Prioridad 1: Seleccionado (siempre azul)
@@ -87,7 +88,7 @@ const alternarDia = (dia) => {
         border: '2px dashed',
         borderColor: 'primary.main',
         cursor: 'not-allowed',
-        opacity: fueraMes ? 0.4 : 1  
+        
       };
     }
 
@@ -96,13 +97,13 @@ const alternarDia = (dia) => {
       let bgColor = '#f8f9fa';
       
       if (sePasariaDelLimite) bgColor = '#fff3e0'; // naranja claro para "límite alcanzado"
-      else if (esFestivoDia) bgColor = '#f58898';  // rojo  festivos
+      else if (esFestivoDia) bgColor = '#f44f68ff';  // rojo  festivos
       else if (esFinSemana) bgColor = '#e1dfdf';   // gris fin de semana
       
       return { 
         ...base, 
         bgcolor: bgColor, 
-        color: 'text.disabled',
+        color: esFestivoDia ? '#fff' : 'text.disabled',
         cursor: 'not-allowed' 
       };
     }
@@ -152,18 +153,18 @@ const alternarDia = (dia) => {
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(7,1fr)', 
-        mb: 1,
+        mb: 0,
         gap: 0.5
       }}>
         {DIAS.map(d => (
           <Box key={d} sx={{ textAlign: 'center', py: 0.5 }}>
-            <Typography variant="caption" fontWeight={600} color="text.secondary">
+            <Typography  fontWeight={600} fontSize="0.875rem">
               {d}
             </Typography>
           </Box>
         ))}
       </Box>
-
+        <Divider sx={{bgcolor:'black', mb:1 }} />
       {/* Cuadrícula de días */}
       <Box sx={{ 
         display: 'grid', 
@@ -197,7 +198,7 @@ const alternarDia = (dia) => {
           <Typography variant="subtitle1">Seleccionado</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 20, height: 20, bgcolor: '#f58898ff', borderRadius: 0.5 }} />
+          <Box sx={{ width: 20, height: 20, bgcolor: '#f44f68ff', borderRadius: 0.5 }} />
           <Typography variant="subtitle1">Festivo</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

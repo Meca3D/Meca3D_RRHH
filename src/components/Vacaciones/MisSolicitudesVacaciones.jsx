@@ -412,9 +412,9 @@ const MisSolicitudesVacaciones = () => {
                   justifyContent:'space-between',
                   cursor: 'pointer',
                   p: 1,
-                  bgcolor: `${colorEstado.fondo}.fondo`,
+                  bgcolor: `verde.fondo`,
                   borderRadius: 1,
-                  '&:hover': { bgcolor: `${colorEstado.fondo}.fondoFuerte` },
+                  '&:hover': { bgcolor: `verde.fondoFuerte` },
                   
                 }}
               >
@@ -527,7 +527,7 @@ const MisSolicitudesVacaciones = () => {
                  
                 }}
               >
-                <Typography variant="body1"  sx={{ flexGrow: 1 }}>
+                <Typography variant="h6"  sx={{ flexGrow: 1 }}>
                   {cancelacionesParciales.length} Cancelación{cancelacionesParciales.length > 1 ? 'es' : ''} Parcial{cancelacionesParciales.length > 1 ? 'es' : ''}
                 </Typography>
                 {cancelacionesExpanded[solicitud.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -588,8 +588,8 @@ const MisSolicitudesVacaciones = () => {
                       </Box>
                       </Box>
                       {cancelacion.esAdmin && (
-                        <Typography variant="subtitle1" display="block" color="primary.main">
-                          👨‍💼 Cancelado por administrador
+                        <Typography variant="subtitle1" display="block" color="rojo.main">
+                          👨‍💼 Cancelado por administración
                         </Typography>
                       )}
                     </Paper>
@@ -641,7 +641,7 @@ const MisSolicitudesVacaciones = () => {
             ) : (
             <>
               <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mb:1}}>
-                Pedido Cancelado: {formatearTiempoVacasLargo(horasDisponibles.length*8)}
+                Pedido Cancelado: {formatearTiempoVacasLargo(diasCancelados.length*8)}
               </Typography> 
                <Box
                 onClick={() => setCancelacionExpandida(cancelacionExpandida === solicitud.id ? null : solicitud.id)}
@@ -651,9 +651,9 @@ const MisSolicitudesVacaciones = () => {
                   justifyContent:'space-between',
                   cursor: 'pointer',
                   p: 1,
-                  bgcolor: `rojo.fondo`,
+                  bgcolor: `dorado.fondo`,
                   borderRadius: 1,
-                  '&:hover': { bgcolor: `rojo.fondoFuerte` },
+                  '&:hover': { bgcolor: `dorado.fondoFuerte` },
                   
                 }}
               >
@@ -665,11 +665,12 @@ const MisSolicitudesVacaciones = () => {
               </Box>
               
               <Collapse in={cancelacionExpandida === solicitud.id}>
-                <Box sx={{ ml: 2, mb: 2 }}>
+                <Grid container sx={{ ml: 2, mt: 1 }}>
                   {diasCancelados.map(fecha => {            
                     return (
-                      <Typography 
-                        key={fecha} 
+                      <Grid key={fecha} size={{xs:6}}>
+                      <Typography
+                        textAlign='center'
                         fontSize={'1.1rem'} 
                         sx={{ 
                           color:'rojo.main',
@@ -678,9 +679,10 @@ const MisSolicitudesVacaciones = () => {
                       >
                         • {formatearFechaCorta(fecha)} 
                       </Typography>
+                      </Grid>
                     );
                   })}
-                </Box>
+                </Grid>
               </Collapse>
               </>
               )}
@@ -769,7 +771,7 @@ const MisSolicitudesVacaciones = () => {
                     <EventBusyOutlinedIcon  sx={{ fontSize: '2rem' }} />
                   </IconButton>
                   <Typography variant="body2" sx={{ textAlign: 'center' }}>
-                    {solicitud.estado === 'pendiente' ? 'Eliminar' : 'Cancelar'}
+                    {solicitud.estado === 'pendiente' ? 'Eliminar' : 'Cancelar Todo'}
                   </Typography>
                 </Box>
               )}

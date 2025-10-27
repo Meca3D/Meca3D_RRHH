@@ -40,6 +40,9 @@ import SaldosVacaciones from './components/Admin/Vacaciones/SaldosVacaciones';
 import ConfiguracionVacacionesAdmin from './components/Admin/Configuracion/ConfiguracionVacacionesAdmin';
 import GestionUtilidades from './components/Admin/Utilidades/GestionUtilidades';
 import GestionConfiguracion from './components/Admin/Configuracion/GestionConfiguracion';
+import GestionAusencias from './components/Admin/Ausencias/GestionAusencias';
+import AusenciasPendientes from './components/Admin/Ausencias/AusenciasPendientes';
+
 
 import Nominas from './components/Nominas/Nominas';
 import ConfigurarDatosSalariales from './components/Nominas/ConfigurarDatosSalariales';
@@ -57,10 +60,14 @@ import RegistrarHorasExtras from './components/HorasExtras/RegistrarHorasExtras'
 import GestionarHorasExtras from './components/HorasExtras/GestionarHorasExtras';
 import EstadisticasHorasExtras from './components/HorasExtras/EstadisticasHorasExtras';
 import ConfiguracionHorasExtras from './components/HorasExtras/ConfiguracionHorasExtras';
-import Bajas from './components/Bajas/Bajas';
+import Ausencias from './components/Ausencias/Ausencias';
+import CrearAusencia from './components/Ausencias/CrearAusencia';
+import MisAusencias from './components/Ausencias/MisAusencias';
+import EditarAusencia from './components/Ausencias/EditarAusencia';
 
 import LoadingScreen from './components/Layout/LoadingScreen';
 import { useAuthStore } from './stores/authStore';
+
 
 // Componente de protección de rutas
 const ProtectedRoute = ({ children }) => {
@@ -119,7 +126,10 @@ const AppRoutes = () => {
         <Route path="/horas-extras/gestionar" element={<NoOwnerRoute><GestionarHorasExtras /></NoOwnerRoute>} />
         <Route path="/horas-extras/estadisticas" element={<NoOwnerRoute><EstadisticasHorasExtras /></NoOwnerRoute>} />
         <Route path="/horas-extras/configurar" element={<NoOwnerRoute><ConfiguracionHorasExtras /></NoOwnerRoute>} /> 
-        <Route path="/permisos-bajas" element={<NoOwnerRoute><Bajas /></NoOwnerRoute>} /> 
+        <Route path="/ausencias" element={<NoOwnerRoute><Ausencias /></NoOwnerRoute>} /> 
+        <Route path="/ausencias/crear" element={<NoOwnerRoute><CrearAusencia /></NoOwnerRoute>} /> 
+        <Route path="/ausencias/solicitudes" element={<NoOwnerRoute><MisAusencias /></NoOwnerRoute>} /> 
+        <Route path="/ausencias/editar/:ausenciaId" element={<NoOwnerRoute><EditarAusencia /></NoOwnerRoute>} /> 
 
         {/* Rutas de Administración */}
         <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
@@ -145,6 +155,10 @@ const AppRoutes = () => {
         <Route path="admin/vacaciones/saldos" element={<AusenciasRoute><GestionarSaldos /></AusenciasRoute>} />
         <Route path="admin/vacaciones/evolucionsaldos" element={<AusenciasRoute><SaldosVacaciones /></AusenciasRoute>} />
         <Route path="admin/vacaciones/estadisticas" element={<AusenciasRoute><EstadisticasVacasAdmin /></AusenciasRoute>} />
+
+        {/* Rutas de Gestión de Ausencias */}
+        <Route path="admin/ausencias" element={<AusenciasRoute><GestionAusencias /></AusenciasRoute>} />
+        <Route path="admin/ausencias/pendientes" element={<AusenciasRoute><AusenciasPendientes /></AusenciasRoute>} />
 
         {/* Rutas de Utilidades */}
         <Route path="admin/utilidades" element={<AusenciasRoute><GestionUtilidades /></AusenciasRoute>} />

@@ -48,14 +48,15 @@ export const handler = async (event) => {
       // Mensaje por defecto para solicitudes nuevas
       body = esVenta
         ? `${nombreSolicitante} solicita vender ${horasSolicitadas}h`
-        : `${nombreSolicitante} solicita ${diasSolicitados} día(s) de vacaciones`;
+        : `${nombreSolicitante} solicita ${diasSolicitados} de vacaciones`;
     }
 
     // Definir título según acción
     const titles = {
       'cancelacion': '🔴 Cancelación de vacaciones',
       'cancelacion_parcial': '🟡 Cancelación parcial de vacaciones',
-      'solicitud': '📬 Nueva solicitud de vacaciones'
+      'solicitud': '📬 Nueva solicitud de vacaciones',
+      comentariosSolicitante: ausenciaData.comentariosSolicitante,
     };
 
     const notificationTitle = titles[accion] || titles.solicitud;

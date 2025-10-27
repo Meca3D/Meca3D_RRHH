@@ -269,8 +269,8 @@ useEffect(() => {
 
   return (
     <>
-    <AppBar
-    sx={{ 
+        <AppBar
+           sx={{ 
               overflow:'hidden',
               background: 'linear-gradient(135deg, #FB8C00 0%, #F57C00 50%, #EF6C00 100%)',
               boxShadow: '0 2px 10px rgba(251, 140, 0, 0.2)',
@@ -314,7 +314,7 @@ useEffect(() => {
                     fontSize: { xs: '0.9rem', sm: '1rem' }
                   }}
                 >
-                  Revisa y gestiona las peticiones
+                  Aprueba/Deniega las vacacaciones
                 </Typography>
               </Box>
               {/* Icono decorativo */}
@@ -565,16 +565,18 @@ useEffect(() => {
                               </Typography>  
                             </Button>
                             
-                            {/* ✅ NUEVO: Lista colapsable de fechas */}
+                            {/* Lista de fechas */}
                             <Collapse in={esExpandida}>
                               <Box sx={{ mt: 1, p: 1, bgcolor: 'azul.fondo', borderRadius: 1 }}>
-                                <Box   sx={{}}>
+                                <Grid container   sx={{}}>
                                 {ordenarFechas(solicitud.fechas).map((fecha, index) => (
+                                  <Grid size={{xs:6,md:4}}>
                                   <Typography key={index} variant="body1" textAlign="center" sx={{fontSize:'1.3rem'}} >
                                     • {formatearFechaCorta(fecha)}
                                   </Typography>
+                                  </Grid>
                                 ))}
-                                </Box>
+                                </Grid>
                               </Box>
                             </Collapse>
                           </Box>

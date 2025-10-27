@@ -6,40 +6,39 @@ import {
 } from '@mui/material';
 
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import AssignmentAddIcon from '@mui/icons-material/Assignment';
+import DynamicFeedOutlinedIcon from '@mui/icons-material/DynamicFeedOutlined';
+import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
+import HistoryIcon from '@mui/icons-material/History';
 
-import { useAuthStore } from '../../stores/authStore';
-import { formatearTiempoVacas } from '../../utils/vacacionesUtils';
 
-
-const Bajas = () => {
-  const { userProfile } = useAuthStore();
+const Ausencias = () => {
   const navigate = useNavigate();
 
-/* 
+
   const quickActions = [
     {
       id: 'crear',
-      title: 'Crear Solicitud',
+      title: 'Crear Ausencia',
       subtitle: 'Nueva petición',
-      description: 'Solicitar días u horas',
+      description: 'Solicitar un Permiso o Baja',
       label: 'Nueva',
-      icon: AssignmentAddIcon,
+      icon: PostAddOutlinedIcon,
       color: 'naranja.main',
       bgColor: 'naranja.fondo',
-      route: '/vacaciones/crear'
+      route: '/ausencias/crear'
     },
     {
-      id: 'mis-solicitudes',
-      title: 'Mis Solicitudes',
+      id: 'mis-ausencias',
+      title: 'Mis Ausencias',
       subtitle: 'Historial personal',
       description: 'Ver, editar y eliminar',
       label: 'Gestión',
-      icon: HistoryIcon,
+      icon: DynamicFeedOutlinedIcon,
       color: 'azul.main',
       bgColor: 'azul.fondo',
-      route: '/vacaciones/solicitudes'
+      route: '/ausencias/solicitudes'
     },
+    /* 
     {
       id: 'saldo',
       title: 'Saldo y Movimientos',
@@ -62,9 +61,9 @@ const Bajas = () => {
       bgColor: 'purpura.fondo',
       route: '/vacaciones/estadisticas'
     }
+    */
   ];
 
- */
 
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
@@ -118,13 +117,6 @@ const Bajas = () => {
             </Grid>
           </Grid>
       </Paper>
-
-      <Card  elevation={5} sx={{p:2,  bgcolor:'azul.fondo'}}>
-        <Typography textAlign="center" variant="h6" fontWeight="500">
-           Proximamente, creación y gestión de permisos y bajas.    
-        </Typography>
-      </Card>
-{/* 
      
       <Grid container spacing={3}>
         {quickActions.map((action) => {
@@ -175,11 +167,11 @@ const Bajas = () => {
             </Grid>
           );
         })}
-        </Grid> */}    
+        </Grid>    
         
         </Container>
   );
 };
  
 
-export default Bajas;
+export default Ausencias;

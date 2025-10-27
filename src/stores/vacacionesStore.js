@@ -122,7 +122,7 @@ export const useVacacionesStore = create((set, get) => {
         },
 
 
-    // Obtener días cancelados totales de todas las subcolecciones
+    // Obtener días cancelados de todas las cancelacionesParciales
     obtenerDiasCancelados: (cancelacionesParciales) => {
       if (!Array.isArray(cancelacionesParciales)) return [];
       
@@ -134,9 +134,9 @@ export const useVacacionesStore = create((set, get) => {
     // Obtener días disfrutados (pasados y no cancelados)
     obtenerDiasDisfrutados: (solicitud) => {
       if (!solicitud.fechas) return [];
-      
-      const diasCancelados = get().obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
-      
+      const diasCanceladosParcialmente = get().obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
+      const diasCanceladosTotalmente = solicitud?.fechasCanceladas || []
+      const diasCancelados =[...diasCanceladosParcialmente, ...diasCanceladosTotalmente]
       return solicitud.fechas.filter(fecha => {
         const esFechaPasada = esFechaPasadaOHoy(fecha);
         const yaFueCancelado = diasCancelados.includes(fecha);
@@ -301,7 +301,6 @@ export const useVacacionesStore = create((set, get) => {
         }
       } catch (notifError) {
         console.error('Error enviando notificaciones:', notifError);
-        // No bloquear la creación de la solicitud
       }
 
       return solicitudId;
@@ -365,8 +364,7 @@ export const useVacacionesStore = create((set, get) => {
         // Calcular horas correctamente
         let horasADevolver;
         if (solicitud.estado === 'pendiente') {
-          const horasYaCanceladas = diasYaCancelados.length * 8;
-          horasADevolver = solicitud.horasSolicitadas - horasYaCanceladas;
+          horasADevolver = solicitud.horasSolicitadas
         } else {
             if (solicitud.horasSolicitadas<8) {
               horasADevolver=solicitud.horasSolicitadas}
@@ -416,7 +414,7 @@ export const useVacacionesStore = create((set, get) => {
           const { sendNotification, userProfile } = useAuthStore.getState();
           const nombreSolicitante = formatearNombre(userProfile.nombre);
           
-          if ((esAdmin || esAuto )&& solicitud.solicitante !== useAuthStore.getState().user?.email) {
+          if ((esAdmin || esAuto ) && solicitud.solicitante !== useAuthStore.getState().user?.email) {
             // Caso 1: Admin cancela solicitud de un empleado → Notificar al empleado
             await sendNotification({
               empleadoEmail: solicitud.solicitante,
@@ -1352,7 +1350,7 @@ export const useVacacionesStore = create((set, get) => {
 
   cancelarSolicitudParcial: async (solicitud, diasACancelar, motivoCancelacion, esAdmin = false) => {
     try {
-      const { user } = useAuthStore.getState();
+      const { user, userProfile } = useAuthStore.getState();
       
       if (!motivoCancelacion || motivoCancelacion.trim() === '') {
         throw new Error('Debes proporcionar un motivo para la cancelación parcial');
@@ -1420,7 +1418,7 @@ export const useVacacionesStore = create((set, get) => {
           fechaCancelacion: formatYMD(new Date()),
           horasDisponiblesAntesCancelacion: saldoAntes,
           horasDisponiblesDespuesCancelacion: saldoDespues,
-          procesadaPor: user?.email,
+          procesadaPor: userProfile?.nombre,
           esAdmin: esAdmin,
           createdAt: new Date()
         };
@@ -1449,7 +1447,7 @@ export const useVacacionesStore = create((set, get) => {
           await sendNotification({
             empleadoEmail: solicitud.solicitante,
             title: '⚠️ Cancelación parcial de vacaciones',
-            body: `❌ El administrador ha cancelado ${horasADevolver} de tus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`,
+            body: `❌ El administrador ha cancelado ${formatearTiempoVacasLargo(horasADevolver)} de tus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`,
             url: '/vacaciones/solicitudes',
             type: 'vacaciones_cancelada_parcial'
           });

@@ -297,7 +297,6 @@ const HistorialSolicitudes = () => {
     setDiasACancelar([]);
     setMotivoCancelacionParcial('');
     setDialogCancelarParcial(true);
-    console.log(getFechasVivasDeSolicitud(solicitud))
     };
 
     const handleConfirmarCancelacionParcial = async () => {
@@ -357,7 +356,9 @@ const HistorialSolicitudes = () => {
 
     // Función para determinar si una solicitud puede cancelarse parcialmente
      const puedeGestionarSolicitud = (solicitud) => {
-    const diasCancelados = obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
+    const diasCanceladosParcialmente = obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
+    const diasCanceladosTotalmente = solicitud?.fechasCanceladas || []
+    const diasCancelados =[...diasCanceladosParcialmente, ...diasCanceladosTotalmente]
     const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
     const diasDisponibles = solicitud.fechas.filter(fecha => {
       const yaFueCancelado = diasCancelados.includes(fecha);
@@ -543,9 +544,9 @@ const HistorialSolicitudes = () => {
                     alignItems: 'center',
                     cursor: 'pointer',
                     p: 1,
-                    bgcolor: `${colorEstado}.fondo`,
+                    bgcolor: `verde.fondo`,
                     borderRadius: 1,
-                    '&:hover': { bgcolor: `${colorEstado}.fondoFuerte` }
+                    '&:hover': { bgcolor: `verde.fondoFuerte` }
               }}>
               <Typography fontSize={'1.15rem'}>
                 {formatearFechaLarga(solicitud.fechas[0])}
@@ -574,9 +575,9 @@ const HistorialSolicitudes = () => {
                     justifyContent:'space-between',
                     cursor: 'pointer',
                     p: 1,
-                    bgcolor: `${colorEstado}.fondo`,
+                    bgcolor: `verde.fondo`,
                     borderRadius: 1,
-                    '&:hover': { bgcolor: `${colorEstado}.fondoFuerte` },
+                    '&:hover': { bgcolor: `verde.fondoFuerte` },
                     
                   }}
                 >
@@ -679,7 +680,7 @@ const HistorialSolicitudes = () => {
                    
                   }}
                 >
-                  <Typography variant="body1"  sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6"  sx={{ flexGrow: 1 }}>
                     {cancelacionesParciales.length} Cancelación{cancelacionesParciales.length > 1 ? 'es' : ''} Parcial{cancelacionesParciales.length > 1 ? 'es' : ''}
                   </Typography>
                   {cancelacionesExpanded[solicitud.id] ? <ExpandLess /> : <ExpandMore />}
@@ -740,7 +741,7 @@ const HistorialSolicitudes = () => {
                         </Box>
                         </Box>                    
                         <Typography variant="subtitle1" display="block" color="error.main">
-                          • Cancelado por {datosUsuarios[cancelacion.procesadaPor].nombre}
+                          • Cancelado por {cancelacion.procesadaPor}
                         </Typography>
                       
                       </Paper>
@@ -791,7 +792,7 @@ const HistorialSolicitudes = () => {
                             ) : (
                             <>
                               <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', mb:1}}>
-                                Pedido Cancelado: {formatearTiempoVacasLargo(horasDisponibles.length*8)}
+                                Pedido Cancelado: {formatearTiempoVacasLargo(solicitud.fechasCanceladas.length*8)}
                               </Typography> 
                                <Box
                                 onClick={() => setCancelacionesFechasExpanded(cancelacionesFechasExpanded === solicitud.id ? null : solicitud.id)}
@@ -801,37 +802,38 @@ const HistorialSolicitudes = () => {
                                   justifyContent:'space-between',
                                   cursor: 'pointer',
                                   p: 1,
-                                  bgcolor: `rojo.fondo`,
+                                  bgcolor: `dorado.fondo`,
                                   borderRadius: 1,
-                                  '&:hover': { bgcolor: `rojo.fondoFuerte` },
+                                  '&:hover': { bgcolor: `dorado.fondoFuerte` },
                                   
                                 }}
                               >
-                  <Typography variant="body1">
+                  <Typography variant="h6">
                     Fechas Canceladas 
                   </Typography>
                   {cancelacionesFechasExpanded === solicitud.id ? <ExpandLess /> : <ExpandMore />}
                 </Box>
                 
                 <Collapse in={cancelacionesFechasExpanded === solicitud.id}>
-                  <Box sx={{ ml: 2, mb: 2 }}>
+                  <Grid container sx={{ ml: 2,mt:1 }}>
                     {ordenarFechas(diasCancelados).map(fecha => {
                       
                       
                       return (
+                        <Grid size={{xs:6}} key={fecha}>
                         <Typography 
-                          key={fecha} 
+                        textAlign='center' 
                           fontSize={'1.1rem'} 
                           sx={{ 
                             color:'rojo.main',
-                            mb: 0.5,
                           }}
                         >
                           • {formatearFechaCorta(fecha)} 
                         </Typography>
+                        </Grid>
                       );
                     })}
-                  </Box>
+                  </Grid>
                 </Collapse>
                  </>
                   )}

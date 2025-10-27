@@ -25,7 +25,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TodayOutlinedIcon from '@mui/icons-material/TodayOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import { useEffect } from 'react';
 
 
@@ -91,7 +91,7 @@ const AdminDashboard = () => {
     {
       title: trabajadoresVacacionesHoy===1 ? 'Trabajador' : 'Trabajadores',
       value: loadingStats ? '...' : trabajadoresVacacionesHoy.toString(),
-      subtitle: 'Vacaciones Hoy',
+      subtitle: trabajadoresVacacionesHoy===1? 'Ausente Hoy':'Ausentes Hoy',
       icon: TodayOutlinedIcon,
       ...getVacacionesColor(trabajadoresVacacionesHoy),
       action: () => navigate('/admin/vacaciones/calendario')
@@ -99,7 +99,7 @@ const AdminDashboard = () => {
     {
       title: trabajadoresVacacionesMañana===1 ? 'Trabajador' : 'Trabajadores',
       value: loadingStats ? '...' : trabajadoresVacacionesMañana.toString(),
-      subtitle: 'Vacaciones Mañana',
+      subtitle: trabajadoresVacacionesMañana===1? 'Ausente Mañana':'Ausentes Mañana',
       icon: EventOutlinedIcon,
       ...getVacacionesColor(trabajadoresVacacionesMañana),
       action: () => navigate('/admin/vacaciones/calendario')
@@ -114,29 +114,21 @@ const AdminDashboard = () => {
       action: () => navigate('/admin/nominas')
     }, */
   {
-    title: 'Solicitudes',
+    title: solicitudesPendientes===1? 'Solicitud':'Solicitudes',
     value: loadingStats ? '...' : solicitudesPendientes.toString(),
-    subtitle: 'Pendientes',
+    subtitle: solicitudesPendientes===1? 'Pendiente':'Pendientes',
     icon: ListAltOutlinedIcon,
     color: 'naranja.main',
     bgColor: 'naranja.fondo',
     action: () => navigate('/admin/vacaciones/pendientes')
   },
-/*     {
-      title: 'Productos',
-      value: '25',
-      subtitle: 'Desayunos',
-      icon: RestaurantIcon,
-      color: 'dorado.main',
-      bgColor: 'dorado.fondo',
-      action: () => navigate('/admin/desayunos')
-    } */
+  
   ];
  const quickActions = [
 
     {
         id: 'calendario',
-        title: 'Calendario Vacaciones',
+        title: 'Calendario Ausencias',
         description: 'Calendario visual de vacaciones del personal',
         icon: CalendarMonthOutlinedIcon,
         route: '/admin/vacaciones/calendario',
@@ -170,19 +162,19 @@ const AdminDashboard = () => {
       onClick: () => navigate('/admin/vacaciones')
     },
     {
+     label: 'Permisos y Bajas',
+     icon: AssignmentOutlinedIcon,
+     color: 'naranja.main',
+     bgColor: 'naranja.fondo',
+     onClick: () => navigate('/admin/ausencias')
+   }, 
+    {
       label: 'Gestión Desayunos',
       icon: RestaurantIcon,
       color: 'dorado.main',
       bgColor: 'dorado.fondo',
       onClick: () => navigate('/admin/desayunos')
     },
-/*     {
-      label: 'Reportes Analytics',
-      icon: BarChartIcon,
-      color: 'naranja.main',
-      bgColor: 'naranja.fondo',
-      onClick: () => navigate('/admin/reportes')
-    }, */
         {
       label: 'Utilidades',
       icon: ConstructionOutlinedIcon,
@@ -218,12 +210,13 @@ const AdminDashboard = () => {
         } : {}
       }}
     >
-      <CardContent sx={{ p: 3 }}>
+      <CardContent sx={{ p: 1 }}>
         <Box display="flex" alignItems="flex-start" justifyContent="center" mb={2}>
           <Box 
             sx={{ 
               p: 1,
-              m: -2, 
+              m: -1,
+              mt:0, 
               borderRadius: 2, 
               bgcolor: bgColor,
               display: 'flex',
@@ -231,7 +224,7 @@ const AdminDashboard = () => {
               justifyContent: 'center'
             }}
           >
-            <Icon sx={{ color: color, fontSize: 30 }} />
+            <Icon sx={{ color: color, fontSize: 40 }} />
           </Box>
         </Box>
         <Box sx={{
@@ -245,11 +238,11 @@ const AdminDashboard = () => {
           <Typography textAlign="center" variant="h4" fontWeight="bold" color="text.primary" gutterBottom>
             {value}
           </Typography>
-          <Typography textAlign="center" variant="body1" fontWeight="600" color="text.primary" gutterBottom>
+          <Typography textAlign="center" variant="body1" fontWeight="600" color="text.primary" >
             {title}
           </Typography>
           {subtitle && (
-            <Typography textAlign="center" variant="caption" color="text.secondary">
+            <Typography textAlign="center" fontSize={'0.95rem'}>
               {subtitle}
             </Typography>
           )}
@@ -326,25 +319,43 @@ const AdminDashboard = () => {
        display='flex' elevation={0}
         sx={{mb:2, p:2, color:autoAprobacionActiva ? 'verde.main' : 'default', flexDirection:'column', alignItems:'center', justifyContent:'center'}} >
       <Typography fontSize='1.1rem' textAlign="center" alignItems='center' color={'rojo.main'} fontWeight="bold">
-        CONFIGURACION DE VACACIONES
+        CONFIGURACION DE AUSENCIAS
       </Typography>
       <Divider sx={{bgcolor:'black', mb:1}} />
-      <Typography fontSize='1.1rem' textAlign="center" alignItems='center' color={configVacaciones?.ventaVacaciones?.habilitado ?"azul.main": 'grey'} fontWeight="bold">
-        Venta de Vacaciones: <strong>{configVacaciones?.ventaVacaciones?.habilitado ? 'ON' : 'OFF'}</strong>
+      <Box sx={{display:'flex', justifyContent:'space-between'}}>
+      <Typography fontSize='1.1rem'  alignItems='center' color={configVacaciones?.ventaVacaciones?.habilitado ?"azul.main": 'grey'} fontWeight="bold">
+        Venta de Vacaciones:
       </Typography>
-       <Typography fontSize='1.1rem' textAlign="center" alignItems='center' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="bold">
-        Auto-Aprobación Vacaciones: <strong>{autoAprobacionActiva ? 'ON' : 'OFF'}</strong>
+      <Typography fontSize='1.1rem'  alignItems='center' color={configVacaciones?.ventaVacaciones?.habilitado ?"azul.main": 'grey'} fontWeight="bold">
+        <strong>{configVacaciones?.ventaVacaciones?.habilitado ? 'ON' : 'OFF'}</strong>
       </Typography>
-      <Typography fontSize='1rem' textAlign="center" sx={{mt:-0.5, fontWeight:'bold', fontStyle:'italic'}}>
+      </Box>
+      <Box sx={{display:'flex', justifyContent:'space-between'}}>
+       <Typography fontSize='1.1rem'  alignItems='center' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="bold">
+        Auto-Aprobación Vacaciones: 
+      </Typography>
+      <Typography fontSize='1.1rem'  alignItems='center' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="bold">
+        <strong>{autoAprobacionActiva ? 'ON' : 'OFF'}</strong>
+      </Typography>
+      </Box>
+      <Typography fontSize='1rem'  sx={{mt:-0.5, fontWeight:'bold', fontStyle:'italic'}}>
       {configVacaciones?.autoAprobar?.habilitado ? `Modo: ${
         configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
         configVacaciones.autoAprobar.modo === 'noVentas' ? 'Todas menos las ventas' :
         configVacaciones.autoAprobar.modo === 'porHoras' ? `Solicitudes ≤ ${configVacaciones.autoAprobar.maxHoras} horas` :
-        configVacaciones.autoAprobar.modo === 'sinConflictos' ? 'Solo si no hay conflictos de cobertura' :
+        configVacaciones.autoAprobar.modo === 'sinConflictos' ? 'Si no hay conflictos de cobertura' :
         configVacaciones.autoAprobar.modo === 'porHorasYsinConflictos' ? `≤ ${configVacaciones.autoAprobar.maxHoras} horas y sin conflictos` :
         ''
       }` : ''}
       </Typography>
+      <Box sx={{display:'flex', justifyContent:'space-between', mt:0.5}}>
+       <Typography fontSize='1.1rem'  alignItems='center' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="bold">
+        Auto-Aprobación Ausencias: 
+      </Typography>
+      <Typography fontSize='1.1rem'  alignItems='center' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="bold">
+        <strong>{autoAprobacionActiva ? 'ON' : 'OFF'}</strong>
+      </Typography>
+      </Box>
       </Card>
 
       {/* Grid de acciones rapidas para owner*/}
