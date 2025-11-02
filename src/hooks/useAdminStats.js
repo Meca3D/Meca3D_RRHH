@@ -1,6 +1,7 @@
 // hooks/useAdminStats.js
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useVacacionesStore } from '../stores/vacacionesStore';
+import { useAusenciasStore } from '../stores/ausenciasStore';
 import { formatYMD } from '../utils/dateUtils';
 import { useUIStore } from '../stores/uiStore';
 import { addDays } from 'date-fns';
@@ -14,12 +15,15 @@ export const useAdminStats = () => {
     loadConfigVacaciones,
     obtenerDiasCancelados
   } = useVacacionesStore();
-  const {showError, showInfo} = useUIStore();
+
+  const {configAusencias, loadConfigAusencias, ausencias, loadAusencias} = useAusenciasStore();
+  const {showError} = useUIStore();
 
   const [stats, setStats] = useState({
     trabajadoresVacacionesHoy: 0,
     trabajadoresVacacionesMañana: 0,
     solicitudesPendientes: 0,
+    permisosPendientes:0,
     autoAprobacionActiva: false,
     loadingStats: true
   });
@@ -30,12 +34,20 @@ export const useAdminStats = () => {
     return () => unsubscribe();} // Cleanup al desmontar
   }, [loadConfigVacaciones, configVacaciones]);
 
+  useEffect(() => {
+    if (!configAusencias){
+    const unsubscribe = loadConfigAusencias();
+    return () => unsubscribe();} // Cleanup al desmontar
+  }, [loadConfigAusencias, configAusencias]);
+
   // Cargar datos al montar 
   useEffect(() => {
   const unsub1 = loadSolicitudesVacaciones();
+  const unsub2 = loadAusencias();
   
   return () => {
     if (typeof unsub1 === 'function') unsub1();
+    if (typeof unsub2 === 'function') unsub2();
   };
   }, []); 
 
@@ -78,6 +90,11 @@ export const useAdminStats = () => {
           (sol) => sol.estado === 'pendiente'
         ).length;
 
+        // Contar solicitudes pendientes
+        const permisosPendientes = ausencias.filter(
+          (ausencia) => ausencia.estado === 'pendiente'
+        ).length;
+
         // Estado de auto-aprobación
         const autoAprobacion = configVacaciones?.autoAprobar?.habilitado || false;
 
@@ -85,6 +102,7 @@ export const useAdminStats = () => {
           trabajadoresVacacionesHoy: trabajadoresHoy,
           trabajadoresVacacionesMañana: trabajadoresMañana,
           solicitudesPendientes: pendientes,
+          permisosPendientes: permisosPendientes,
           autoAprobacionActiva: autoAprobacion,
           loadingStats: false
         });
@@ -95,10 +113,10 @@ export const useAdminStats = () => {
     };
 
     // Solo calcular si ya tenemos datos
-if (Array.isArray(solicitudesVacaciones) && solicitudesVacaciones.length >= 0 && configVacaciones !== null) {
+if (Array.isArray(solicitudesVacaciones) && Array.isArray(ausencias) && ausencias.length>=0 && solicitudesVacaciones.length >= 0 && configVacaciones !== null) {
   calcularStats();}
 
-  }, [solicitudesVacaciones, configVacaciones]);
+  }, [solicitudesVacaciones, configVacaciones, ausencias]);
 
   return stats;
 };

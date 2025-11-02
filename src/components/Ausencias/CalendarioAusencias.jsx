@@ -5,15 +5,17 @@ import { Box, Typography, IconButton, Paper, Divider } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
 import {
-  formatYMD, formatearMesAno, obtenerDiasCalendario, navegarMes, esFinDeSemana
+  formatYMD, formatearMesAno, obtenerDiasCalendario, navegarMes, esFinDeSemana, esFechaPasadaOHoy
 } from '../../utils/dateUtils';
 
 const DIAS = ['L','M','X','J','V','S','D'];
 
 const CalendarioAusencias = ({
-  fechasSeleccionadas,
-  onFechasChange
-}) => {
+    fechasSeleccionadas,
+    onFechasChange,
+    esAdmin = false, // Permitir editar días pasados solo si es admin
+    fechasOriginales = [] // Fechas originales de la ausencia (para bloquear en modo añadir)
+  }) => {
   const [mesActual, setMesActual] = useState(new Date());
   const { esFestivo } = useVacacionesStore();
 
@@ -24,12 +26,23 @@ const CalendarioAusencias = ({
   const alternarDia = (dia) => {
     const fechaStr = formatYMD(dia);
     
+    // Bloquear días pasados para trabajadores
+    if (!esAdmin && esFechaPasadaOHoy(fechaStr)) {
+      return;
+    }
+    
+    // Bloquear fechas originales (no se pueden deseleccionar al añadir)
+    if (fechasOriginales.includes(fechaStr)) {
+      return;
+    }
+    
     if (fechasSeleccionadas.includes(fechaStr)) {
       onFechasChange(fechasSeleccionadas.filter(f => f !== fechaStr));
     } else {
       onFechasChange([...fechasSeleccionadas, fechaStr]);
     }
   };
+
 
   const estiloDia = (dia) => {
     const fechaStr = formatYMD(dia);
@@ -38,20 +51,26 @@ const CalendarioAusencias = ({
     const fueraMes = dia.getMonth() !== mesActual.getMonth();
     const esFestivoDia = esFestivo(fechaStr);
     const esFinSemana = esFinDeSemana(dia);
+    const esFechaOriginal = fechasOriginales.includes(fechaStr);
+    const esDiaPasado = !esAdmin && esFechaPasadaOHoy(fechaStr);
+    const esSeleccionable=!esDiaPasado && !esFestivoDia ;
 
-    const base = {
-      minHeight: 45,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: 'pointer',
-      borderRadius: 1,
-      transition: 'all .2s ease',
-      fontSize: '0.875rem',
-      opacity: fueraMes ? 0.5 : 1
-    };
+  
+  
+  const base = {
+    minHeight: 45,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    borderRadius: 1,
+    transition: 'all .2s ease',
+    fontSize: '0.875rem',
+    opacity: fueraMes||esDiaPasado ? 0.5 : 1,
+    border: hoy? '2px solid black' :""
+  };
 
-    // Día seleccionado y Festivo
+  // Día seleccionado y Festivo
     if (seleccionado && esFestivoDia) {
       return {
         ...base,
@@ -60,12 +79,35 @@ const CalendarioAusencias = ({
         border: '2px solid red'
       };
     }
-    // Día seleccionado (morado para permisos/bajas)
-    if (seleccionado) {
+
+  // Día seleccionado
+  if (seleccionado) {
+    return {
+      ...base,
+      bgcolor: 'primary.main',
+      color: '#fff',
+    };
+  }
+  
+  // Día original (no se puede deseleccionar)
+  if (esFechaOriginal) {
+    return {
+      ...base,
+        bgcolor: '#e3f2fd',  // azul muy claro
+        color: 'primary.main',
+        border: '2px dashed',
+        borderColor: 'primary.main',
+        cursor: 'not-allowed',
+    };
+  }
+
+    // Día pasado (bloqueado para trabajadores)
+    if (esDiaPasado) {
       return {
         ...base,
-        bgcolor: 'primary.main',
-        color: '#fff',
+        bgColor : '#f8f9fa',
+        color: 'text.disabled',
+        cursor: 'not-allowed',
       };
     }
 
@@ -73,7 +115,7 @@ const CalendarioAusencias = ({
     if (esFestivoDia) {
       return {
         ...base,
-        bgcolor: '#f73b57ff',
+        bgcolor: '#f44f68ff',
         color: "#fff",
         border: '1px dashed #d32f2f',
       };
@@ -93,14 +135,6 @@ const CalendarioAusencias = ({
       return {
         ...base,
         color: 'text.disabled',
-        opacity:0.5
-      };
-    }
-    // Día seleccionado y Festivo
-    if (hoy) {
-      return {
-        ...base,
-        border: '2px solid black'
       };
     }
     // Día normal
@@ -157,17 +191,18 @@ const CalendarioAusencias = ({
           <Typography variant="subtitle1">Seleccionado</Typography>
         </Box>
         <Box display="flex" alignItems="center" gap={0.5}>
-          <Box width={20} height={20} bgcolor="#f73b57ff" border="1px dashed #f73b57ff" borderRadius={0.5} />
+          <Box width={20} height={20} bgcolor="#f44f68ff" borderRadius={0.5} />
           <Typography variant="subtitle1">Festivo</Typography>
         </Box>
         <Box display="flex" alignItems="center" gap={0.5}>
           <Box width={20} height={20} bgcolor="#e1dfdf" borderRadius={0.5} />
           <Typography variant="subtitle1">Fin de semana</Typography>
         </Box>
-         <Box display="flex" alignItems="center" gap={0.5}>
-          <Box width={20} height={20} border='2px solid black' borderRadius={0.5} />
-          <Typography variant="subtitle1">Hoy</Typography>
-        </Box>
+        {fechasOriginales.length > 0 &&(
+        <Box display="flex" alignItems="center" gap={0.5}>
+          <Box width={20} height={20} sx={{ bgcolor: '#e3f2fd', color: 'primary.main', border: '2px dashed', borderColor: 'primary.main',}} borderRadius={0.5} />
+          <Typography variant="subtitle1">Original</Typography>
+        </Box>)}
       </Box>
     </Box>
   );

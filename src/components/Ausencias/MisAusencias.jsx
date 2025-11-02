@@ -3,45 +3,66 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
-  IconButton, Chip, Grid, Tabs, Tab, Fab, Dialog, Collapse,
-  DialogTitle, DialogContent, DialogActions, Button, TextField, CircularProgress
+  Container, Typography, Box, Card, CardContent, AppBar, Toolbar, Popover, Alert,
+  IconButton, Chip, Grid, Tabs, Tab, Fab, Dialog, Collapse, Menu, MenuItem, ListItemIcon, ListItemText,
+  DialogTitle, DialogContent, DialogActions, Button, TextField, CircularProgress,
+  Divider
 } from '@mui/material';
 import {
   ArrowBackIosNew as ArrowBackIosNewIcon,
   EventBusyOutlined as EventBusyOutlinedIcon,
   DynamicFeedOutlined as DynamicFeedOutlinedIcon,
-  Add as AddIcon,
-  EditOutlined as EditIcon,
-  CancelOutlined as CancelIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
+  AddCircleOutline as AddIcon,     
+  DeleteOutline as DeleteIcon,       
+  CancelOutlined as CancelIcon,
+  MoreVert as MoreVertIcon,
+  SelectAll as SelectAllIcon
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
 import { useAusenciasStore } from '../../stores/ausenciasStore';
 import { useUIStore } from '../../stores/uiStore';
 import { formatearFechaCorta, ordenarFechas, esFechaPasadaOHoy, formatearFechaLarga } from '../../utils/dateUtils';
+import { capitalizeFirstLetter } from '../Helpers';
 
 const MisAusencias = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
+    obtenerDiasAgregados,
+    obtenerDiasCancelados,
+    obtenerDiasDisponiblesParaCancelar,
     ausencias,
+    cancelarDiasAusencia,
     loadAusencias,
-    cancelarAusencia,
-    loading
+    eliminarAusencia,
+    loading,
+    calcularEstadoRealFechas
   } = useAusenciasStore();
   const { showSuccess, showError } = useUIStore();
 
   // Estados principales
   const [tabActual, setTabActual] = useState(0);
   const [ausenciaExpandida, setAusenciaExpandida] = useState(null);
-
+  
   // Estados para cancelación
   const [dialogoCancelacion, setDialogoCancelacion] = useState(false);
   const [ausenciaACancelar, setAusenciaACancelar] = useState(null);
+  const [diasACancelar, setDiasACancelar] = useState([]); // ⬅️ Array de fechas
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
   const [cancelando, setCancelando] = useState(false);
+  const [cancelacionesExpanded, setCancelacionesExpanded] = useState({});
+
+  // Estados para eliminación
+  const [dialogoEliminacion, setDialogoEliminacion] = useState(false);
+  const [ausenciaAEliminar, setAusenciaAEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  // Estado para menú de acciones
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [ausenciaMenuAbierto, setAusenciaMenuAbierto] = useState(null);
+
 
   useEffect(() => {
     if (!user?.email) return;
@@ -52,14 +73,17 @@ const MisAusencias = () => {
   }, [user?.email, loadAusencias]);
 
   const puedeGestionarAusencia = (ausencia) => {
-    const diasDisponibles = ausencia.fechas.filter(fecha => !esFechaPasadaOHoy(fecha));
-
+    const diasDisponibles = ausencia.fechasActuales.filter(fecha => !esFechaPasadaOHoy(fecha));
+    const tieneDiasPasados = ausencia.fechasActuales.some(f => esFechaPasadaOHoy(f));
+    
     return {
-      puedeEditar: ausencia.estado === 'pendiente',
-      puedeCancelar: ausencia.estado === 'pendiente' || (ausencia.estado === 'aprobado' && diasDisponibles.length > 0),
+      puedeAñadir: (ausencia.estado === 'pendiente' || ausencia.estado === 'aprobado'),
+      puedeCancelar: (ausencia.estado === 'pendiente' || ausencia.estado === 'aprobado') && diasDisponibles.length > 0,
+      puedeEliminar: (ausencia.estado === 'pendiente' || ausencia.estado === 'aprobado') && !tieneDiasPasados,
       diasDisponibles: diasDisponibles.length
     };
   };
+
 
   // Filtrar ausencias por estado
   const ausenciasPendientes = ausencias.filter(a => a.estado === 'pendiente');
@@ -67,49 +91,127 @@ const MisAusencias = () => {
   const ausenciasRechazadas = ausencias.filter(a => a.estado === 'rechazado');
   const ausenciasCanceladas = ausencias.filter(a => a.estado === 'cancelado');
 
-  // Función para abrir diálogo de cancelación
+ // Abrir diálogo de cancelación (con selector de días)
   const handleAbrirCancelacion = (ausencia) => {
     setAusenciaACancelar(ausencia);
+    setDiasACancelar([]);
     setMotivoCancelacion('');
     setDialogoCancelacion(true);
   };
 
-  // Función para confirmar cancelación
+  // Confirmar cancelación de días
   const handleConfirmarCancelacion = async () => {
     if (!motivoCancelacion.trim()) {
-      showError('Debes escribir un motivo para cancelar la ausencia');
+      showError('Debes escribir un motivo para cancelar');
+      return;
+    }
+
+    if (diasACancelar.length === 0) {
+      showError('Debes seleccionar al menos un día para cancelar');
       return;
     }
 
     setCancelando(true);
     try {
-      await cancelarAusencia(ausenciaACancelar, motivoCancelacion, false);
-      
+      await cancelarDiasAusencia(
+        ausenciaACancelar.id,
+        diasACancelar,
+        motivoCancelacion,
+        ausenciaACancelar,
+        false //es admin
+      );
+
       const tipoTexto = ausenciaACancelar.tipo === 'baja' ? 'Baja' : 'Permiso';
-      showSuccess(`${tipoTexto} cancelado correctamente`);
-      
+      const diasDisponibles = obtenerDiasDisponiblesParaCancelar(ausenciaACancelar);
+      const esCancelacionTotal = diasACancelar.length === diasDisponibles.length;
+
+      showSuccess(
+        esCancelacionTotal
+          ? `${tipoTexto} cancelado completamente`
+          : `${diasACancelar.length} día(s) cancelado(s) correctamente`
+      );
+
       setDialogoCancelacion(false);
       setAusenciaACancelar(null);
+      setDiasACancelar([]);
       setMotivoCancelacion('');
     } catch (error) {
-      showError('Error al cancelar la ausencia: ' + error.message);
+      showError('Error al cancelar: ' + error.message);
     } finally {
       setCancelando(false);
     }
   };
 
-  const handleEditarAusencia = (ausencia) => {
-    // Verificar si se puede editar (solo pendientes y fechas futuras)
-    const primeraFecha = ausencia.fechas[0];
-    const esFechaFutura = !esFechaPasadaOHoy(primeraFecha);
-
-    if (!esFechaFutura) {
-      showError('No puedes editar ausencias con fechas pasadas');
-      return;
-    }
-
-    navigate(`/ausencias/editar/${ausencia.id}`);
+  // Abrir diálogo de eliminación
+  const handleAbrirEliminacion = (ausencia) => {
+    setAusenciaAEliminar(ausencia);
+    setDialogoEliminacion(true);
   };
+
+  // Confirmar eliminación
+  const handleConfirmarEliminacion = async () => {
+    setEliminando(true);
+    try {
+      await eliminarAusencia(ausenciaAEliminar.id, ausenciaAEliminar);
+
+      const tipoTexto = ausenciaAEliminar.tipo === 'baja' ? 'Baja' : 'Permiso';
+      showSuccess(`${tipoTexto} eliminado correctamente`);
+
+      setDialogoEliminacion(false);
+      setAusenciaAEliminar(null);
+    } catch (error) {
+      showError('Error al eliminar: ' + error.message);
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  // Navegar a añadir días
+  const handleAñadirDias = (ausencia) => {
+    navigate(`/ausencias/agregarDias/${ausencia.id}`);
+  };
+
+  // Abrir menú de acciones
+  const handleAbrirMenu = (event, ausencia) => {
+    event.stopPropagation(); 
+    event.preventDefault()
+    setMenuAnchor(event.currentTarget);
+    setAusenciaMenuAbierto(ausencia);
+  };
+
+  // Cerrar menú
+  const handleCerrarMenu = () => {
+    setMenuAnchor(null);
+    setAusenciaMenuAbierto(null);
+  };
+
+  // Acciones desde el menú
+  const handleAccionMenu = (accion, ausencia) => {
+    handleCerrarMenu();
+    
+    switch (accion) {
+      case 'añadir':
+        handleAñadirDias(ausencia);
+        break;
+      case 'cancelar':
+        handleAbrirCancelacion(ausencia);
+        break;
+      case 'eliminar':
+        handleAbrirEliminacion(ausencia);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Toggle para acordeón de cancelaciones parciales
+  const toggleCancelacionesExpanded = (ausenciaId) => {
+    setCancelacionesExpanded(prev => ({
+      ...prev,
+      [ausenciaId]: !prev[ausenciaId]
+    }));
+  };
+
 
   const getColorEstado = (estado) => {
     switch (estado) {
@@ -126,28 +228,109 @@ const MisAusencias = () => {
   };
 
   const AusenciaCard = ({ ausencia }) => {
-    const { puedeEditar, puedeCancelar, diasDisponibles } = puedeGestionarAusencia(ausencia);
+    const { puedeAñadir, puedeCancelar, puedeEliminar, diasDisponibles } = puedeGestionarAusencia(ausencia);
     const colorEstado = getColorEstado(ausencia.estado);
     const colorTipo = getColorTipo(ausencia.tipo);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuButtonRef = React.useRef(null);
+
+    const handleAbrirMenu = (event) => {
+      event.stopPropagation();
+      setMenuOpen(true);
+    };
+
+    const handleCerrarMenu = () => {
+      setMenuOpen(false);
+    };
 
     return (
       <Card elevation={2} sx={{ mb: 2 }}>
         <CardContent>
           <Grid container spacing={2}>
             {/* Cabecera con estado y tipo */}
+          
             <Grid size={{ xs: 12 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                <Chip
-                  label={ausencia.estado.toUpperCase()}
-                  sx={colorEstado}
-                  size="small"
-                />
+              <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Chip
                   label={ausencia.tipo === 'baja' ? '🔴 BAJA' : '🟣 PERMISO'}
                   color={colorTipo}
                   variant="outlined"
                   size="small"
                 />
+                <Chip
+                  label={ausencia.estado.toUpperCase()}
+                  sx={colorEstado}
+                  size="small"
+                />
+                {/* Menú de 3 puntos (solo si hay acciones disponibles) */}
+                {(puedeAñadir || puedeCancelar || puedeEliminar) && (
+                  <>
+                  <IconButton
+                    size="small"
+                    ref={menuButtonRef}
+                    onClick={handleAbrirMenu}
+                    sx={{
+                      color: 'text.secondary',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                        color: 'primary.main'
+                      }
+                    }}
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
+                   {/* Menú de acciones */}
+                  <Menu
+                    disablePortal
+                    keepMounted 
+                    anchorEl={menuButtonRef.current}
+                    open={menuOpen}
+                    onClose={handleCerrarMenu}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',  
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    slotProps={{
+                      paper: {
+                        sx:{
+                        minWidth: 180,
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                        borderRadius: 2 
+                        }        
+                      }
+                    }}
+                  >
+                                {puedeAñadir && (
+                  <MenuItem onClick={() => handleAccionMenu('añadir', ausencia)}>
+                    <ListItemIcon>
+                      <AddIcon fontSize="small" sx={{ color: 'success.main' }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Añadir días" />
+                  </MenuItem>
+                )}
+                {puedeCancelar && (
+                  <MenuItem onClick={() => handleAccionMenu('cancelar', ausencia)}>
+                    <ListItemIcon>
+                      <CancelIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Cancelar días" />
+                  </MenuItem>
+                )}
+                {puedeEliminar && (
+                  <MenuItem onClick={() => handleAccionMenu('eliminar', ausencia)}>
+                    <ListItemIcon>
+                      <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} />
+                    </ListItemIcon>
+                    <ListItemText primary={'Eliminar '+ capitalizeFirstLetter(ausencia.tipo)} />
+                  </MenuItem>
+                )}
+              </Menu>
+                </>
+                )}
               </Box>
             </Grid>
 
@@ -192,7 +375,7 @@ const MisAusencias = () => {
             {/* Duración */}
             <Grid size={{ xs: 12 }}>
               <Typography variant="body1" fontWeight={600}>
-                Días solicitados: {ausencia.fechas.length} día{ausencia.fechas.length !== 1 ? 's' : ''}
+                {capitalizeFirstLetter(ausencia.tipo)} Original: {ausencia.fechas.length} día{ausencia.fechas.length !== 1 ? 's' : ''}
               </Typography>
             </Grid>
 
@@ -232,23 +415,93 @@ const MisAusencias = () => {
                     {ausenciaExpandida === ausencia.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                   </Box>
                   <Collapse in={ausenciaExpandida === ausencia.id}>
-                    <Grid container sx={{ mt: 1, pl: 2 }}>
-                      {ordenarFechas(ausencia.fechas).map(fecha => {
+                    <Grid container sx={{ mt: 1, pl: 2 }} spacing={1}>
+                      {/* Obtener listas para clasificar */}
+                      {(() => {
+                        // Calcular el estado real de las fechas considerando el orden temporal
+                        const { activas, canceladas, agregadas } = calcularEstadoRealFechas(ausencia);
+                        
+                        // Obtener TODAS las fechas que se añadieron en algún momento
+                        const todasLasFechasAgregadas = obtenerDiasAgregados(ausencia.ediciones || []);
+                        
+                        // Todas las fechas únicas = originales + todas las agregadas (estén canceladas o no)
+                        const todasLasFechas = [...new Set([...ausencia.fechas, ...todasLasFechasAgregadas])];
+
+
+                      return ordenarFechas(todasLasFechas).map(fecha => {
                         const esPasada = esFechaPasadaOHoy(fecha);
-                        return (
-                          <Grid size={{xs:6, md:4}} key={fecha}>
-                            <Typography
-                                variant="body1"
-                                color={esPasada ? 'text.disabled' : 'text.primary'}
-                                sx={{ textDecoration: esPasada ? 'line-through' : 'none' }}
-                            >
-                                • {formatearFechaCorta(fecha)}
-                            </Typography>
-                          </Grid>
-                        );
-                      })}
+                        const esAgregada = agregadas.includes(fecha);
+                        const estaCancelada = canceladas.includes(fecha);
+                        const estaActiva = ausencia.fechasActuales.includes(fecha);
+                        
+                        // Determinar estilo y etiqueta según el estado REAL
+                        let colorTexto = esPasada?'text.secondary':'text.primary'
+                        let etiqueta = '';
+                        let decoracion = 'none';
+                        let icono = '•';
+                        
+                        if (estaCancelada) {
+                          // Fecha cancelada y NO reactivada
+                          colorTexto = 'error.main';
+                          decoracion = 'line-through';
+                          etiqueta = '(Cancelado)';
+                          icono = '❌';
+                        } else if (esAgregada) {
+                          // Fecha añadida (puede ser nueva o reactivada)
+                          colorTexto = 'success.main';
+                          etiqueta = '(Añadido)';
+                          icono = '➕';
+                        }   
+                          return (
+                            <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
+                              <Box display="flex" alignItems="center" gap={0.5}>
+                                <Typography
+                                  variant="body2"
+                                  color={colorTexto}
+                                  sx={{ 
+                                    textDecoration: decoracion,
+                                    fontStyle: esPasada? 'italic': 'normal',
+                                    fontWeight: esAgregada ? 600 : 400
+                                  }}
+                                >
+                                  {icono} {formatearFechaCorta(fecha)}
+                                </Typography>
+                                {etiqueta && (
+                                  <Typography 
+                                    variant="caption" 
+                                    color={colorTexto}
+                                    sx={{ fontStyle: 'italic' }}
+                                  >
+                                    
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Grid>
+                          );
+                        });
+                      })()}
                     </Grid>
+                    {ausencia.fechas !== ausencia.fechasActuales && (
+                      <>
+                      <Divider sx={{bgcolor:'black', mt:1}} />
+                      <Grid container sx={{ mt: 1, pl: 2 }} spacing={0.5}>
+                      <Grid size={{xs:6,md:4}} display="flex" alignItems="center">
+                        <Typography variant="caption" color="text.primary">• Fecha original</Typography>
+                      </Grid>
+                      <Grid size={{xs:6,md:4}} display="flex" alignItems="center">
+                        <Typography variant="caption" color="text.secondary" fontStyle='italic'>Fecha Pasada</Typography>
+                      </Grid>
+                      <Grid size={{xs:6,md:4}} display="flex" alignItems="center">
+                        <Typography variant="caption" color="success.main">➕ Añadido</Typography>
+                      </Grid>
+                      <Grid size={{xs:6,md:4}} display="flex" alignItems="center">
+                        <Typography variant="caption" color="error.main">❌ Cancelado</Typography>
+                      </Grid>
+                      </Grid>
+                      </>
+                      )}
                   </Collapse>
+
                 </>
               )}
             </Grid>
@@ -281,65 +534,233 @@ const MisAusencias = () => {
               </Grid>
             )}
 
-            {/* Motivo de cancelación */}
-            {ausencia.motivoCancelacion && (
+            {/* Historial de ediciones (días añadidos) */}
+            {ausencia.ediciones && ausencia.ediciones.length > 0 && (
               <Grid size={{ xs: 12 }}>
-                <Box sx={{ p: 1.5, bgcolor: '#fff3e0', borderRadius: 2, borderLeft: '3px solid #FF9800' }}>
-                  <Typography variant="body1" color="warning.main" display="block" fontWeight={600}>
-                    ⚠️ Motivo de cancelación:
+                <Divider sx={{mt:1,  mb: 2, bgcolor: 'black' }} />
+                
+                <Typography sx={{ mb: 1, fontWeight: 600, fontSize: '1rem' }}>
+                  ➕ Días añadidos: {obtenerDiasAgregados(ausencia.ediciones).length} {obtenerDiasAgregados(ausencia.ediciones).length === 1 ? 'día' : 'días'}
+                </Typography>
+
+                <Box
+                  onClick={() => toggleCancelacionesExpanded(`ediciones-${ausencia.id}`)}
+                  sx={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    p: 1.5,
+                    bgcolor: 'success.lighter',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'success.main',
+                    '&:hover': { bgcolor: 'success.light' }
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600} color="success.dark">
+                    {ausencia.ediciones.length} {ausencia.ediciones.length !== 1 ? ' Extensiones' : ' Extensión'}
                   </Typography>
-                  <Typography variant="body1">
-                    {ausencia.motivoCancelacion}
-                  </Typography>
+                  {cancelacionesExpanded[`ediciones-${ausencia.id}`] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </Box>
+
+                <Collapse in={cancelacionesExpanded[`ediciones-${ausencia.id}`]}>
+                  <Box sx={{ mt: 2 }}>
+                    {ausencia.ediciones.map((edicion, index) => (
+                      <Card
+                        key={index}
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          mb: 1,
+                          bgcolor: '#e8f5e9',
+                          borderLeft: '4px solid',
+                          borderColor: 'success.main'
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight={700} sx={{ mb: 1, color: 'success.dark' }}>
+                          Extensión #{index + 1}
+                        </Typography>
+
+                        {/* Fecha de edición */}
+                        <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                          <Typography variant="body2" color="">
+                            Añadido el:
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            {formatearFechaCorta(edicion.fechaEdicion)}
+                          </Typography>
+                        </Box>
+
+                        {/* Días añadidos */}
+                        <Box mb={1}>
+                          <Typography variant="body2" color="" display="block" mb={0.5}>
+                            Días añadidos ({edicion.fechasAgregadas.length}):
+                          </Typography>
+                          <Grid container sx={{ display: 'flex' }}>
+                            {edicion.fechasAgregadas.map(fecha => (
+                              <Grid size={{xs:4,md:3}} key={fecha}>
+                              <Chip
+                                label={formatearFechaCorta(fecha)}
+                                size="small"
+                                sx={{
+                                  bgcolor: 'success.main',
+                                  color: 'white',
+                                  fontWeight: 600
+                                }}
+                              />
+                              </Grid>
+                            ))}
+                          </Grid>
+                        </Box>
+
+                        {/* Motivo */}
+                        {edicion.motivoEdicion && (
+                          <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px dashed', borderColor: 'success.main' }}>
+                            <Typography variant="body2" color="" fontWeight={600} display="block">
+                              💬 Motivo:
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
+                              "{edicion.motivoEdicion}"
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {/* Quién editó */}
+                        <Box mt={1}>
+                          <Typography variant="body2" color="">
+                            Días añadidos por: <strong>{edicion.editadoPor}</strong>
+                          </Typography>
+                        </Box>
+                      </Card>
+                    ))}
+                  </Box>
+                </Collapse>
               </Grid>
             )}
 
-            {/* Acciones */}
-            <Grid size={{ xs: 12 }}>
-              <Box display="flex" gap={1} justifyContent="space-between" flexWrap="nowrap" sx={{mt:1}}>
-                {/* Editar - solo pendientes */}
-                {puedeEditar && (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    onClick={() => handleEditarAusencia(ausencia)}
-                    sx={{
-                      fontSize:'1.1rem',
-                      color: "azul.main",
-                      borderColor: 'azul.main',
-                      '&:hover': { bgcolor: 'azul.fondo', borderColor: 'azul.main', transform: 'scale(1.05)' },
-                      transition: 'all 0.2s ease',
-                      textTransform: 'none'
-                    }}
-                  >
-                    Editar
-                  </Button>
-                )}
 
-                {/* Cancelar - pendientes o aprobadas con días futuros */}
-                {puedeCancelar && (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<CancelIcon />}
-                    onClick={() => handleAbrirCancelacion(ausencia)}
-                    sx={{
-                      fontSize:'1.1rem',
-                      color: "rojo.main",
-                      borderColor: 'rojo.main',
-                      '&:hover': { bgcolor: 'rojo.fondo', borderColor: 'rojo.main', transform: 'scale(1.05)' },
-                      transition: 'all 0.2s ease',
-                      textTransform: 'none'
-                    }}
-                    title={ausencia.estado === 'pendiente' ? 'Eliminar solicitud' : 'Cancelar ausencia'}
-                  >
-                    {ausencia.estado === 'pendiente' ? 'Eliminar' : 'Cancelar'}
-                  </Button>
-                )}
-              </Box>
-            </Grid>
+            {/* Historial de cancelaciones parciales */}
+            {ausencia.cancelaciones && ausencia.cancelaciones.length > 0 && (
+              <Grid size={{ xs: 12 }}>
+                <Divider sx={{ my: 2, bgcolor: 'black' }} />
+                
+                <Typography sx={{ mb: 1, fontWeight: 600, fontSize: '1rem' }}>
+                  ❌ Días Cancelados: {obtenerDiasCancelados(ausencia.cancelaciones).length} {obtenerDiasCancelados(ausencia.cancelaciones).length === 1 ? 'día' : 'días'}
+                </Typography>
+
+                <Box
+                  onClick={() => toggleCancelacionesExpanded(ausencia.id)}
+                  sx={{
+                    mb:1,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    p: 1.5,
+                    bgcolor:'warning.lighter',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'warning.main',
+                    '&:hover': { bgcolor: 'warning.light' }
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600} color="warning.dark">
+                    {ausencia.cancelaciones.length} {ausencia.cancelaciones.length !== 1 ? ' Cancelaciones' : ' Cancelación'}
+                  </Typography>
+                  {cancelacionesExpanded[ausencia.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </Box>
+
+                <Collapse in={cancelacionesExpanded[ausencia.id]}>
+                  <Box sx={{ mt: 1 }}>
+                    {ausencia.cancelaciones.map((cancelacion, index) => (
+                      <Card
+                        key={index}
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          mb: 2.5,
+                          bgcolor:  cancelacion.esCancelacionTotal?'rojo.fondo':'naranja.fondo',
+                          borderLeft: '4px solid',
+                          borderColor: cancelacion.esCancelacionTotal?'error.main':'warning.main'
+                        }}
+                      >
+                        <Box display='flex' justifyContent='space-between'>
+                        <Typography variant="body2" fontWeight={700} sx={{ mb: 1, color: cancelacion.esCancelacionTotal?'error.dark':'warning.dark' }}>
+                          Cancelación #{index + 1}
+                          </Typography>
+                            {cancelacion.esCancelacionTotal && (
+                              <Chip 
+                                label="TOTAL" 
+                                size="small" 
+                                sx={{ 
+                                  ml: 1, 
+                                  bgcolor: 'error.main', 
+                                  color: 'white',
+                                  fontWeight: 700
+                                }} 
+                              />
+                            )}
+                        </Box>
+
+                        {/* Fecha de cancelación */}
+                        <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                          <Typography variant="body2" color="">
+                            Cancelado el:
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            {formatearFechaCorta(cancelacion.fechaCancelacion)}
+                          </Typography>
+                        </Box>
+
+                        {/* Días cancelados */}
+                        <Box mb={1.5}>
+                          <Typography variant="body2" color="" display="block" mb={0.5}>
+                            Días cancelados ({cancelacion.diasCancelados.length}):
+                          </Typography>
+                          < Grid container sx={{ display: 'flex' }}>
+                            {cancelacion.diasCancelados.map(fecha => (
+                              <Grid size={{xs:4,md:3}} key={fecha}>
+                              <Chip                             
+                                label={formatearFechaCorta(fecha)}
+                                size="small"
+                                variant='outlined'
+                                sx={{
+                                  fontSize: '0.75rem',
+                                  mb: 0.5,
+                                  bgcolor: 'white',
+                                  color: cancelacion.esCancelacionTotal?'error.main':'warning.main',
+                                  bordercolor: cancelacion.esCancelacionTotal?'error.main':'warning.main',
+                                  fontWeight: 600
+                                }}
+                              />
+                              </Grid>
+                            ))}
+                          </Grid>
+                        </Box>
+
+                        {/* Motivo */}
+                        <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px dashed', borderColor: 'warning.main' }}>
+                          <Typography variant="body2" color="" fontWeight={600} display="block">
+                            💬 Motivo:
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
+                            "{cancelacion.motivoCancelacion}"
+                          </Typography>
+                        </Box>
+
+                        {/* Quién canceló */}
+                        <Box mt={1}>
+                          <Typography variant="body2" color="">
+                            Cancelado por:<br/><strong>{cancelacion.canceladoPor}</strong>
+                          </Typography>
+                        </Box>
+                      </Card>
+                    ))}
+                  </Box>
+                </Collapse>
+              </Grid>
+            )}
           </Grid>
         </CardContent>
       </Card>
@@ -476,63 +897,179 @@ const MisAusencias = () => {
       </Container>
 
 
-      {/* Diálogo de cancelación */}
+      {/* Diálogo de cancelación con selector de días */}
       <Dialog
-        open={dialogoCancelacion}
+        open={dialogoCancelacion && ausenciaACancelar !== null}
         onClose={() => !cancelando && setDialogoCancelacion(false)}
         maxWidth="sm"
         fullWidth
+        
       >
-        <DialogTitle sx={{mb:2, bgcolor:ausenciaACancelar?.estado === 'pendiente' ? 'rojo.main' : 'naranja.main'}}>
-          <Typography textAlign='center' fontSize='1.5rem' color='white'>
-          {ausenciaACancelar?.estado === 'pendiente' ? 'Eliminar solicitud' : 'Cancelar ausencia'}
-          </Typography>
+        <DialogTitle sx={{color:'warning.main', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.2rem'}}>
+          ⚠️ Cancelar días {ausenciaACancelar?.tipo === 'baja' ? 'de la baja' : 'del permiso'}
         </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" mb={2} textAlign='center'>
-            {ausenciaACancelar?.estado === 'pendiente'
-              ? `Vas a eliminar esta solicitud de ${ausenciaACancelar?.tipo}. Esta acción es irreversible. ¿Estás seguro?`
-              : `Vas a cancelar esta solicitud de ${ausenciaACancelar?.tipo} ya ${ausenciaACancelar?.estado}. Explica brevemente el motivo.`
-            }
-          </Typography>
+        <DialogContent >
+          {ausenciaACancelar && (
+            <>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography fontSize='0.95rem' fontWeight={600}>
+                  {ausenciaACancelar.tipo === 'baja' ? 'Baja' : 'Permiso'}: {ausenciaACancelar.motivo}
+                </Typography>
+                <Typography fontSize='0.8rem' display="block">
+                  Días disponibles para cancelar: {obtenerDiasDisponiblesParaCancelar(ausenciaACancelar).length}
+                </Typography>
+              </Alert>
 
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            label="Motivo de cancelación"
-            value={motivoCancelacion}
-            onChange={(e) => setMotivoCancelacion(e.target.value)}
-            placeholder="Ej: Error en las fechas, cambio de planes..."
-            disabled={cancelando}
-            required
-          />
+              {/* Selector de días */}
+              <Typography textAlign='center' variant="body1" fontWeight={600} mb={0.5}>
+                Selecciona los días a cancelar
+              </Typography>
+              
+              <Grid container sx={{ 
+                maxHeight: 200, 
+                overflowY: 'auto', 
+                border: '1px solid #e0e0e0', 
+                borderRadius: 2, 
+                p: 1.5,
+                mb: 2 
+              }}>
+                {obtenerDiasDisponiblesParaCancelar(ausenciaACancelar).map(fecha => (
+                  <Grid size={{xs:6, md:4}} 
+                    key={fecha}
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      p: 0.5,
+                      '&:hover': { bgcolor: '#f5f5f5' },
+                      borderRadius: 1
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={diasACancelar.includes(fecha)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setDiasACancelar([...diasACancelar, fecha]);
+                        } else {
+                          setDiasACancelar(diasACancelar.filter(f => f !== fecha));
+                        }
+                      }}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Typography variant="body2">
+                      {formatearFechaCorta(fecha)}
+                    </Typography>
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Botón seleccionar todos */}
+              <Button
+                size="small"
+                variant="outlined"
+                fullWidth
+                onClick={() => {
+                  const todosDias = obtenerDiasDisponiblesParaCancelar(ausenciaACancelar);
+                  setDiasACancelar(
+                    diasACancelar.length === todosDias.length ? [] : todosDias
+                  );
+                }}
+                sx={{ mb: 2,p:1, fontSize:'1rem' }}
+              >
+                <SelectAllIcon sx={{mr:1.5, fontSize:'1.65rem'}}/>
+                {diasACancelar.length === obtenerDiasDisponiblesParaCancelar(ausenciaACancelar).length
+                  ? 'Deseleccionar todos'
+                  : 'Seleccionar todos'}
+              </Button>
+
+              {/* Motivo */}
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Motivo de cancelación"
+                value={motivoCancelacion}
+                onChange={(e) => setMotivoCancelacion(e.target.value)}
+                placeholder="Ej: Ya me siento mejor, cambio de planes..."
+                disabled={cancelando}
+                required
+              />
+            </>
+          )}
         </DialogContent>
-        <DialogActions sx={{display:'flex', justifyContent:'space-between',p:2, mt:-2}}>
+        <DialogActions sx={{ px: 3, pb: 2, display:'flex', justifyContent:'space-between' }}>
           <Button
             onClick={() => setDialogoCancelacion(false)}
             disabled={cancelando}
             color="primary"
             variant="outlined"
-            sx={{ textTransform: 'none', px: 2, py: 1.5 }}
+            sx={{ textTransform: 'none', p: 1, fontSize:'1.1rem' }}
           >
-            Cerrar
+            Volver
           </Button>
           <Button
             onClick={handleConfirmarCancelacion}
-            disabled={cancelando || !motivoCancelacion.trim()}
+            disabled={cancelando || !motivoCancelacion.trim() || diasACancelar.length === 0}
             variant="contained"
-            color="error"
-            sx={{ textTransform: 'none', px: 2, py: 1.5 }}
+            color="warning"
+            sx={{ textTransform: 'none', p: 1,fontSize:'1.1rem' }}
             startIcon={cancelando ? <CircularProgress size={20} color="inherit" /> : <CancelIcon />}
           >
-            {ausenciaACancelar?.estado === 'pendiente'
-              ? (cancelando ? 'Eliminando...' : 'Eliminar')
-              : (cancelando ? 'Cancelando...' : 'Cancelar')
-            }
+            {cancelando ? 'Cancelando...' : `Cancelar ${diasACancelar.length} ${diasACancelar.length===1 ? 'día':'días'} `}
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Diálogo de eliminación */}
+      <Dialog
+        open={dialogoEliminacion && ausenciaAEliminar !== null}
+        onClose={() => !eliminando && setDialogoEliminacion(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          🗑️ Eliminar {ausenciaAEliminar?.tipo === 'baja' ? 'baja' : 'permiso'}
+        </DialogTitle>
+        <DialogContent>
+          {ausenciaAEliminar && (
+            <Alert severity="error">
+              <Typography variant="body2" mb={1}>
+                ¿Estás seguro de que quieres <strong>eliminar permanentemente</strong> esta ausencia?
+              </Typography>
+              <Typography variant="body2" fontWeight={600}>
+                {ausenciaAEliminar.tipo === 'baja' ? 'Baja' : 'Permiso'}: {ausenciaAEliminar.motivo}
+              </Typography>
+              <Typography variant="caption" display="block">
+                {ausenciaAEliminar.fechasActuales.length} día(s) • {formatearFechaCorta(ausenciaAEliminar.fechasActuales[0])}
+              </Typography>
+              <Typography variant="body2" color="error" mt={1} fontStyle="italic">
+                Esta acción no se puede deshacer.
+              </Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setDialogoEliminacion(false)}
+            disabled={eliminando}
+            color="primary"
+            variant="outlined"
+            sx={{ textTransform: 'none', px: 2, py: 1.5 }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmarEliminacion}
+            disabled={eliminando}
+            variant="contained"
+            color="error"
+            sx={{ textTransform: 'none', px: 2, py: 1.5 }}
+            startIcon={eliminando ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
+          >
+            {eliminando ? 'Eliminando...' : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </>
   );
 };

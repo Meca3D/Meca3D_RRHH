@@ -18,18 +18,18 @@ import { useVacacionesStore } from '../../../stores/vacacionesStore';
 
 const GestionAusencias = () => {
   const navigate = useNavigate();
-  const { solicitudesPendientes } = useAdminStats();
+  const { permisosPendientes } = useAdminStats();
 
 
   const quickActions = [
     {
       id: 'pendientes',
-      title: 'Ausencias Pendientes',
+      title: 'Permisos Pendientes',
       description: 'Ausencias pendientes de revisar',
       icon: AssignmentLateOutlinedIcon,
       route: '/admin/ausencias/pendientes',
-      color: 'naranja.main',
-      bgColor: 'naranja.fondo',
+      color: 'purpura.main',
+      bgColor: 'purpura.fondo',
     },
     {
       id: 'historial',
@@ -90,7 +90,7 @@ const GestionAusencias = () => {
             <Box display="flex" alignItems="center" gap={1}>
            <Typography variant="h6" textAlign="center" color="naranja.main" fontWeight="bold">{}
            </Typography>
-           <Typography variant="body1" textAlign="center" color="naranja.main" fontWeight="bold">Ausencias Pendientes: <strong>{solicitudesPendientes}</strong>
+           <Typography variant="body1" textAlign="center" color="naranja.main" fontWeight="bold">Permisos Pendientes: <strong>{permisosPendientes}</strong>
            </Typography>
            </Box>
                          

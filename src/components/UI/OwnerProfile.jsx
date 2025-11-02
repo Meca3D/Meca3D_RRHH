@@ -204,6 +204,7 @@ const OwnerProfile = ({ open, onClose }) => {
       }
     } finally {
       setLoading(false);
+      setEditMode(false);
     }
   };
 

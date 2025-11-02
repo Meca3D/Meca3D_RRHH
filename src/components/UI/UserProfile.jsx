@@ -186,6 +186,7 @@ const UserProfile = ({ open, onClose }) => {
         newPassword: '',
         confirmPassword: ''
       });
+      setEditMode(false);
       
     } catch (error) {
       if (error.message=="Firebase: Error (auth/invalid-credential)."){

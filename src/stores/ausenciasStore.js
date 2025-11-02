@@ -1,10 +1,10 @@
 // stores/ausenciasStore.js
 
 import { create } from 'zustand';
-import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, setDoc, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuthStore } from './authStore';
-import { formatYMD } from '../utils/dateUtils';
+import { formatYMD, esFechaPasadaOHoy } from '../utils/dateUtils';
 
 export const useAusenciasStore = create((set, get) => {
   let unsubscribeAusencias = null;
@@ -21,8 +21,8 @@ export const useAusenciasStore = create((set, get) => {
     motivosPermisos: [
       'Hospitalización',
       'Operación Menor',
-      'Prueba Médica',
       'Muerte de familiar',
+      'Prueba Médica',
       'Lactancia',
       'Matrimonio',
       'Mudanza',
@@ -32,6 +32,7 @@ export const useAusenciasStore = create((set, get) => {
 
     motivosBajas: [
       'Enfermedad',
+      'Operación',
       'Accidente',
       'Paternidad/Maternidad',
       'Otros'
@@ -85,6 +86,7 @@ export const useAusenciasStore = create((set, get) => {
         throw e;
       }
     },
+
 
     // Cargar ausencias (con o sin filtro por usuario)
     loadAusencias: (userEmail = null) => {
@@ -151,33 +153,21 @@ export const useAusenciasStore = create((set, get) => {
 
     // Evaluar auto-aprobación según configuración
     evaluarAutoAprobacion: (ausencia) => {
+      // LAS BAJAS SIEMPRE SE AUTO-APRUEBAN (justificante médico obligatorio)
+      if (ausencia.tipo === 'baja') {
+        return { aplicar: true, motivo: 'Bajas médicas se aprueban automáticamente' };
+      }
+
+      // PERMISOS: dependen de la configuración
       const { configAusencias } = get();
-
       if (!configAusencias?.autoAprobar?.habilitado) {
-        return { aplicar: false, motivo: 'Auto-aprobación deshabilitada' };
+        return { aplicar: false, motivo: 'Auto-aprobación de permisos deshabilitada' };
       }
 
-      const modo = configAusencias.autoAprobar.modo;
-
-      // Modo: todas
-      if (modo === 'todas') {
-        return { aplicar: true, motivo: 'ok' };
-      }
-
-      // Modo: solo bajas
-      if (modo === 'soloBajas') {
-        const aplicar = ausencia.tipo === 'baja';
-        return { aplicar, motivo: aplicar ? 'ok' : 'Solo se auto-aprueban bajas' };
-      }
-
-      // Modo: solo permisos
-      if (modo === 'soloPermisos') {
-        const aplicar = ausencia.tipo === 'permiso';
-        return { aplicar, motivo: aplicar ? 'ok' : 'Solo se auto-aprueban permisos' };
-      }
-
-      return { aplicar: false, motivo: 'Modo no reconocido' };
+      // Si la auto-aprobación está habilitada, aprobar permisos
+      return { aplicar: true, motivo: 'Auto-aprobación de permisos activada' };
     },
+
 
     // Crear nueva ausencia
     crearAusencia: async (ausenciaData) => {
@@ -196,12 +186,18 @@ export const useAusenciasStore = create((set, get) => {
 
         const nuevaAusencia = {
           ...ausenciaData,
+          fechasActuales: [...ausenciaData.fechas],
           fechaSolicitud: formatYMD(new Date()),
           estado: resAuto.aplicar ? 'aprobado' : 'pendiente',
-          comentariosAdmin: resAuto.aplicar 
-            ? (get().configAusencias?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') 
-            : '',
+          comentariosAdmin: 
+            ausenciaData.tipo==='baja'
+              ? 'Baja registrada correctamente'   
+              :resAuto.aplicar 
+                ? (get().configAusencias?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') 
+                : '',
           fechaAprobacionDenegacion: resAuto.aplicar ? formatYMD(new Date()) : '',
+          ediciones: [],
+          cancelaciones: [],
           createdAt: new Date(),
           updatedAt: new Date()
         };
@@ -215,32 +211,36 @@ export const useAusenciasStore = create((set, get) => {
           const { sendNotification, userProfile } = useAuthStore.getState();
           const { formatearNombre } = await import('../components/Helpers');
           const nombreSolicitante = formatearNombre(userProfile?.nombre || ausenciaData.solicitante);
-
+          const baja = ausenciaData.tipo==='baja'
           if (resAuto.aplicar) {
             // Auto-aprobada: notificar al solicitante
             await sendNotification({
               empleadoEmail: ausenciaData.solicitante,
-              title: `✅ ${ausenciaData.tipo === 'baja' ? 'Baja aprobada' : 'Permiso aprobado'}`,
-              body: `Tu solicitud de ${ausenciaData.tipo} (${ausenciaData.motivo}) ha sido aprobada`,
+              title: `✅ ${baja ? 'Baja registrada' : 'Permiso aprobado'}`,
+              body: `Confirmamos que tu ${ausenciaData.tipo} (${ausenciaData.motivo}) ha sido ${baja ? 'registrada con éxito' : 'aprobado por RR.HH.'}.\n\nPuedes considerar tu ausencia confirmada.`,
               url: '/ausencias/MisAusencias',
               type: 'ausencia_aprobada'
             });
 
             // Notificar también a admins (info)
-            await fetch('/.netlify/functions/notifyAdmins', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                solicitante: ausenciaData.solicitante,
-                nombreSolicitante: nombreSolicitante,
-                tipo: ausenciaData.tipo,
-                motivo: ausenciaData.motivo,
-                comentariosSolicitante: ausenciaData.comentariosSolicitante,
-                diasSolicitados: ausenciaData.fechas.length,
-                accion: 'ausencia_auto_aprobada',
-                mensaje: `Se a autoaprobado una solicitud de ${ausenciaData.tipo} (${ausenciaData.motivo}).\n\n💬 ${nombreSolicitante}: ${ausenciaData.comentariosSolicitante}`
-              })
-            });
+            const mensajeAdmin = ausenciaData.tipo === 'baja'
+              ? `${nombreSolicitante} ha registrado una baja: (${ausenciaData.motivo})\n\n📅 ${ausenciaData.fechas.length} día(s)\n\n💬 ${ausenciaData.comentariosSolicitante || 'Sin comentarios'}`
+              : `${nombreSolicitante} ha solicitado un permiso: (${ausenciaData.motivo}) - Auto-aprobado por configuración.\n\n📅 ${ausenciaData.fechas.length} día(s)\n\n💬 ${ausenciaData.comentariosSolicitante || 'Sin comentarios'}`;
+
+          await fetch('/.netlify/functions/notifyAdmins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              solicitante: ausenciaData.solicitante,
+              nombreSolicitante: nombreSolicitante,
+              tipo: ausenciaData.tipo,
+              motivo: ausenciaData.motivo,
+              comentariosSolicitante: ausenciaData.comentariosSolicitante,
+              diasSolicitados: ausenciaData.fechas.length,
+              accion: ausenciaData.tipo === 'baja' ? 'baja_registrada' : 'permiso_auto_aprobado',
+              mensaje: mensajeAdmin
+            })
+          });
           } else {
             // Pendiente: notificar a admins para revisión
             await fetch('/.netlify/functions/notifyAdmins', {
@@ -358,87 +358,6 @@ export const useAusenciasStore = create((set, get) => {
       }
     },
 
-    // Cancelar ausencia
-    cancelarAusencia: async (ausencia, motivoCancelacion, esAdmin = false) => {
-      try {
-        if (!motivoCancelacion || motivoCancelacion.trim() === '') {
-          throw new Error('Debes proporcionar un motivo para la cancelación');
-        }
-
-        const ausenciaRef = doc(db, 'AUSENCIAS', ausencia.id);
-        const motivo = esAdmin 
-          ? ('Admin: ' + motivoCancelacion.trim()) 
-          : motivoCancelacion.trim();
-
-        await updateDoc(ausenciaRef, {
-          estado: 'cancelado',
-          fechaCancelacion: formatYMD(new Date()),
-          motivoCancelacion: motivo,
-          updatedAt: new Date()
-        });
-
-        // Notificaciones según quién canceló
-        try {
-          const { sendNotification, userProfile } = useAuthStore.getState();
-          const { formatearNombre } = await import('../components/Helpers');
-          const nombreSolicitante = formatearNombre(userProfile?.nombre || ausencia.solicitante);
-
-          if (esAdmin && ausencia.solicitante !== useAuthStore.getState().user?.email) {
-            // Admin cancela → notificar al empleado
-            await sendNotification({
-              empleadoEmail: ausencia.solicitante,
-              title: `⚠️ ${ausencia.tipo === 'baja' ? 'Baja cancelada' : 'Permiso cancelado'}`,
-              body: `Tu ${ausencia.tipo === 'baja' ? 'Baja ha sido cancelada' : 'Permiso ha sido cancelado'} por administración.\n\n💬 Motivo: ${motivoCancelacion}`,
-              url: '/ausencias/MisAusencias',
-              type: 'ausencia_cancelada_admin'
-            });
-          } else if (!esAdmin) {
-            // Trabajador cancela → notificar a admins
-            await fetch('/.netlify/functions/notifyAdmins', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                solicitante: ausencia.solicitante,
-                nombreSolicitante: nombreSolicitante,
-                tipo: ausencia.tipo,
-                motivo: ausencia.motivo,
-                accion: 'cancelacion_ausencia',
-                mensaje: `${nombreSolicitante} ha cancelado su ${ausencia.tipo}.\n\n💬 Motivo: ${motivoCancelacion}`
-              })
-            });
-          }
-        } catch (notifError) {
-          console.error('Error enviando notificación:', notifError);
-        }
-
-        return true;
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
-      }
-    },
-
-    // Eliminar ausencia (solo pendientes)
-    eliminarAusencia: async (ausenciaId, ausencia) => {
-      try {
-        if (ausencia.estado !== 'pendiente') {
-          throw new Error('Solo se pueden eliminar ausencias pendientes');
-        }
-
-        const ausenciaRef = doc(db, 'AUSENCIAS', ausenciaId);
-        await updateDoc(ausenciaRef, {
-          estado: 'eliminado',
-          fechaEliminacion: formatYMD(new Date()),
-          updatedAt: new Date()
-        });
-
-        return true;
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
-      }
-    },
-
     // Obtener ausencia completa por ID
     obtenerAusenciaCompleta: async (ausenciaId) => {
       try {
@@ -473,6 +392,334 @@ export const useAusenciasStore = create((set, get) => {
           'Ayudante de Taller'
         ];
     },
+
+    // Añadir días a una ausencia existente
+    añadirDiasAusencia: async (ausenciaId, nuevasFechas, motivoEdicion, ausenciaOriginal, esAdmin) => {
+      try {
+        const { userProfile} = useAuthStore.getState();
+        
+        // Validar que haya nuevas fechas
+        if (!nuevasFechas || nuevasFechas.length === 0) {
+          throw new Error('Debes añadir al menos una fecha nueva');
+        }
+        
+        // Combinar fechasActuales con las nuevas (sin duplicados)
+        const fechasActualizadas = [...new Set([...ausenciaOriginal.fechasActuales, ...nuevasFechas])];
+
+        
+        const nuevaEdicion = {
+          fechaEdicion: formatYMD(new Date()),
+          fechasAgregadas: nuevasFechas,
+          motivoEdicion: motivoEdicion || '',
+          editadoPor: userProfile?.nombre || 'unknown'
+        };
+        
+        const ausenciaRef = doc(db, 'AUSENCIAS', ausenciaId);
+        await updateDoc(ausenciaRef, {
+          fechasActuales: fechasActualizadas,
+          ediciones: [...(ausenciaOriginal.ediciones || []), nuevaEdicion],
+          updatedAt: new Date()
+        });
+        
+        // Notificar según quién editó
+        try {
+          const { sendNotification, userProfile } = useAuthStore.getState();
+          const { formatearNombre } = await import('../components/Helpers');
+          
+          if (esAdmin) {
+            // Admin editó → notificar al empleado
+            await sendNotification({
+              empleadoEmail: ausenciaOriginal.solicitante,
+              title: `📝 ${ausenciaOriginal.tipo === 'baja' ? 'Baja' : 'Permiso'} modificado por administración`,
+              body: `Se añadieron ${nuevasFechas.length} día(s) a tu ${ausenciaOriginal.tipo}`,
+              url: '/ausencias/MisAusencias',
+              type: 'ausencia_editada_admin'
+            });
+          } else {
+            // Empleado añadió días → notificar a admins
+            const nombreSolicitante = formatearNombre(userProfile?.nombre || ausenciaOriginal.solicitante);
+            
+            await fetch('/.netlify/functions/notifyAdmins', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                solicitante: ausenciaOriginal.solicitante,
+                nombreSolicitante: nombreSolicitante,
+                tipo: ausenciaOriginal.tipo,
+                motivo: ausenciaOriginal.motivo,
+                diasSolicitados: nuevasFechas.length,
+                accion: 'edicion_ausencia',
+                mensaje: `${nombreSolicitante} ha añadido ${nuevasFechas.length} día(s) a su ${ausenciaOriginal.tipo}.\n💬 Motivo: ${motivoEdicion || 'No especificado'}`
+              })
+            });
+          }
+        } catch (notifError) {
+          console.error('Error enviando notificación:', notifError);
+        }
+        
+        return true;
+      } catch (error) {
+        set({ error: error.message });
+        throw error;
+      }
+    },
+
+        // Cancelar días específicos de una ausencia (parcial o total)
+    cancelarDiasAusencia: async (ausenciaId, diasACancelar, motivoCancelacion, ausencia, esAdmin=false) => {
+      try {
+        const { userProfile } = useAuthStore.getState();
+        
+        if (!motivoCancelacion || motivoCancelacion.trim() === '') {
+          throw new Error('Debes proporcionar un motivo para la cancelación');
+        }
+        
+        if (!diasACancelar || diasACancelar.length === 0) {
+          throw new Error('Debes seleccionar al menos un día para cancelar');
+        }
+        
+        const fechasRestantes = ausencia.fechasActuales.filter(f => !diasACancelar.includes(f));
+        const esCancelacionTotal = fechasRestantes.length === 0;
+        
+        // Crear objeto de cancelación (mismo formato para parcial y total)
+        const nuevaCancelacion = {
+          fechaCancelacion: formatYMD(new Date()),
+          diasCancelados: diasACancelar,
+          motivoCancelacion: motivoCancelacion.trim(),
+          canceladoPor: userProfile?.nombre || 'unknown',
+          esCancelacionTotal: esCancelacionTotal // ⬅️ Indicador para el historial
+        };
+        
+        const ausenciaRef = doc(db, 'AUSENCIAS', ausenciaId);
+        
+        // Actualizar documento (misma lógica para parcial y total)
+        await updateDoc(ausenciaRef, {
+          estado: esCancelacionTotal ? 'cancelado' : ausencia.estado, // Solo cambiar estado si es total
+          fechasActuales: fechasRestantes,
+          cancelaciones: [...(ausencia.cancelaciones || []), nuevaCancelacion],
+          updatedAt: new Date()
+        });
+        
+        // Notificaciones
+        try {
+          const { sendNotification, userProfile } = useAuthStore.getState();
+          const { formatearNombre } = await import('../components/Helpers');
+          const nombreSolicitante = formatearNombre(userProfile?.nombre || ausencia.solicitante);
+          
+          if (esAdmin && ausencia.solicitante !== userProfile?.email) {
+            // Admin canceló → notificar al empleado
+            await sendNotification({
+              empleadoEmail: ausencia.solicitante,
+              title: `⚠️ ${ausencia.tipo === 'baja' ? 'Baja' : 'Permiso'} ${esCancelacionTotal ? 'cancelado' : 'modificado'}`,
+              body: `${esCancelacionTotal ? 'Tu ausencia ha sido cancelada completamente' : `Se cancelaron ${diasACancelar.length} día(s) de tu ${ausencia.tipo}`} por el administrador.\n💬 Motivo: ${motivoCancelacion}`,
+              url: '/ausencias/solicitudes',
+              type: esCancelacionTotal ? 'ausencia_cancelada_total_admin' : 'ausencia_cancelada_parcial_admin'
+            });
+          } else {
+            // Empleado canceló → notificar a admins
+            await fetch('/.netlify/functions/notifyAdmins', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                solicitante: ausencia.solicitante,
+                nombreSolicitante: nombreSolicitante,
+                tipo: ausencia.tipo,
+                motivo: ausencia.motivo,
+                accion: esCancelacionTotal ? 'cancelacion_total_ausencia' : 'cancelacion_parcial_ausencia',
+                mensaje: `${nombreSolicitante} ha ${esCancelacionTotal ? 'cancelado completamente' : 'cancelado parcialmente'} su ${ausencia.tipo}.\n📅 Días cancelados: ${diasACancelar.length}\n💬 Motivo: ${motivoCancelacion}`
+              })
+            });
+          }
+        } catch (notifError) {
+          console.error('Error enviando notificación:', notifError);
+        }
+        
+        return true;
+      } catch (error) {
+        set({ error: error.message });
+        throw error;
+      }
+    },
+
+    // Eliminar ausencia completamente (solo si no tiene días pasados)
+    eliminarAusencia: async (ausenciaId, ausencia) => {
+      try {
+        
+        // Verificar que no tenga días pasados
+        const tieneDiasPasados = ausencia.fechasActuales.some(f => esFechaPasadaOHoy(f));
+        if (tieneDiasPasados) {
+          throw new Error('No se puede eliminar una ausencia con días pasados. Usa cancelar en su lugar.');
+        }
+        
+        const ausenciaRef = doc(db, 'AUSENCIAS', ausenciaId);
+        await deleteDoc(ausenciaRef);
+        
+        // Notificar a admins
+        try {
+          const { userProfile } = useAuthStore.getState();
+          const { formatearNombre } = await import('../components/Helpers');
+          const nombreSolicitante = formatearNombre(userProfile?.nombre || ausencia.solicitante);
+          
+          await fetch('/.netlify/functions/notifyAdmins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              solicitante: ausencia.solicitante,
+              nombreSolicitante: nombreSolicitante,
+              tipo: ausencia.tipo,
+              motivo: ausencia.motivo,
+              accion: 'eliminacion_ausencia',
+              mensaje: `${nombreSolicitante} ha eliminado su solicitud de ${ausencia.tipo} (${ausencia.motivo}).`
+            })
+          });
+        } catch (notifError) {
+          console.error('Error enviando notificación:', notifError);
+        }
+        
+        return true;
+      } catch (error) {
+        set({ error: error.message });
+        throw error;
+      }
+    },
+
+    // Obtener el estado real de cada fecha considerando el orden temporal
+    calcularEstadoRealFechas: (ausencia) => {
+      if (!ausencia.fechas) return { activas: [], canceladas: [], agregadas: [] };
+      
+      // Crear un registro temporal con todas las fechas originales
+      const registroFechas = {};
+      
+      ausencia.fechas.forEach(fecha => {
+        registroFechas[fecha] = {
+          estado: 'original',
+          ultimaAccion: ausencia.fechaSolicitud || '1970-01-01',
+          accionTipo: 'solicitud'
+        };
+      });
+      
+      // Crear un array con TODAS las acciones (ediciones y cancelaciones) ordenadas cronológicamente
+      const todasLasAcciones = [];
+      
+      // Añadir ediciones
+      if (ausencia.ediciones && ausencia.ediciones.length > 0) {
+        ausencia.ediciones.forEach(edicion => {
+          todasLasAcciones.push({
+            tipo: 'edicion',
+            fecha: edicion.fechaEdicion,
+            fechasAfectadas: edicion.fechasAgregadas
+          });
+        });
+      }
+      
+      // Añadir cancelaciones
+      if (ausencia.cancelaciones && ausencia.cancelaciones.length > 0) {
+        ausencia.cancelaciones.forEach(cancelacion => {
+          todasLasAcciones.push({
+            tipo: 'cancelacion',
+            fecha: cancelacion.fechaCancelacion,
+            fechasAfectadas: cancelacion.diasCancelados
+          });
+        });
+      }
+      
+      // Ordenar TODAS las acciones cronológicamente
+      todasLasAcciones.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+      
+      // Procesar las acciones en orden cronológico
+      todasLasAcciones.forEach(accion => {
+        accion.fechasAfectadas.forEach(fecha => {
+          if (accion.tipo === 'edicion') {
+            // AÑADIR fecha
+            if (!registroFechas[fecha]) {
+              // Fecha completamente nueva
+              registroFechas[fecha] = {
+                estado: 'agregada',
+                ultimaAccion: accion.fecha,
+                accionTipo: 'edicion'
+              };
+            } else if (registroFechas[fecha].estado === 'cancelada') {
+              // Reactivar fecha previamente cancelada
+              registroFechas[fecha] = {
+                estado: 'reactivada',
+                ultimaAccion: accion.fecha,
+                accionTipo: 'edicion'
+              };
+            }
+            // Si ya existe y no está cancelada, no hacer nada (ya está activa)
+          } else if (accion.tipo === 'cancelacion') {
+            // CANCELAR fecha
+            if (registroFechas[fecha]) {
+              // Marcar como cancelada (sobrescribe cualquier estado anterior)
+              registroFechas[fecha] = {
+                estado: 'cancelada',
+                ultimaAccion: accion.fecha,
+                accionTipo: 'cancelacion'
+              };
+            } else {
+              // Fecha que no conocíamos (por si acaso)
+              registroFechas[fecha] = {
+                estado: 'cancelada',
+                ultimaAccion: accion.fecha,
+                accionTipo: 'cancelacion'
+              };
+            }
+          }
+        });
+      });
+      
+      // Clasificar fechas según su estado final
+      const activas = [];
+      const canceladas = [];
+      const agregadas = [];
+      
+      Object.entries(registroFechas).forEach(([fecha, info]) => {
+        if (info.estado === 'cancelada') {
+          canceladas.push(fecha);
+        } else if (info.estado === 'agregada') {
+          agregadas.push(fecha);
+        } else if (info.estado === 'reactivada' || info.estado === 'original') {
+          activas.push(fecha);
+        }
+      });
+      
+      return { activas, canceladas, agregadas };
+    },
+
+
+    // Utilidades para obtener días cancelados y editados
+    obtenerDiasCancelados: (cancelaciones) => {
+      if (!cancelaciones || cancelaciones.length === 0) return [];
+      return cancelaciones.flatMap(c => c.diasCancelados);
+    },
+
+    obtenerDiasAgregados: (ediciones) => {
+      if (!ediciones || ediciones.length === 0) return [];
+      return ediciones.flatMap(e => e.fechasAgregadas);
+    },
+
+    // Obtener días disponibles para cancelar (solo futuros de fechasActuales)
+    obtenerDiasDisponiblesParaCancelar: (ausencia) => {
+      if (!ausencia.fechasActuales) return [];
+      return ausencia.fechasActuales.filter(f => !esFechaPasadaOHoy(f));
+    },
+
+    // Verificar si ausencia tiene días pasados
+    tieneDiasPasados: (ausencia) => {
+      if (!ausencia.fechasActuales) return false;
+      return ausencia.fechasActuales.some(f => esFechaPasadaOHoy(f));
+    },
+
+    // Calcular días totales (originales vs actuales)
+    calcularDiasTotales: (ausencia) => {
+      return {
+        originales: ausencia.fechas?.length || 0,
+        actuales: ausencia.fechasActuales?.length || 0,
+        cancelados: get().obtenerDiasCancelados(ausencia.cancelaciones).length,
+        agregados: get().obtenerDiasAgregados(ausencia.ediciones).length
+      };
+    },
+
+
 
     // Limpiar listeners al desmontar
     cleanup: () => {

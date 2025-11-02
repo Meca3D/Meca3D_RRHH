@@ -52,12 +52,18 @@ export const handler = async (event) => {
     }
 
     // Definir título según acción
-    const titles = {
-      'cancelacion': '🔴 Cancelación de vacaciones',
-      'cancelacion_parcial': '🟡 Cancelación parcial de vacaciones',
-      'solicitud': '📬 Nueva solicitud de vacaciones',
-      comentariosSolicitante: ausenciaData.comentariosSolicitante,
-    };
+// Definir título según acción
+const titles = {
+  'cancelacion': '🔴 Cancelación de vacaciones',
+  'cancelacion_parcial': '🟡 Cancelación parcial de vacaciones',
+  'solicitud': '📬 Nueva solicitud de vacaciones',
+  'nueva_ausencia': '📋 Nueva solicitud de permiso',
+  'baja_registrada': '🏥 Baja médica registrada',
+  'permiso_auto_aprobado': '✅ Permiso auto-aprobado',
+  'ausencia_auto_aprobada': '✅ Ausencia auto-aprobada',
+  'cancelacion_ausencia': '⚠️ Cancelación de ausencia'
+};
+
 
     const notificationTitle = titles[accion] || titles.solicitud;
     // Enviar notificación a cada admin

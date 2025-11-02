@@ -16,6 +16,7 @@ import {
   Save
 } from '@mui/icons-material';
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
+import { useAusenciasStore } from '../../../stores/ausenciasStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 
@@ -23,6 +24,9 @@ const ConfiguracionVacacionesAdmin = () => {
   const navigate = useNavigate();
   const { configVacaciones, loadConfigVacaciones, updateConfigVacaciones } = useVacacionesStore();
   const { showSuccess, showError} = useUIStore()
+  const { configAusencias, loadConfigAusencias, updateConfigAusencias } = useAusenciasStore();
+  const [localCfgAusencias, setLocalCfgAusencias] = useState(null);
+
 
   const [localCfg, setLocalCfg] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -30,9 +34,13 @@ const ConfiguracionVacacionesAdmin = () => {
 
 
   useEffect(() => {
-    const unsub = loadConfigVacaciones();
-    return () => { if (typeof unsub === 'function') unsub(); };
-  }, [loadConfigVacaciones]);
+    const unsubVac = loadConfigVacaciones();
+    const unsubAus = loadConfigAusencias(); 
+    return () => { 
+      if (typeof unsubVac === 'function') unsubVac();
+      if (typeof unsubAus === 'function') unsubAus(); 
+    };
+  }, [loadConfigVacaciones, loadConfigAusencias]); 
 
   useEffect(() => {
     if (configVacaciones) {
@@ -49,6 +57,27 @@ const ConfiguracionVacacionesAdmin = () => {
       });
     }
   }, [configVacaciones]);
+
+  // Inicializar configuración de ausencias
+  useEffect(() => {
+    if (configAusencias) {
+      setLocalCfgAusencias(JSON.parse(JSON.stringify(configAusencias)));
+    } else {
+      setLocalCfgAusencias({
+        autoAprobar: { 
+          habilitado: false, 
+          mensaje: 'Permiso aprobado automáticamente por política de empresa.' 
+        }
+      });
+    }
+  }, [configAusencias]);
+
+  const setAutoAusencias = (path, value) => {
+    setLocalCfgAusencias(prev => ({
+      ...prev,
+      autoAprobar: { ...prev.autoAprobar, [path]: value }
+    }));
+  };
 
   const setAuto = (path, value) => {
     setLocalCfg(prev => ({
@@ -79,19 +108,26 @@ const ConfiguracionVacacionesAdmin = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const resultado = await updateConfigVacaciones(localCfg);
-      if (resultado) {
-      showSuccess('Configuración guardada con éxito')
-      navigate('/admin/configuracion')
+      // Guardar configuración de vacaciones
+      const resultadoVac = await updateConfigVacaciones(localCfg);
+      
+      // Guardar configuración de ausencias
+      const resultadoAus = await updateConfigAusencias(localCfgAusencias);
+      
+      if (resultadoVac && resultadoAus) {
+        showSuccess('Configuración guardada con éxito');
+        navigate('/admin/configuracion');
       } else {
-      showError('Error al guardar la configuración')
+        showError('Error al guardar la configuración');
       }
     } finally {
       setSaving(false);
     }
   };
 
+
   if (!localCfg) return null;
+  if (!localCfgAusencias) return null;
 
   const umbrales = Object.entries(localCfg.cobertura?.umbrales || {});
 
@@ -141,7 +177,7 @@ const ConfiguracionVacacionesAdmin = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
                 }}
             >
-                Vacaciones y Cobertura
+                Vacaciones, Permisos y Cobertura
             </Typography>
             </Box>
             <IconButton
@@ -252,21 +288,69 @@ const ConfiguracionVacacionesAdmin = () => {
                       multiline
                       minRows={3}
                       value={localCfg.autoAprobar?.mensaje || ''}
+                      disabled={!localCfg?.autoAprobar?.habilitado}
                       onChange={(e) => setAuto('mensaje', e.target.value)}
                       placeholder="Ej: Aprobado automáticamente según política activa sin conflictos."
+                      helperText={
+                        localCfg?.autoAprobar?.habilitado
+                          ? <strong>"Este mensaje se registrará en 'Comentarios Administración' cuando una solicitud se auto-apruebe"</strong>
+                          : null
+                      }
                       sx={{mt:1}}
                     />
                   </Grid>
                 </Grid>
-
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography fontSize='1rem'>
-                  La auto-aprobación se aplica en el momento de crear la solicitud y registra el mensaje indicado en “Comentarios Admin”
-                  </Typography>
-                </Alert>
               </CardContent>
             </Card>
           </Grid>
+
+          {/* Card de Ausencias (Permisos) */}
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Card elevation={2} sx={{ }}>
+              <CardContent>
+                {/* Auto-aprobación de permisos */}
+                  <Box display='flex' justifyContent='center' alignItems='center' sx={{width:'100%', bgcolor:'grey.100',  mb:2}}>
+                    <Typography fontSize='1.75rem' fontWeight={700} sx={{ textAlign:'center'}}>
+                    Permisos
+                    </Typography>
+                  </Box>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ThumbUpAlt sx={{ color: '#9C27B0' }} />
+                      Auto-aprobación
+                    </Typography>
+
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={localCfgAusencias?.autoAprobar?.habilitado || false}
+                          onChange={(e) => setAutoAusencias('habilitado', e.target.checked)}
+                        />
+                      }
+                      label="Habilitar auto-aprobación"
+                    />
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Mensaje de auto-aprobación */}
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={2}
+                      label="Mensaje de auto-aprobación"
+                      value={localCfgAusencias?.autoAprobar?.mensaje || ''}
+                      onChange={(e) => setAutoAusencias('mensaje', e.target.value)}
+                      placeholder="Ej: Permiso aprobado automáticamente según política de empresa."
+                      disabled={!localCfgAusencias?.autoAprobar?.habilitado}
+                      helperText={
+                        localCfgAusencias?.autoAprobar?.habilitado
+                          ? <strong>"Este mensaje se registrará en 'Comentarios Administración' cuando un permiso se auto-apruebe"</strong>
+                          : null
+                      }
+                    />
+              </CardContent>
+            </Card>
+          </Grid>
+
 
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
@@ -316,7 +400,7 @@ const ConfiguracionVacacionesAdmin = () => {
                 </Table>
                 <Alert severity='info'>
                    <Typography fontSize='1rem' sx={{ mb: 2 }}>
-                    Define el número de personas de vacaciones a la vez, que activa “posible conflicto” por puesto
+                    Define el número de personas ausentes a la vez, que activa “posible conflicto” por puesto
                   </Typography>
                 </Alert>
 
@@ -333,9 +417,9 @@ const ConfiguracionVacacionesAdmin = () => {
 
                 onClick={() => navigate('/admin')}
                 disabled={saving}
-                sx={{textTransform:'none', p:1.5}}
+                sx={{textTransform:'none', p:1}}
               >
-                <Typography fontSize='1.2rem' display='flex'>
+                <Typography fontSize='1.1rem' display='flex'>
                   Volver
                 </Typography>
               </Button>
@@ -346,15 +430,15 @@ const ConfiguracionVacacionesAdmin = () => {
 
                 onClick={handleSave}
                 disabled={saving}
-                sx={{textTransform:'none', p:1.5}}
+                sx={{textTransform:'none', p:1}}
               >
-                <Typography fontSize='1.2rem' display='flex' alignItems='center'>
-                 <Save sx={{fontSize:'1.5rem', mr:1}}/> {saving ? 'Guardando...' : 'Guardar cambios'}
+                <Typography fontSize='1.1rem' display='flex' alignItems='center'>
+                 <Save sx={{fontSize:'1.3rem', mr:1}}/> {saving ? 'Guardando...' : 'Guardar cambios'}
                 </Typography>
               </Button>
             </Box>
           </Grid>
-        </Grid>
+          </Grid>
       </Container>
     </>
   );

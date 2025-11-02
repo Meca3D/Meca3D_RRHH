@@ -63,7 +63,7 @@ import ConfiguracionHorasExtras from './components/HorasExtras/ConfiguracionHora
 import Ausencias from './components/Ausencias/Ausencias';
 import CrearAusencia from './components/Ausencias/CrearAusencia';
 import MisAusencias from './components/Ausencias/MisAusencias';
-import EditarAusencia from './components/Ausencias/EditarAusencia';
+import AñadirAusencia from './components/Ausencias/AñadirDiasAusencia';
 
 import LoadingScreen from './components/Layout/LoadingScreen';
 import { useAuthStore } from './stores/authStore';
@@ -129,7 +129,7 @@ const AppRoutes = () => {
         <Route path="/ausencias" element={<NoOwnerRoute><Ausencias /></NoOwnerRoute>} /> 
         <Route path="/ausencias/crear" element={<NoOwnerRoute><CrearAusencia /></NoOwnerRoute>} /> 
         <Route path="/ausencias/solicitudes" element={<NoOwnerRoute><MisAusencias /></NoOwnerRoute>} /> 
-        <Route path="/ausencias/editar/:ausenciaId" element={<NoOwnerRoute><EditarAusencia /></NoOwnerRoute>} /> 
+        <Route path="/ausencias/agregarDias/:ausenciaId" element={<NoOwnerRoute><AñadirAusencia /></NoOwnerRoute>} /> 
 
         {/* Rutas de Administración */}
         <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

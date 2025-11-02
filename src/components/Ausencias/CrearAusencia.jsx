@@ -95,7 +95,7 @@ const CrearAusencia = () => {
         comentariosAdmin: ''
       });
 
-      showSuccess('Solicitud de Ausencia creada correctamente');
+      showSuccess(tipo==='baja'?'Baja registrada correctamente':'Solicitud de Permiso enviada correctamente');
       navigate('/ausencias');
     } catch (err) {
       showError(`Error: ${err.message}`);
@@ -151,7 +151,7 @@ const CrearAusencia = () => {
               fontSize: { xs: '0.9rem', sm: '1rem' }
             }}
           >
-            Solicita un Permiso o una Baja
+            Pide un Permiso o Registra una Baja
           </Typography>
         </Box>
         <IconButton
@@ -169,17 +169,20 @@ const CrearAusencia = () => {
 
       <Container maxWidth="sm" sx={{ py: 3 }}>
         <Box component="form" onSubmit={handleSubmit}>
-          {/* Título */}
+          {tipo==='permiso' && (
           <Typography variant="h5" fontWeight={700} mb={2} textAlign="center">
             Solicitar {' '}
             <Box component="span" color="purpura.main">
               Permiso
-            </Box> 
-             {' '} o {' '}
+            </Box>
+            </Typography> )}
+          {tipo==='baja' && (
+          <Typography variant="h5" fontWeight={700} mb={2} textAlign="center">
+            Registrar {' '}
             <Box component="span" color="rojo.main">
               Baja
             </Box>
-          </Typography>
+          </Typography> )}
 
           {/* Card principal */}
           <Card elevation={2} sx={{ mb: 3 }}>

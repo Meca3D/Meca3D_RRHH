@@ -187,16 +187,16 @@ const AusenciasPendientes = () => {
                         {userData.nombre || ausencia.solicitante}
                         </Typography>
                         {userData.puesto && (
-                        <Typography variant="subtitle1" color="">
+                        <Typography variant="subtitle1" color="text.secondary" sx={{mt:-0.5}}>
                         {userData.puesto}
                         </Typography>
                         )}
                     </Box>
                         <Box sx={{ mb: 2, textAlign:"center" }}>
                           <Typography variant="body1"  gutterBottom>
-                           Solicitado: {formatearFechaCorta(ausencia.fechaSolicitud)}
+                           Solicitado el: {formatearFechaCorta(ausencia.fechaSolicitud)}
                           </Typography>
-              <Typography variant="body1" fontWeight={600}>
+              <Typography variant="body1" fontWeight={600} gutterBottom>
                 Días solicitados: {ausencia.fechas.length} día{ausencia.fechas.length !== 1 ? 's' : ''}
               </Typography>
   
@@ -227,7 +227,7 @@ const AusenciasPendientes = () => {
                       justifyContent: 'space-between',
                       cursor: 'pointer',
                       p: 1.5,
-                      mb:2,
+                      mb:1,
                       borderRadius: 2,
                       '&:hover': { bgcolor: 'azul.fondoFuerte' },
                     }}
@@ -238,13 +238,12 @@ const AusenciasPendientes = () => {
                     {ausenciaExpandida === ausencia.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                   </Box>
                   <Collapse in={ausenciaExpandida === ausencia.id}>
-                    <Grid container sx={{ mt: 1 }}>
+                    <Grid container sx={{mb:1}}>
                       {ordenarFechas(ausencia.fechas).map(fecha => (
-                        <Grid size={{xs:6, md:4}}>
-                        <Typography
-                          key={fecha}
-                          variant="body2"
-                          color="text.primary"
+                        <Grid key={fecha} size={{xs:4, md:3}}>
+                        <Typography                         
+                          fontSize='1rem'
+                          
                         >
                           • {formatearFechaCorta(fecha)}
                         </Typography>
@@ -257,7 +256,7 @@ const AusenciasPendientes = () => {
 
             {/* Comentarios del solicitante */}
             {ausencia.comentariosSolicitante && (
-                <Box sx={{ p: 1.5, bgcolor: '#f5f5f5', borderRadius: 2, borderLeft: `3px solid ${ausencia.tipo==="baja"?'red':'purple'}`}}>
+                <Box sx={{ mt:1, p: 1.5, bgcolor: '#f5f5f5', borderRadius: 2, borderLeft: `3px solid ${ausencia.tipo==="baja"?'red':'purple'}`}}>
                   <Typography variant="body1"  display="block" fontWeight={600}>
                     💬 Comentarios del solicitante:
                   </Typography>
@@ -279,11 +278,14 @@ const AusenciasPendientes = () => {
                   startIcon={<RejectIcon />}
                   onClick={() => handleAbrirDialogo(ausencia, 'rechazar')}
                   sx={{
-                      bgcolor: 'rojo.main',
-                      color: 'white',
-                      '&:hover': {
-                          bgcolor: 'rojo.oscuro',
-                          transform: 'scale(1.05)'
+                    py:1,
+                    px:2,
+                    fontSize:'1rem',
+                    bgcolor: 'rojo.main',
+                    color: 'white',
+                    '&:hover': {
+                        bgcolor: 'rojo.oscuro',
+                        transform: 'scale(1.05)'
                     },
                     transition: 'all 0.2s ease',
                     textTransform: 'none',
@@ -299,15 +301,18 @@ const AusenciasPendientes = () => {
                     startIcon={<CheckIcon />}
                     onClick={() => handleAbrirDialogo(ausencia, 'aprobar')}
                     sx={{
-                    bgcolor: 'verde.main',
-                    color: 'white',
-                    '&:hover': {
-                        bgcolor: 'verde.oscuro',
-                        transform: 'scale(1.05)'
-                    },
-                    transition: 'all 0.2s ease',
-                    textTransform: 'none',
-                    fontWeight: 600
+                      py:1,
+                      px:2,
+                      fontSize:'1rem',
+                      bgcolor: 'verde.main',
+                      color: 'white',
+                      '&:hover': {
+                          bgcolor: 'verde.oscuro',
+                          transform: 'scale(1.05)'
+                      },
+                      transition: 'all 0.2s ease',
+                      textTransform: 'none',
+                      fontWeight: 600
                     }}
                 >
                     Aprobar
@@ -335,7 +340,7 @@ const AusenciasPendientes = () => {
       <AppBar 
         sx={{ 
           overflow:'hidden',
-          background: 'linear-gradient(135deg, #7B1FA2 0%, #b02785ff 50%, #b02727ff 100%)',
+          background: 'linear-gradient(135deg, #8844a5ff 0%, #b740afff 50%, #a20ea8ff 100%)',
           boxShadow: '0 2px 10px rgba(251, 140, 0, 0.2)',
           zIndex: 1100
         }}
@@ -365,7 +370,7 @@ const AusenciasPendientes = () => {
                 lineHeight: 1.2
               }}
             >
-            Ausencias Pendientes
+            Permisos Pendientes
           </Typography>
           <Typography 
             variant="caption" 
@@ -374,7 +379,7 @@ const AusenciasPendientes = () => {
               fontSize: { xs: '0.9rem', sm: '1rem' }
             }}
           >
-            Aprueba/Deniega los Permisos y Bajas
+            Aprueba/Cancela los Permisos Laborales
           </Typography>
         </Box>
         <IconButton
@@ -392,16 +397,16 @@ const AusenciasPendientes = () => {
 
       <Container maxWidth="md" sx={{ py: 3 }}>
         {/* Botón de filtros */}
-        <Box display="flex" justifyContent="center" mb={2}>
+        <Card sx={{mb:2, p:1}}>
+        <Box display="flex" justifyContent="center" >
         <Button
-            variant="outlined"
+            fullWidth
             startIcon={<FilterListIcon />}
             endIcon={mostrarFiltros ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             onClick={() => setMostrarFiltros(!mostrarFiltros)}
             sx={{
-            borderColor: '#9C27B0',
-            color: '#9C27B0',
-            '&:hover': { bgcolor: '#f3e5f5', borderColor: '#7B1FA2' }
+              fontSize:"1.2rem",
+              color: '#9C27B0',
             }}
         >
             Filtros
@@ -410,8 +415,6 @@ const AusenciasPendientes = () => {
 
         {/* Panel de filtros colapsable */}
         <Collapse in={mostrarFiltros}>
-        <Card elevation={1} sx={{ mb: 3, bgcolor: '#f3e5f5' }}>
-            <CardContent>
             <Grid container spacing={2}>
                 {/* Filtro por empleado */}
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -428,22 +431,6 @@ const AusenciasPendientes = () => {
                         {formatearNombre(empleado)}
                         </MenuItem>
                     ))}
-                    </Select>
-                </FormControl>
-                </Grid>
-
-                {/* Filtro por tipo */}
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <FormControl fullWidth size="small">
-                    <InputLabel>Tipo</InputLabel>
-                    <Select
-                    value={filtroTipo}
-                    onChange={(e) => setFiltroTipo(e.target.value)}
-                    label="Tipo"
-                    >
-                    <MenuItem value="Todos">Todos</MenuItem>
-                    <MenuItem value="Permiso">🟣 Permisos</MenuItem>
-                    <MenuItem value="Baja">🔴 Bajas</MenuItem>
                     </Select>
                 </FormControl>
                 </Grid>
@@ -481,16 +468,15 @@ const AusenciasPendientes = () => {
                 </FormControl>
                 </Grid>
             </Grid>
-            </CardContent>
-        </Card>
         </Collapse>
+        </Card>
 
         {/* Lista de ausencias pendientes */}
         {ausenciasPendientes.length === 0 ? (
           <Box textAlign="center" py={6}>
             <EventBusyOutlinedIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h6" color="text.secondary" mb={1}>
-              No hay ausencias pendientes
+              No hay permisos pendientes
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Todas las solicitudes han sido revisadas

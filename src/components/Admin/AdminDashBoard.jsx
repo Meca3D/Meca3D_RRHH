@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useAdminStats } from '../../hooks/useAdminStats';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
+import { useAusenciasStore } from '../../stores/ausenciasStore';
 
 // Iconos
 import MenuIcon from '@mui/icons-material/Menu';
@@ -33,19 +34,24 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isOwner, loading, user} = useAuthStore();
   const { configVacaciones, loadConfigVacaciones, procesarSolicitudesCaducadas } = useVacacionesStore();
+  const { configAusencias, loadConfigAusencias } = useAusenciasStore();
   const {
     trabajadoresVacacionesHoy,
     trabajadoresVacacionesMañana,
     solicitudesPendientes,
+    permisosPendientes,
     autoAprobacionActiva,
     loadingStats,
   } = useAdminStats();
 
   useEffect(() => {
-    if (!configVacaciones) {
-    const unsub = loadConfigVacaciones();
-    return () => { if (typeof unsub === 'function') unsub(); }}
-  }, [loadConfigVacaciones]);
+    const unsubVac = loadConfigVacaciones();
+    const unsubAus = loadConfigAusencias(); 
+    return () => { 
+      if (typeof unsubVac === 'function') unsubVac();
+      if (typeof unsubAus === 'function') unsubAus(); 
+    };
+  }, [loadConfigVacaciones, loadConfigAusencias]); 
 
   useEffect(() => {
     const procesarCaducadas = async () => {
@@ -114,13 +120,22 @@ const AdminDashboard = () => {
       action: () => navigate('/admin/nominas')
     }, */
   {
-    title: solicitudesPendientes===1? 'Solicitud':'Solicitudes',
+    title: 'Vacaciones',
     value: loadingStats ? '...' : solicitudesPendientes.toString(),
-    subtitle: solicitudesPendientes===1? 'Pendiente':'Pendientes',
+    subtitle: 'Pendientes',
     icon: ListAltOutlinedIcon,
     color: 'naranja.main',
     bgColor: 'naranja.fondo',
     action: () => navigate('/admin/vacaciones/pendientes')
+  },
+    {
+    title: permisosPendientes===1? 'Permiso':'Permisos',
+    value: loadingStats ? '...' : permisosPendientes.toString(),
+    subtitle: permisosPendientes===1? 'Pendiente':'Pendientes',
+    icon: ListAltOutlinedIcon,
+    color: 'purpura.main',
+    bgColor: 'purpura.fondo',
+    action: () => navigate('/admin/ausencias/pendientes')
   },
   
   ];
@@ -338,22 +353,27 @@ const AdminDashboard = () => {
         <strong>{autoAprobacionActiva ? 'ON' : 'OFF'}</strong>
       </Typography>
       </Box>
-      <Typography fontSize='1rem'  sx={{mt:-0.5, fontWeight:'bold', fontStyle:'italic'}}>
-      {configVacaciones?.autoAprobar?.habilitado ? `Modo: ${
-        configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
-        configVacaciones.autoAprobar.modo === 'noVentas' ? 'Todas menos las ventas' :
-        configVacaciones.autoAprobar.modo === 'porHoras' ? `Solicitudes ≤ ${configVacaciones.autoAprobar.maxHoras} horas` :
-        configVacaciones.autoAprobar.modo === 'sinConflictos' ? 'Si no hay conflictos de cobertura' :
-        configVacaciones.autoAprobar.modo === 'porHorasYsinConflictos' ? `≤ ${configVacaciones.autoAprobar.maxHoras} horas y sin conflictos` :
-        ''
-      }` : ''}
+      {configVacaciones?.autoAprobar?.habilitado && (
+        <Box display="flex" justifyContent='space-between' alignItems="center" sx={{}}>
+        <Typography fontSize='1.1rem'  color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="600" fontStyle='italic'>
+        Modo:
+        </Typography>
+        <Typography fontSize='1.1rem' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="600" fontStyle='italic'>
+          {configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
+          configVacaciones.autoAprobar.modo === 'noVentas' ? 'Todas menos las ventas' :
+          configVacaciones.autoAprobar.modo === 'porHoras' ? `Solicitudes ≤ ${configVacaciones.autoAprobar.maxHoras} horas` :
+          configVacaciones.autoAprobar.modo === 'sinConflictos' ? 'Solo si no hay conflictos de cobertura' :
+          configVacaciones.autoAprobar.modo === 'porHorasYsinConflictos' ? `≤ ${configVacaciones.autoAprobar.maxHoras} horas y sin conflictos` :
+          ''}
+          </Typography>
+        </Box>
+      )}
+      <Box sx={{display:'flex', justifyContent:'space-between'}}>
+       <Typography fontSize='1.1rem'  alignItems='center' color={configAusencias?.autoAprobar?.habilitado  ?"azul.main": 'grey'} fontWeight="bold">
+        Auto-Aprobación Permisos: 
       </Typography>
-      <Box sx={{display:'flex', justifyContent:'space-between', mt:0.5}}>
-       <Typography fontSize='1.1rem'  alignItems='center' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="bold">
-        Auto-Aprobación Ausencias: 
-      </Typography>
-      <Typography fontSize='1.1rem'  alignItems='center' color={autoAprobacionActiva ?"azul.main": 'grey'} fontWeight="bold">
-        <strong>{autoAprobacionActiva ? 'ON' : 'OFF'}</strong>
+      <Typography fontSize='1.1rem'  alignItems='center' color={configAusencias?.autoAprobar?.habilitado  ?"azul.main": 'grey'} fontWeight="bold">
+        <strong>{configAusencias?.autoAprobar?.habilitado  ? 'ON' : 'OFF'}</strong>
       </Typography>
       </Box>
       </Card>

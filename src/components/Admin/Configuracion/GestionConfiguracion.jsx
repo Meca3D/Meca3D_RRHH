@@ -12,19 +12,23 @@ import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
-
+import { useAusenciasStore } from '../../../stores/ausenciasStore';
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
 
 const GestionConfiguracion = () => {
   const navigate = useNavigate();
   const { configVacaciones,loadConfigVacaciones } = useVacacionesStore();
+  const { configAusencias,loadConfigAusencias } = useAusenciasStore();
 
   // Cargar configuración al montar
   useEffect(() => {
-    if (!configVacaciones) {
-      loadConfigVacaciones();
-    }
-  }, [configVacaciones]);
+    const unsubVac = loadConfigVacaciones();
+    const unsubAus = loadConfigAusencias(); 
+    return () => { 
+      if (typeof unsubVac === 'function') unsubVac();
+      if (typeof unsubAus === 'function') unsubAus(); 
+    };
+  }, [loadConfigVacaciones, loadConfigAusencias]); 
 
   const quickActions = [
         {
@@ -67,32 +71,47 @@ const GestionConfiguracion = () => {
           }}
         />
         
-        <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
-            <SettingsOutlined sx={{ color:'purpura.main', fontSize: '4rem' }} />
-          <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" flexWrap="nowrap">
-            <Typography textAlign="center" color="purpura.main" variant="h5" fontWeight="bold" gutterBottom>
-              Configuraciones
-            </Typography>
-            <Box display="flex" flexDirection="column" alignItems="center" sx={{mt:2}}>
-            <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold" sx={{mb:-0.5}}>
-            Venta de Vacaciones: <strong>{configVacaciones?.ventaVacaciones?.habilitado ? 'ON' : 'OFF'}</strong>
+        <Box display="flex" alignItems="center" gap={3} position="relative" zIndex={1}>
+          <SettingsOutlined sx={{ color:'purpura.main', fontSize: '4rem' }} />
+          <Typography textAlign="center" color="purpura.main" variant="h5" fontWeight="bold" gutterBottom>
+            Configuraciones
           </Typography>
-           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">Auto-Aprobación <strong>{configVacaciones?.autoAprobar?.habilitado ? 'ON' : 'OFF'}</strong>
+        </Box>
+            <Box display="flex" justifyContent='space-between' alignItems="center" sx={{mt:2}}>
+            <Typography variant="body1" color="purpura.main" fontWeight="600">Auto-Aprobación Permisos:
+            </Typography>
+            <Typography variant="body1" color="purpura.main" fontWeight="bold">{configAusencias?.autoAprobar?.habilitado ? 'ON' : 'OFF'}
+            </Typography>
+            </Box>
+            <Box display="flex" justifyContent='space-between' alignItems="center" sx={{}}>
+            <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="600">
+              Venta de Vacaciones: 
            </Typography>
-           <Typography variant="body2" textAlign="center" color="dorado.main" fontWeight="bold" fontStyle='italic'sx={{mt:-0.5}}>
-            {configVacaciones?.autoAprobar?.habilitado ? `Modo: ${
-              configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
+           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">
+              {configVacaciones?.ventaVacaciones?.habilitado ? 'ON' : 'OFF'}
+           </Typography>
+           </Box>
+           <Box display="flex" justifyContent='space-between' alignItems="center" sx={{}}>
+           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="600">Auto-Aprobación Vacaciones:
+           </Typography>
+           <Typography variant="body1" textAlign="center" color="purpura.main" fontWeight="bold">{configVacaciones?.autoAprobar?.habilitado ? 'ON' : 'OFF'}
+           </Typography>
+           </Box>
+           {configVacaciones?.autoAprobar?.habilitado && (
+           <Box display="flex" justifyContent='space-between' alignItems="center" sx={{}}>
+           <Typography variant="body2" textAlign="center" color="dorado.main" fontWeight="600" fontStyle='italic'>
+            Modo:
+           </Typography>
+            <Typography variant="body2" textAlign="center" color="dorado.main" fontWeight="600" fontStyle='italic'>
+              {configVacaciones.autoAprobar.modo === 'todas' ? 'Todas las solicitudes' :
               configVacaciones.autoAprobar.modo === 'noVentas' ? 'Todas menos las ventas' :
               configVacaciones.autoAprobar.modo === 'porHoras' ? `Solicitudes ≤ ${configVacaciones.autoAprobar.maxHoras} horas` :
               configVacaciones.autoAprobar.modo === 'sinConflictos' ? 'Solo si no hay conflictos de cobertura' :
               configVacaciones.autoAprobar.modo === 'porHorasYsinConflictos' ? `≤ ${configVacaciones.autoAprobar.maxHoras} horas y sin conflictos` :
-              ''
-            }` : ''}
-           </Typography>
+              ''}
+              </Typography>
            </Box>
-                         
-            </Box>
-          </Box>
+          )}
       </Paper>
 
      <Grid container spacing={3}>

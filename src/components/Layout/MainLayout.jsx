@@ -91,7 +91,7 @@ const MainLayout = () => {
     if (location.pathname.startsWith('/desayunos')) return 'Desayunos';
     if (location.pathname.startsWith('/nominas')) return 'Mis Nóminas';
     if (location.pathname.startsWith('/vacaciones')) return 'Mis Vacaciones';
-    if (location.pathname.startsWith('/permisos-bajas')) return 'Mis Permisos/Bajas';
+    if (location.pathname.startsWith('/ausencias')) return 'Mis Permisos y Bajas';
     if (location.pathname.startsWith('/horas-extras')) return 'Mis Horas Extras';
     return 'Mecaformas 3D';
   };

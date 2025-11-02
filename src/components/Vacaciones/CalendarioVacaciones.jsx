@@ -67,7 +67,7 @@ const alternarDia = (dia) => {
       borderRadius: 1,
       transition: 'all .2s ease',
       fontSize: '0.875rem',
-      opacity: fueraMes ? 0.4 : 1  
+      opacity: fueraMes ? 0.6 : 1  
     };
 
     // Prioridad 1: Seleccionado (siempre azul)
@@ -114,7 +114,6 @@ const alternarDia = (dia) => {
       return { 
         ...base, 
         color: 'text.disabled',
-        '&:hover': { bgcolor: 'primary.50' }
       };
     }
 
