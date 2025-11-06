@@ -10,11 +10,10 @@ import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined
 import AssignmentLateOutlinedIcon from '@mui/icons-material/AssignmentLateOutlined';
 import DynamicFeedOutlinedIcon from '@mui/icons-material/DynamicFeedOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
-import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
+import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
 import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
 import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
 import { useAdminStats } from '../../../hooks/useAdminStats';
-import { useVacacionesStore } from '../../../stores/vacacionesStore';
 
 const GestionAusencias = () => {
   const navigate = useNavigate();
@@ -40,16 +39,17 @@ const GestionAusencias = () => {
       color: 'azul.main',
       bgColor: 'azul.fondo',
     },
-
-/*         {
-      id: 'analytics',
-      title: 'Estadisticas',
-      description: 'Analisis y Estadisticas de Vacaciones',
-      icon: AssessmentOutlined,
-      route: '/admin/vacaciones/estadisticas',
-      color: 'rosa.main',
-      bgColor: 'rosa.fondo',
-    }, */
+    {
+      id: 'crear',
+      title: 'Crear Ausencia',
+      subtitle: 'Nueva petición',
+      description: 'Solicitar un Permiso o Baja',
+      label: 'Nueva',
+      icon: PostAddOutlinedIcon,
+      color: 'naranja.main',
+      bgColor: 'naranja.fondo',
+      route: '/admin/ausencias/crear'
+    },
   ];
 
   

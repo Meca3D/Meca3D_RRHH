@@ -42,6 +42,8 @@ import GestionUtilidades from './components/Admin/Utilidades/GestionUtilidades';
 import GestionConfiguracion from './components/Admin/Configuracion/GestionConfiguracion';
 import GestionAusencias from './components/Admin/Ausencias/GestionAusencias';
 import AusenciasPendientes from './components/Admin/Ausencias/AusenciasPendientes';
+import HistorialAusencias from './components/Admin/Ausencias/HistorialAusencias';
+import CrearAusenciaAdmin from './components/Admin/Ausencias/CrearAusenciaAdmin';
 
 
 import Nominas from './components/Nominas/Nominas';
@@ -159,6 +161,8 @@ const AppRoutes = () => {
         {/* Rutas de Gestión de Ausencias */}
         <Route path="admin/ausencias" element={<AusenciasRoute><GestionAusencias /></AusenciasRoute>} />
         <Route path="admin/ausencias/pendientes" element={<AusenciasRoute><AusenciasPendientes /></AusenciasRoute>} />
+        <Route path="admin/ausencias/historial" element={<AusenciasRoute><HistorialAusencias /></AusenciasRoute>} />
+        <Route path="admin/ausencias/crear" element={<AusenciasRoute><CrearAusenciaAdmin /></AusenciasRoute>} />
 
         {/* Rutas de Utilidades */}
         <Route path="admin/utilidades" element={<AusenciasRoute><GestionUtilidades /></AusenciasRoute>} />

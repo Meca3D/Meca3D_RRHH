@@ -170,79 +170,72 @@ export const useAusenciasStore = create((set, get) => {
 
 
     // Crear nueva ausencia
-    crearAusencia: async (ausenciaData) => {
+    crearAusencia: async (ausenciaData, esAdmin = false) => {
       try {
-        const { user } = useAuthStore.getState();
-
-        // Evaluar auto-aprobación
-        const ausenciaTemp = {
-          ...ausenciaData,
-          id: 'temp',
-          estado: 'pendiente',
-          fechaSolicitud: formatYMD(new Date())
-        };
-
-        const resAuto = get().evaluarAutoAprobacion(ausenciaTemp);
-
+        const { userProfile, sendNotification } = useAuthStore.getState();
+        
+        // Si es admin, NO evaluar auto-aprobación, siempre aprobar
+        let estadoFinal;
+        let comentariosAdminFinal;
+        let fechaAprobacion;
+        
+        if (esAdmin) {
+          // Admin crea ausencia → siempre aprobada
+          estadoFinal = 'aprobado';
+          comentariosAdminFinal = ausenciaData.comentariosAdmin || 'Ausencia registrada por administración';
+          fechaAprobacion = formatYMD(new Date());
+        } else {
+          // Empleado crea ausencia → evaluar auto-aprobación
+          const resAuto = get().evaluarAutoAprobacion(ausenciaData);
+          estadoFinal = resAuto.aplicar ? 'aprobado' : 'pendiente';
+          comentariosAdminFinal = resAuto.aplicar 
+            ? (get().configAusencias?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') 
+            : '';
+          fechaAprobacion = resAuto.aplicar ? formatYMD(new Date()) : '';
+        }
+        
         const nuevaAusencia = {
           ...ausenciaData,
           fechasActuales: [...ausenciaData.fechas],
           fechaSolicitud: formatYMD(new Date()),
-          estado: resAuto.aplicar ? 'aprobado' : 'pendiente',
-          comentariosAdmin: 
-            ausenciaData.tipo==='baja'
-              ? 'Baja registrada correctamente'   
-              :resAuto.aplicar 
-                ? (get().configAusencias?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') 
-                : '',
-          fechaAprobacionDenegacion: resAuto.aplicar ? formatYMD(new Date()) : '',
+          estado: estadoFinal,
+          comentariosAdmin: comentariosAdminFinal,
+          fechaAprobacionDenegacion: fechaAprobacion,
           ediciones: [],
           cancelaciones: [],
           createdAt: new Date(),
           updatedAt: new Date()
         };
 
-        // Crear documento con ID random
-        const newAusenciaRef = doc(collection(db, 'AUSENCIAS'));
-        await setDoc(newAusenciaRef, nuevaAusencia);
+        const nuevaRef = doc(collection(db, 'AUSENCIAS'));
+        await setDoc(nuevaRef, nuevaAusencia);
 
-        // Enviar notificaciones
+        // Notificaciones
         try {
-          const { sendNotification, userProfile } = useAuthStore.getState();
-          const { formatearNombre } = await import('../components/Helpers');
-          const nombreSolicitante = formatearNombre(userProfile?.nombre || ausenciaData.solicitante);
-          const baja = ausenciaData.tipo==='baja'
-          if (resAuto.aplicar) {
-            // Auto-aprobada: notificar al solicitante
+          if (esAdmin) {
+            // Admin creó ausencia → notificar al empleado
             await sendNotification({
               empleadoEmail: ausenciaData.solicitante,
-              title: `✅ ${baja ? 'Baja registrada' : 'Permiso aprobado'}`,
-              body: `Confirmamos que tu ${ausenciaData.tipo} (${ausenciaData.motivo}) ha sido ${baja ? 'registrada con éxito' : 'aprobado por RR.HH.'}.\n\nPuedes considerar tu ausencia confirmada.`,
+              title: `✅ ${ausenciaData.tipo === 'baja' ? 'Baja registrada' : 'Permiso registrado'} por administración`,
+              body: `Se te ha registrado ${ausenciaData.tipo === 'baja' ? 'una' : 'un'} ${ausenciaData.tipo} de ${ausenciaData.fechas.length} día(s).\n(${ausenciaData.motivo})`,
               url: '/ausencias/MisAusencias',
-              type: 'ausencia_aprobada'
+              type: 'ausencia_creada_admin'
             });
-
-            // Notificar también a admins (info)
-            const mensajeAdmin = ausenciaData.tipo === 'baja'
-              ? `${nombreSolicitante} ha registrado una baja: (${ausenciaData.motivo})\n\n📅 ${ausenciaData.fechas.length} día(s)\n\n💬 ${ausenciaData.comentariosSolicitante || 'Sin comentarios'}`
-              : `${nombreSolicitante} ha solicitado un permiso: (${ausenciaData.motivo}) - Auto-aprobado por configuración.\n\n📅 ${ausenciaData.fechas.length} día(s)\n\n💬 ${ausenciaData.comentariosSolicitante || 'Sin comentarios'}`;
-
-          await fetch('/.netlify/functions/notifyAdmins', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              solicitante: ausenciaData.solicitante,
-              nombreSolicitante: nombreSolicitante,
-              tipo: ausenciaData.tipo,
-              motivo: ausenciaData.motivo,
-              comentariosSolicitante: ausenciaData.comentariosSolicitante,
-              diasSolicitados: ausenciaData.fechas.length,
-              accion: ausenciaData.tipo === 'baja' ? 'baja_registrada' : 'permiso_auto_aprobado',
-              mensaje: mensajeAdmin
-            })
-          });
+          } else if (estadoFinal === 'aprobado') {
+            // Auto-aprobado → notificar empleado
+            await sendNotification({
+              empleadoEmail: ausenciaData.solicitante,
+              title: `✅ ${ausenciaData.tipo === 'baja' ? 'Baja registrada' : 'Permiso registrado'}  automáticamente`,
+              body: `Tu ${ausenciaData.tipo} de ${ausenciaData.fechas.length} día(s) ha sido ${ausenciaData.tipo === 'baja' ? 'registrada' : 'registrado'} correctamente.`,
+              url: '/ausencias/MisAusencias',
+              type: 'ausencia_aprobada_auto'
+            });
           } else {
-            // Pendiente: notificar a admins para revisión
+            // Pendiente → notificar a admins
+            const { formatearNombre } = await import('../components/Helpers');
+            const { userProfile } = useAuthStore.getState();
+            const nombreSolicitante = formatearNombre(userProfile?.nombre || ausenciaData.solicitante);
+            
             await fetch('/.netlify/functions/notifyAdmins', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -251,17 +244,17 @@ export const useAusenciasStore = create((set, get) => {
                 nombreSolicitante: nombreSolicitante,
                 tipo: ausenciaData.tipo,
                 motivo: ausenciaData.motivo,
-                comentariosSolicitante: ausenciaData.comentariosSolicitante,
                 diasSolicitados: ausenciaData.fechas.length,
-                accion: 'nueva_ausencia'
+                accion: 'nueva_ausencia',
+                mensaje: `${nombreSolicitante} ha solicitado un ${ausenciaData.tipo} de ${ausenciaData.fechas.length} día(s).\n📋 Motivo: ${ausenciaData.motivo}`
               })
             });
           }
         } catch (notifError) {
-          console.error('Error enviando notificaciones:', notifError);
+          console.error('Error enviando notificación:', notifError);
         }
 
-        return newAusenciaRef.id;
+        return nuevaRef.id;
       } catch (error) {
         set({ error: error.message });
         throw error;

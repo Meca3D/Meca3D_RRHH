@@ -49,7 +49,6 @@ const AñadirDiasAusencia = () => {
         setLoading(true);
 
         // Cargar festivos y config
-        const unsubFestivos = loadFestivos();
         const unsubConfig = loadConfigAusencias();
 
         // Cargar ausencia
@@ -72,7 +71,6 @@ const AñadirDiasAusencia = () => {
         setAusenciaOriginal(ausencia);
 
         return () => {
-          if (typeof unsubFestivos === 'function') unsubFestivos();
           if (typeof unsubConfig === 'function') unsubConfig();
         };
       } catch (error) {

@@ -1,6 +1,6 @@
 // components/Ausencias/CalendarioAusencias.jsx
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography, IconButton, Paper, Divider } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
@@ -17,11 +17,19 @@ const CalendarioAusencias = ({
     fechasOriginales = [] // Fechas originales de la ausencia (para bloquear en modo añadir)
   }) => {
   const [mesActual, setMesActual] = useState(new Date());
-  const { esFestivo } = useVacacionesStore();
+  const { esFestivo, loadFestivos } = useVacacionesStore();
 
   const cambiarMes = (direccion) => {
     setMesActual(navegarMes(mesActual, direccion));
   };
+
+    // Cargar festivos y config al montar
+    useEffect(() => {
+      const unsubFestivos = loadFestivos();
+      return () => {
+        if (unsubFestivos) unsubFestivos();
+      };
+    }, [loadFestivos]);
 
   const alternarDia = (dia) => {
     const fechaStr = formatYMD(dia);

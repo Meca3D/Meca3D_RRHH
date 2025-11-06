@@ -171,14 +171,6 @@ const MisAusencias = () => {
     navigate(`/ausencias/agregarDias/${ausencia.id}`);
   };
 
-  // Abrir menú de acciones
-  const handleAbrirMenu = (event, ausencia) => {
-    event.stopPropagation(); 
-    event.preventDefault()
-    setMenuAnchor(event.currentTarget);
-    setAusenciaMenuAbierto(ausencia);
-  };
-
   // Cerrar menú
   const handleCerrarMenu = () => {
     setMenuAnchor(null);
@@ -365,9 +357,9 @@ const MisAusencias = () => {
                 </Typography>
               )}
 
-              {ausencia.fechaCancelacion && (
+              {ausencia.estado==='cancelado' && (
                 <Typography variant="body1" color="warning.main" display="block">
-                  ⚠️ Cancelada: {formatearFechaCorta(ausencia.fechaCancelacion)}
+                  ⚠️ Cancelada: {formatearFechaCorta(ausencia.cancelaciones[ausencia.cancelaciones.length-1].fechaCancelacion)}
                 </Typography>
               )}
             </Grid>
@@ -525,7 +517,7 @@ const MisAusencias = () => {
               <Grid size={{ xs: 12 }}>
                 <Box sx={{ p: 1.5, bgcolor: '#e3f2fd', borderRadius: 2, borderLeft: '3px solid #2196F3' }}>
                   <Typography variant="body1" color="primary" fontStyle='italic' display="block" fontWeight={600}>
-                    👨‍💼 Respuesta del administrador:
+                    👨‍💼 Respuesta de administración:
                   </Typography>
                   <Typography variant="body1">
                     {ausencia.comentariosAdmin}
@@ -603,9 +595,13 @@ const MisAusencias = () => {
                               <Chip
                                 label={formatearFechaCorta(fecha)}
                                 size="small"
+                                variant='outlined'
                                 sx={{
-                                  bgcolor: 'success.main',
-                                  color: 'white',
+                                  fontSize: '0.75rem',
+                                  mb: 0.5,
+                                  color: 'success.main',
+                                  bgcolor: 'white',
+                                  bordercolor: 'success.main',
                                   fontWeight: 600
                                 }}
                               />
@@ -974,7 +970,7 @@ const MisAusencias = () => {
                     diasACancelar.length === todosDias.length ? [] : todosDias
                   );
                 }}
-                sx={{ mb: 2,p:1, fontSize:'1rem' }}
+                sx={{ mb: 2,p:1, fontSize:'1.1rem' }}
               >
                 <SelectAllIcon sx={{mr:1.5, fontSize:'1.65rem'}}/>
                 {diasACancelar.length === obtenerDiasDisponiblesParaCancelar(ausenciaACancelar).length

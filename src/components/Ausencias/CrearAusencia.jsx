@@ -19,7 +19,6 @@ import {
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
 import { useAusenciasStore } from '../../stores/ausenciasStore';
-import { useVacacionesStore } from '../../stores/vacacionesStore';
 import { useUIStore } from '../../stores/uiStore';
 import { ordenarFechas, formatearFechaCorta } from '../../utils/dateUtils';
 import CalendarioAusencias from './CalendarioAusencias';
@@ -33,7 +32,6 @@ const CrearAusencia = () => {
     motivosBajas,
     loadConfigAusencias 
   } = useAusenciasStore();
-  const { loadFestivos } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
 
   const [tipo, setTipo] = useState(''); // 'permiso' o 'baja'
@@ -45,10 +43,8 @@ const CrearAusencia = () => {
 
   // Cargar festivos y config al montar
   useEffect(() => {
-    const unsubFestivos = loadFestivos();
     const unsubConfig = loadConfigAusencias();
     return () => {
-      if (unsubFestivos) unsubFestivos();
       if (unsubConfig) unsubConfig();
     };
   }, [loadFestivos, loadConfigAusencias]);
