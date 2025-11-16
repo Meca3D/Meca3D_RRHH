@@ -160,7 +160,7 @@ const CrearAusenciaAdmin = () => {
           <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate('/ausencias')}
+            onClick={() => navigate('/admin/ausencias')}
             sx={{
               bgcolor: 'rgba(255,255,255,0.1)',
               '&:hover': {

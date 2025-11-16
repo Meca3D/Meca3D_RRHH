@@ -510,13 +510,16 @@ const HistorialAusencias = () => {
                 </Grid>
             {/* Información principal */}
             <Grid size={{ xs: 12 }}>
-              <Typography variant="h6" fontWeight={600} color={colorTipo}>
-                {ausencia.motivo}
+              <Typography variant="h5"  display="block">
+                {datosUsuarios[ausencia.solicitante]?.nombre}
               </Typography>
             </Grid>
 
             {/* Fechas importantes */}
             <Grid size={{ xs: 12 }}>
+             <Typography variant="h6" fontWeight={600} color={colorTipo}>
+                {ausencia.motivo}
+              </Typography>
               <Typography variant="body1"  display="block">
                 Solicitada: {formatearFechaCorta(ausencia.fechaSolicitud)}
               </Typography>
@@ -1143,7 +1146,7 @@ const HistorialAusencias = () => {
                       <MenuItem value="">Todos</MenuItem>
                       {empleadosDisponibles.map(email => (
                         <MenuItem key={email} value={email}>
-                          {formatearNombre(datosUsuarios[email]?.nombre || email)}
+                          {(datosUsuarios[email]?.nombre || email)}
                         </MenuItem>
                       ))}
                     </Select>

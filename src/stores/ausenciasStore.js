@@ -712,6 +712,92 @@ export const useAusenciasStore = create((set, get) => {
       };
     },
 
+    // Guardar/actualizar penalización por bajas
+    guardarPenalizacion: async (año, empleadoEmail, diasBajaTotales, penalizacionAplicada) => {
+      try {
+        const { userProfile } = useAuthStore.getState();
+        const penalizacionesRef = doc(db, 'PENALIZACIONES', año.toString());
+        const docSnap = await getDoc(penalizacionesRef);
+
+        const nuevaPenalizacion = {
+          email: empleadoEmail,
+          diasBajaTotales: diasBajaTotales,
+          penalizacionAplicada: penalizacionAplicada, // Total acumulado en horas
+          aplicadoPor: userProfile?.email || 'admin',
+          fechaAplicacion: formatYMD(new Date()),
+          timestamp: new Date()
+        };
+
+        if (docSnap.exists()) {
+          // Actualizar array existente
+          const penalizaciones = docSnap.data().penalizaciones || [];
+          const index = penalizaciones.findIndex(p => p.email === empleadoEmail);
+          
+          if (index >= 0) {
+            penalizaciones[index] = nuevaPenalizacion; // Actualizar
+          } else {
+            penalizaciones.push(nuevaPenalizacion); // Añadir nuevo
+          }
+          
+          await updateDoc(penalizacionesRef, { penalizaciones });
+        } else {
+          // Crear documento nuevo
+          await setDoc(penalizacionesRef, {
+            año: parseInt(año),
+            penalizaciones: [nuevaPenalizacion]
+          });
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Error guardando penalización:', error);
+        throw error;
+      }
+    },
+
+    // Obtener penalizaciones de un año
+    obtenerPenalizaciones: async (año) => {
+      try {
+        const penalizacionesRef = doc(db, 'PENALIZACIONES', año.toString());
+        const docSnap = await getDoc(penalizacionesRef);
+        
+        if (docSnap.exists()) {
+          return docSnap.data().penalizaciones || [];
+        }
+        return [];
+      } catch (error) {
+        console.error('Error obteniendo penalizaciones:', error);
+        return [];
+      }
+    },
+
+    // Escuchar cambios en penalizaciones de un año (onSnapshot)
+    loadPenalizacionesYear: (año, callback) => {
+      try {
+        const penalizacionesRef = doc(db, 'PENALIZACIONES', año.toString());
+        
+        const unsubscribe = onSnapshot(
+          penalizacionesRef,
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const penalizaciones = docSnap.data().penalizaciones || [];
+              callback(penalizaciones);
+            } else {
+              callback([]);
+            }
+          },
+          (error) => {
+            console.error('Error en listener de penalizaciones:', error);
+            callback([]);
+          }
+        );
+
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error configurando listener de penalizaciones:', error);
+        return () => {};
+      }
+    },
 
 
     // Limpiar listeners al desmontar

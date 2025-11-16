@@ -570,8 +570,8 @@ useEffect(() => {
                               <Box sx={{ mt: 1, p: 1, bgcolor: 'azul.fondo', borderRadius: 1 }}>
                                 <Grid container   sx={{}}>
                                 {ordenarFechas(solicitud.fechas).map((fecha, index) => (
-                                  <Grid size={{xs:6,md:4}}>
-                                  <Typography key={index} variant="body1" textAlign="center" sx={{fontSize:'1.3rem'}} >
+                                  <Grid size={{xs:6,md:4}} key={index}>
+                                  <Typography  variant="body1" textAlign="center" sx={{fontSize:'1.3rem'}} >
                                     • {formatearFechaCorta(fecha)}
                                   </Typography>
                                   </Grid>

@@ -123,47 +123,44 @@ export const useVacacionesStore = create((set, get) => {
 
 
     // Obtener días cancelados de todas las cancelacionesParciales
-    obtenerDiasCancelados: (cancelacionesParciales) => {
-      if (!Array.isArray(cancelacionesParciales)) return [];
-      
-      return cancelacionesParciales.reduce((acc, cancelacion) => {
-        return [...acc, ...cancelacion.fechasCanceladas];
+    obtenerDiasCancelados: (cancelaciones) => {
+      if (!Array.isArray(cancelaciones)) return [];
+      return cancelaciones.reduce((acc, cancelacion) => {
+        return [...acc, ...(cancelacion.fechasCanceladas || [])];
       }, []);
     },
 
+
     // Obtener días disfrutados (pasados y no cancelados)
     obtenerDiasDisfrutados: (solicitud) => {
-      if (!solicitud.fechas) return [];
-      const diasCanceladosParcialmente = get().obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
-      const diasCanceladosTotalmente = solicitud?.fechasCanceladas || []
-      const diasCancelados =[...diasCanceladosParcialmente, ...diasCanceladosTotalmente]
-      return solicitud.fechas.filter(fecha => {
-        const esFechaPasada = esFechaPasadaOHoy(fecha);
-        const yaFueCancelado = diasCancelados.includes(fecha);
-        return esFechaPasada && !yaFueCancelado;
-      });
+      if (solicitud.esVenta) return [];
+      if (!Array.isArray(solicitud.fechasActuales)) return [];
+      if (solicitud.fechasActuales.length===0) return [];
+      if (!['aprobada','cancelada'].includes(solicitud.estado)) return [];
+      
+      return solicitud.fechasActuales.filter(fecha => esFechaPasadaOHoy(fecha));
     },
 
-    // Verificar si puede cancelarse parcialmente
-    puedeCancelarParcialmente: (solicitud, esAdmin = false) => {
-      if (solicitud.estado !== 'aprobada') return false;
-      
-      // ✅ NO permitir para horas sueltas
-      const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
-      if (esHorasSueltas) return false;
-      
-      const diasCancelados = get().obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
-      
-      const diasDisponibles = solicitud.fechas.filter(fecha => {
-        const yaFueCancelado = diasCancelados.includes(fecha);
-        const esFechaPasada = esFechaPasadaOHoy(fecha);
-        
-        // ✅ Admin puede cancelar días pasados, usuario no
-        return !yaFueCancelado && (esAdmin || !esFechaPasada);
-      });
-      
-      return diasDisponibles.length > 1; // Debe quedar al menos 1 día
-    },
+
+    puedeCancelarDias: (solicitud, esAdmin = false) => {
+    if (solicitud.estado !== 'aprobada') return false;
+    
+    // Las ventas siempre se pueden cancelar si están aprobadas
+    if (solicitud.esVenta&&esAdmin) return true;
+    
+    // Horas sueltas no se pueden cancelar
+    const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechasActuales?.length === 1;
+    if (esHorasSueltas&&esAdmin) return false;
+    
+    // Verificar que hay días disponibles para cancelar
+    const diasDisponibles = (solicitud.fechasActuales || []).filter(fecha => {
+      const esFechaPasada = esFechaPasadaOHoy(fecha);
+      return esAdmin || !esFechaPasada;
+    });
+    
+    return diasDisponibles.length > 0;
+  },
+
 
     // Cargar días festivos
     loadFestivos: () => {
@@ -217,6 +214,8 @@ export const useVacacionesStore = create((set, get) => {
     const nuevaSolicitud = {
       ...solicitudData,
       fechaSolicitud: formatYMD(new Date()),
+      fechasActuales: solicitudData.esVenta ? [] : [...solicitudData.fechas], 
+      cancelaciones: [], 
       estado: res.aplicar ? 'aprobada' : 'pendiente',
       comentariosAdmin: res.aplicar ? (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') : '',
       fechaAprobacionDenegacion: res.aplicar ? formatYMD(new Date()) : '',
@@ -268,13 +267,12 @@ export const useVacacionesStore = create((set, get) => {
 
           // Transacción completada, enviar notificaciones
       try {
+        const { sendNotification, userProfile } = useAuthStore.getState();
+        const nombreSolicitante = formatearNombre(userProfile?.nombre || solicitudData.solicitante);
         if (res.aplicar) {
           // ✅ Auto-aprobada: Notificar al solicitante
-          const { sendNotification, userProfile } = useAuthStore.getState();
-          const nombreSolicitante = formatearNombre(userProfile?.nombre || solicitudData.solicitante);
-  
           await sendNotification({
-            empleadoEmail: nombreSolicitante,
+            empleadoEmail: solicitudData.solicitante,
             title: '✅ Solicitud de vacaciones aprobada',
             body: solicitudData.esVenta 
               ? `Tu venta de ${formatearTiempoVacasLargo(solicitudData.horasSolicitadas)} ha sido aprobada automáticamente`
@@ -284,9 +282,6 @@ export const useVacacionesStore = create((set, get) => {
           });
         } else {
           // solicitud en estado pendiente: Notificar a admins via Cloud Function
-          const { userProfile } = useAuthStore.getState();
-          const nombreSolicitante = formatearNombre(userProfile?.nombre || solicitudData.solicitante);
-
           await fetch('/.netlify/functions/notifyAdmins', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -344,7 +339,7 @@ export const useVacacionesStore = create((set, get) => {
           }
         },
 
-        // Cancelar Solicitudes de Vacaciones
+/*         // Cancelar Solicitudes de Vacaciones
         cancelarSolicitudVacaciones: async (solicitud, motivoCancelacion, esAdmin = false, esAuto = false) => {
       try {
         if (!motivoCancelacion || motivoCancelacion.trim() === '') {
@@ -453,7 +448,7 @@ export const useVacacionesStore = create((set, get) => {
         set({ error: error.message });
         throw error;
       }
-    },
+    }, */
 
     // Actualizar solicitud
  actualizarSolicitudVacaciones: async (solicitudId, datosActualizados, solicitudOriginal) => {
@@ -475,7 +470,8 @@ export const useVacacionesStore = create((set, get) => {
 
         const datosFinales = {
           ...datosActualizados,
-          fechaEdicion: formatYMD(new Date()), 
+          fechaEdicion: formatYMD(new Date()),
+          fechasActuales: datosActualizados.fechas ? [...datosActualizados.fechas] : solicitudOriginal.fechasActuales,
           updatedAt: new Date(),
           estado: resAuto.aplicar ? 'aprobada' : 'pendiente',
           comentariosAdmin: resAuto.aplicar ? (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') : '',
@@ -483,14 +479,6 @@ export const useVacacionesStore = create((set, get) => {
           horasDisponiblesAntes: '', // Se calculará en transacción si aplica
           horasDisponiblesDespues: '' // Se calculará en transacción si aplica
         };
-
-        // Si original era aprobada, limpiar campos de aprobación (incluso si se auto-aprueba de nuevo)
-        if (solicitudOriginal.estado === 'aprobada' && !resAuto.aplicar) {
-          datosFinales.comentariosAdmin = ''; 
-          datosFinales.horasDisponiblesAntes = '';
-          datosFinales.horasDisponiblesDespues = '';
-          datosFinales.fechaAprobacionDenegacion = '';
-        }
 
         const diferencia = datosActualizados.horasSolicitadas - solicitudOriginal.horasSolicitadas;
         const solicitudRef = doc(db, 'VACACIONES', solicitudId);
@@ -545,22 +533,8 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
-    getFechasVivasDeSolicitud:(solicitud)=> {
-  const fechasSolicitadas = Array.isArray(solicitud?.fechas) ? [...new Set(solicitud.fechas)] : [];
-
-  const parciales = Array.isArray(solicitud?.cancelacionesParciales)
-    ? solicitud.cancelacionesParciales.flatMap(c => Array.isArray(c.fechasCanceladas) ? c.fechasCanceladas : [])
-    : [];
-
-  // Si hubo cancelación total, la solicitud suele guardar 'fechasCanceladas'
-  // Fallback: si estado === 'cancelado' y no hay 'fechasCanceladas', considerar todo cancelado
-  const totales = Array.isArray(solicitud?.fechasCanceladas)
-    ? solicitud.fechasCanceladas
-    : (solicitud?.estado === 'cancelado' ? fechasSolicitadas : []);
-
-  const canceladasSet = new Set([...parciales, ...totales]);
-
-  return fechasSolicitadas.filter(f => !canceladasSet.has(f)).sort();
+    getFechasVivasDeSolicitud: (solicitud) => {
+      return Array.isArray(solicitud?.fechasActuales) ? [...solicitud.fechasActuales].sort() : [];
     },
 
     obtenerSolicitudCompleta: async (solicitudId) => {
@@ -753,7 +727,7 @@ export const useVacacionesStore = create((set, get) => {
         const { solicitudesVacaciones } = get();
         
         const solicitudesPendientesCaducadas = solicitudesVacaciones.filter(solicitud => {
-          const primeraFecha = solicitud.fechas[0];
+          const primeraFecha = solicitud.fechasActuales[0];
           return solicitud.estado === 'pendiente' && esFechaPasadaOHoy(primeraFecha) && !solicitud.esVenta;
         });
 
@@ -762,18 +736,24 @@ export const useVacacionesStore = create((set, get) => {
         }
 
         console.log(`🔄 Procesando ${solicitudesPendientesCaducadas.length} solicitudes caducadas`);
-
+        const { sendNotification } = useAuthStore.getState();
         let procesadas = 0;
         for (const solicitud of solicitudesPendientesCaducadas) {
           try {
             // ✅ pasar el objeto solicitud completo y el motivo
-            await get().cancelarSolicitudVacaciones(
-              solicitud, 
-              'Solicitud cancelada automáticamente. No pudo ser revisada antes de las fechas solicitadas.',
-              false,
-              true
-            );
+            await get().eliminarSolicitudVacaciones(
+              solicitud.id,
+              solicitud.horasSolicitadas,
+              solicitud.solicitante
+            )           
             procesadas++;
+            await sendNotification({
+                empleadoEmail: solicitud.solicitante,
+                title: '⚠️ Eliminacion de solicitud de Vacaciones',
+                body: `❌ Solicitud de vacaciones eliminada automáticamente. No pudo ser revisada antes de las fechas solicitadas`,
+                url: '/vacaciones/solicitudes',
+                type: 'vacaciones_eliminada'
+              });
           } catch (error) {
             console.error(`❌ Error al procesar solicitud caducada ${solicitud.id}:`, error);
           }
@@ -785,6 +765,128 @@ export const useVacacionesStore = create((set, get) => {
       } catch (error) {
         console.error('❌ Error general procesando solicitudes caducadas:', error);
         return { procesadas: 0, error: error.message };
+      }
+    },
+
+    cancelarVentaVacaciones: async (solicitud, motivoCancelacion, esAdmin = false) => {
+      try {
+        const { userProfile, user } = useAuthStore.getState();
+        
+        // Validaciones
+        if (!motivoCancelacion?.trim()) {
+          throw new Error('Debe proporcionar un motivo de cancelación');
+        }
+
+        if (!solicitud.esVenta) {
+          throw new Error('Esta función solo es para cancelar ventas de vacaciones');
+        }
+
+        if (solicitud.estado !== 'aprobada' && solicitud.estado !== 'pendiente') {
+          throw new Error('Solo se pueden cancelar ventas aprobadas o pendientes');
+        }
+
+        // Si está pendiente, simplemente eliminar la solicitud
+        if (solicitud.estado === 'pendiente') {
+          await get().eliminarSolicitudVacaciones(solicitud.id, solicitud.horasSolicitadas,solicitud.solicitante);
+          return { success: true, eliminada: true };
+        }
+        
+        const empleadoActual = esAdmin ? solicitud.solicitante : user?.email;
+        let saldoAntes = 0;
+        let saldoDespues = 0;
+        const horasADevolver = solicitud.horasSolicitadas;
+        // Si está aprobada, crear registro de cancelación
+
+        // Ejecutar transacción
+        await runTransaction(db, async (transaction) => {
+        const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
+        // Obtener saldo actual del empleado ANTES de la cancelación
+        const userDoc = await transaction.get(userDocRef);
+        if (!userDoc.exists()) {
+          throw new Error('Empleado no encontrado');
+        }
+        saldoAntes = userDoc.data().vacaciones?.disponibles || 0;
+        saldoDespues = saldoAntes + horasADevolver;
+
+        const registroCancelacion = {
+          createdAt: new Date(),
+          esAdmin,
+          fechaCancelacion: formatYMD(new Date()),
+          fechasCanceladas: [],
+          esCancelacionTotal: true,
+          horasDevueltas: horasADevolver,
+          horasDisponiblesAntesCancelacion: saldoAntes,
+          horasDisponiblesDespuesCancelacion: saldoDespues,
+          motivoCancelacion: motivoCancelacion.trim(),
+          procesadaPor: userProfile?.nombre
+        };
+
+        const solicitudRef = doc(db, 'VACACIONES', solicitud.id);
+
+          // Actualizar solicitud a cancelado
+          transaction.update(solicitudRef, {
+            estado: 'cancelado',
+            horasExtraId: "",
+            cancelaciones: arrayUnion(registroCancelacion),
+            updatedAt: new Date()
+          });
+
+          // Devolver saldo al empleado
+          transaction.update(userDocRef, {
+            'vacaciones.disponibles': saldoDespues,
+            updatedAt: new Date()
+          });
+
+          // Si existe registro en HORAS_EXTRA, eliminarlo
+          if (solicitud.horasExtraId) {
+            const horaExtraRef = doc(db, 'HORAS_EXTRA', solicitud.horasExtraId);
+            transaction.delete(horaExtraRef);
+          }
+        });
+
+        // Notificaciones según quién canceló
+            try {
+              const { sendNotification, userProfile } = useAuthStore.getState();
+              const nombreSolicitante = formatearNombre(userProfile.nombre);
+              
+              if (esAdmin && solicitud.solicitante !== empleadoActual) {
+                // Admin cancela solicitud de un empleado → Notificar al empleado
+                await sendNotification({
+                  empleadoEmail: solicitud.solicitante,
+                  title: '⚠️ Cancelación de venta vacaciones',
+                  body: `❌ El administrador ha cancelado tu venta de ${formatearTiempoVacasLargo(horasADevolver)} de tus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`,
+                  url: '/vacaciones/solicitudes',
+                  type: 'vacaciones_cancelada'
+                });
+              } else if (!esAdmin) {
+                // Caso 2: Trabajador cancela su propia solicitud → Notificar a admins
+                await fetch('/.netlify/functions/notifyAdmins', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    solicitante: solicitud.solicitante,
+                    nombreSolicitante: nombreSolicitante,
+                    diasSolicitados: `${formatearTiempoVacasLargo(horasADevolver)}`,
+                    esVenta: false,
+                    accion: 'cancelacion_vacaciones',
+                    mensaje: `❌ ${nombreSolicitante} ha cancelado la venta de ${formatearTiempoVacasLargo(horasADevolver)} de sus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`
+                  })
+                });
+              }
+            } catch (notifError) {
+              console.error('Error enviando notificación:', notifError);
+            }
+
+            return {
+              exito: true,
+              horasDevueltas: horasADevolver,
+              saldoAntes,                                           
+              saldoDespues 
+            };
+
+      } catch (error) {
+        console.error('❌ Error al cancelar venta:', error);
+        throw error;
       }
     },
 
@@ -1034,7 +1136,7 @@ export const useVacacionesStore = create((set, get) => {
         
         // Filtrar solo las solicitudes que incluyen la fecha específica
         const solicitudesEnFecha = solicitudesAprobadas.filter(s => {
-          if (!Array.isArray(s.fechas) || !s.fechas.includes(fecha)) return false;
+          if (!Array.isArray(s.fechasActuales) || !s.fechasActuales.includes(fecha)) return false;
           const set = s._diasCanceladosSet;
           return !(set && set.has(fecha));
         });
@@ -1163,7 +1265,7 @@ export const useVacacionesStore = create((set, get) => {
             ? await (async () => {
                 // Si alguna fecha tiene conflictos, no cumple
                 const conflictosPorDia = await Promise.all(
-                  (solicitud.fechas || []).map(f => get().detectarConflictos(f))
+                  (solicitud.fechasActuales || []).map(f => get().detectarConflictos(f))
                 );
                 return conflictosPorDia.every(arr => !arr || arr.length === 0);
               })()
@@ -1212,7 +1314,7 @@ export const useVacacionesStore = create((set, get) => {
         
         // Filtrar por año si se especifica
         const solicitudesFiltradas = solicitudesAprobadas.filter(solicitud => {
-          return solicitud.fechas.some(fecha => {
+          return solicitud.fechasActuales.some(fecha => {
             const fechaAño = new Date(fecha).getFullYear();
             return fechaAño === año;
           });
@@ -1275,8 +1377,8 @@ export const useVacacionesStore = create((set, get) => {
         if (filtros.año) {
           solicitudes = solicitudes.filter(s => {
             const añoSolicitud = new Date(s.fechaSolicitud).getFullYear();
-            const añoPrimeraFecha = s.fechas && s.fechas.length > 0 ? 
-              new Date(s.fechas[0]).getFullYear() : añoSolicitud;
+            const añoPrimeraFecha = s.fechasActuales && s.fechasActuales.length > 0 ? 
+              new Date(s.fechasActuales[0]).getFullYear() : añoSolicitud;
             return añoSolicitud === filtros.año || añoPrimeraFecha === filtros.año;
           });
         }
@@ -1308,7 +1410,7 @@ export const useVacacionesStore = create((set, get) => {
         
         const rows = solicitudes.map(s => {
           const userData = datosUsuarios[s.solicitante] || {};
-          const fechasFormatted = s.fechas ? s.fechas.join(', ') : '';
+          const fechasFormatted = s.fechasActuales ? s.fechasActuales.join(', ') : '';
           const fechaResolucion = s.fechaAprobacionDenegacion || s.fechaCancelacion || '';
           
           return [
@@ -1347,8 +1449,169 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
+    cancelarDiasSolicitudVacaciones: async (solicitud, diasACancelar, motivoCancelacion, esAdmin = false) => {
+      try {
+        const { user, userProfile } = useAuthStore.getState();
+        
+        // Validaciones
+        if (!motivoCancelacion?.trim()) {
+          throw new Error('Debe proporcionar un motivo de cancelación');
+        }
 
-  cancelarSolicitudParcial: async (solicitud, diasACancelar, motivoCancelacion, esAdmin = false) => {
+        if (solicitud.estado !== 'aprobada') {
+          throw new Error('Solo se pueden cancelar días de solicitudes aprobadas');
+        }
+
+        // Para solicitudes de venta, usar función específica
+        if (solicitud.esVenta) {
+          throw new Error('Las ventas deben cancelarse con cancelarVentaVacaciones');
+        }
+
+        if (!Array.isArray(diasACancelar) || diasACancelar.length === 0) {
+          throw new Error('Debe seleccionar al menos un día para cancelar');
+        }
+
+        // Validar que los días a cancelar están en fechasActuales
+        const diasNoValidos = diasACancelar.filter(dia => !solicitud.fechasActuales.includes(dia));
+        if (diasNoValidos.length > 0) {
+          throw new Error('Algunos días seleccionados no están disponibles para cancelar');
+        }
+
+        // Si no es admin, validar que no sean fechas pasadas
+        if (!esAdmin) {
+          const diasPasados = diasACancelar.filter(dia => esFechaPasadaOHoy(dia));
+          if (diasPasados.length > 0) {
+            throw new Error('No puede cancelar días que ya han pasado');
+          }
+        }
+
+        // Calcular nuevas fechasActuales
+        const nuevasFechasActuales = solicitud.fechasActuales.filter(fecha => !diasACancelar.includes(fecha));
+
+        // Verificar si es cancelación total: no quedan días futuros por disfrutar
+        const diasFuturosRestantes = nuevasFechasActuales.filter(fecha => !esFechaPasadaOHoy(fecha));
+        const esCancelacionTotal = diasFuturosRestantes.length === 0;
+
+
+        // Calcular horas a devolver
+        let horasADevolver = 0;
+        diasACancelar.forEach(fecha => {
+          const esFinde = esFinDeSemana(fecha);
+          const esFiesta = get().esFestivo(fecha);
+          if (!esFinde && !esFiesta) {
+            horasADevolver += 8;
+          }
+        });
+
+        // Si es tipo horas, calcular proporcionalmente
+        if (solicitud.horasSolicitadas<8 && solicitud.fechasActuales.length > 0) {
+          horasADevolver = solicitud.horasSolicitadas
+        }
+
+        const userDocRef = doc(db, 'USUARIOS', solicitud.solicitante);
+
+        // Usar transacción para crear cancelación y actualizar saldo
+        const empleadoActual = esAdmin ? solicitud.solicitante : user?.email;
+        let saldoAntes = 0;
+        let saldoDespues = 0;
+        await runTransaction(db, async (transaction) => {
+        // Obtener saldo actual del empleado ANTES de la cancelación
+        const userDoc = await transaction.get(userDocRef);
+        if (!userDoc.exists()) {
+          throw new Error('Empleado no encontrado');
+        }
+        saldoAntes = userDoc.data().vacaciones?.disponibles || 0;
+        saldoDespues = saldoAntes + horasADevolver;
+
+        // Crear registro de cancelación
+        const registroCancelacion = {
+          createdAt: new Date(),
+          esAdmin,
+          fechaCancelacion: formatYMD(new Date()),
+          fechasCanceladas: [...diasACancelar].sort(),
+          esCancelacionTotal,
+          horasDevueltas: horasADevolver,
+          horasDisponiblesAntesCancelacion: saldoAntes,
+          horasDisponiblesDespuesCancelacion: saldoDespues,
+          motivoCancelacion: esAdmin?('Jefe: '+motivoCancelacion.trim()):motivoCancelacion.trim(),
+          procesadaPor: userProfile?.nombre,
+        };
+
+        // Preparar actualización
+        const solicitudRef = doc(db, 'VACACIONES', solicitud.id);
+
+        const datosActualizacion = {
+          fechasActuales: nuevasFechasActuales,
+          cancelaciones: arrayUnion(registroCancelacion),
+          updatedAt: new Date()
+        };
+
+        // Si es cancelación total, cambiar estado
+        if (esCancelacionTotal) {
+          datosActualizacion.fechaCancelacion = formatYMD(new Date()),
+          datosActualizacion.estado = 'cancelado';
+        }
+          // Actualizar solicitud
+          transaction.update(solicitudRef, datosActualizacion);
+
+          // Devolver saldo al empleado
+          transaction.update(userDocRef, {
+            'vacaciones.disponibles': saldoDespues,
+            updatedAt: new Date()
+          });
+        });
+
+      // Notificaciones según quién canceló
+            try {
+              const { sendNotification, userProfile } = useAuthStore.getState();
+              const nombreSolicitante = formatearNombre(userProfile.nombre);
+              
+              if (esAdmin && solicitud.solicitante !== empleadoActual) {
+                // Admin cancela solicitud de un empleado → Notificar al empleado
+                await sendNotification({
+                  empleadoEmail: solicitud.solicitante,
+                  title: '⚠️ Cancelación de vacaciones',
+                  body: `❌ El administrador ha cancelado ${formatearTiempoVacasLargo(horasADevolver)} de tus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`,
+                  url: '/vacaciones/solicitudes',
+                  type: 'vacaciones_cancelada'
+                });
+              } else if (!esAdmin) {
+                // Caso 2: Trabajador cancela su propia solicitud → Notificar a admins
+                await fetch('/.netlify/functions/notifyAdmins', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    solicitante: solicitud.solicitante,
+                    nombreSolicitante: nombreSolicitante,
+                    diasSolicitados: `${formatearTiempoVacasLargo(horasADevolver)}`,
+                    esVenta: false,
+                    accion: 'cancelacion_vacaciones',
+                    mensaje: `❌ ${nombreSolicitante} ha cancelado ${formatearTiempoVacasLargo(horasADevolver)} de sus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`
+                  })
+                });
+              }
+            } catch (notifError) {
+              console.error('Error enviando notificación:', notifError);
+            }
+
+            return {
+              exito: true,
+              esCancelacionTotal,
+              horasDevueltas: horasADevolver,
+              diasCancelados: diasACancelar.length,
+              saldoAntes,                                           
+              saldoDespues 
+            };
+
+          } catch (error) {
+            console.error('Error en cancelación parcial:', error);
+            set({ error: error.message });
+            throw error;
+          }
+        },
+
+
+ /*  cancelarSolicitudParcial: async (solicitud, diasACancelar, motivoCancelacion, esAdmin = false) => {
     try {
       const { user, userProfile } = useAuthStore.getState();
       
@@ -1484,7 +1747,7 @@ export const useVacacionesStore = create((set, get) => {
       set({ error: error.message });
       throw error;
     }
-  },
+  }, */
 
   // Obtener todos los empleados con sus saldos actuales
   obtenerEmpleadosConSaldos: async () => {
@@ -1605,9 +1868,9 @@ export const useVacacionesStore = create((set, get) => {
           empleadoEmail: empleadoEmail,
           title: `${emoji} Ajuste de saldo de vacaciones`,
           body: tipoAjuste === 'añadir' 
-            ? `Se han añadido ${formatearTiempoVacasLargo(horas)} a tu saldo. Saldo actual: ${formatearTiempoVacasLargo(nuevoSaldo.disponibles)}`
+            ? `Se han añadido ${formatearTiempoVacasLargo(horas)} a tu saldo.\nSaldo actual: ${formatearTiempoVacasLargo(nuevoSaldo.disponibles)}\n${razonAjuste.trim()}`
             : tipoAjuste === 'reducir' 
-              ? `Se han reducido ${formatearTiempoVacasLargo(horas)} de tu saldo. Saldo actual: ${formatearTiempoVacasLargo(nuevoSaldo.disponibles)}`
+              ? `Se han reducido ${formatearTiempoVacasLargo(horas)} de tu saldo.\nSaldo actual: ${formatearTiempoVacasLargo(nuevoSaldo.disponibles)}\n${razonAjuste.trim()}`
                : `Se ha ajustado tu saldo a ${formatearTiempoVacasLargo(horas)}`,
           url: '/vacaciones',
           type: 'ajuste_saldo'
@@ -1864,8 +2127,8 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
       }));
 
       solicitudesAprobadas.forEach(solicitud => {
-        if (solicitud.fechas && solicitud.fechas.length > 0) {
-          solicitud.fechas.forEach(fecha => {
+        if (solicitud.fechasActuales && solicitud.fechasActuales.length > 0) {
+          solicitud.fechasActuales.forEach(fecha => {
             const fechaObj = new Date(fecha);
             if (fechaObj.getFullYear() === año) {
               const mes = fechaObj.getMonth();
@@ -1892,141 +2155,6 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
     }
   },
 
-  // Calcular KPIs de aprobación
-  calcularKPIsAprobacion: async (año) => {
-    try {
-      const { solicitudes } = await get().obtenerDatosAnaliticos(año);
-
-      const stats = {
-        total: solicitudes.length,
-        aprobadas: 0,
-        denegadas: 0,
-        canceladas: 0,
-        pendientes: 0,
-        tasaAprobacion: 0,
-        tiempoMedioAprobacion: 0
-      };
-
-      let tiemposAprobacion = [];
-
-      solicitudes.forEach(s => {
-        if (s.estado === 'aprobada') stats.aprobadas++;
-        else if (s.estado === 'denegada') stats.denegadas++;
-        else if (s.estado === 'cancelado') stats.canceladas++;
-        else if (s.estado === 'pendiente') stats.pendientes++;
-
-        // Calcular tiempo de aprobación/denegación
-        if (s.fechaAprobacionDenegacion) {
-          const fechaSolicitud = new Date(s.fechaSolicitud);
-          const fechaResolucion = new Date(s.fechaAprobacionDenegacion);
-          const diasTranscurridos = Math.floor((fechaResolucion - fechaSolicitud) / (1000 * 60 * 60 * 24));
-          tiemposAprobacion.push(diasTranscurridos);
-        }
-      });
-
-      const solicitudesResueltas = stats.aprobadas + stats.denegadas;
-      stats.tasaAprobacion = solicitudesResueltas > 0 ? 
-        Math.round((stats.aprobadas / solicitudesResueltas) * 100) : 0;
-
-      stats.tiempoMedioAprobacion = tiemposAprobacion.length > 0 ?
-        Math.round(tiemposAprobacion.reduce((a, b) => a + b, 0) / tiemposAprobacion.length) : 0;
-
-      return stats;
-    } catch (error) {
-      console.error('Error calculando KPIs de aprobación:', error);
-      throw error;
-    }
-  },
-
-  // Calcular uso de vacaciones por empleado
-  calcularUsoPorEmpleado: async (año) => {
-    try {
-      const { solicitudes, usuarios } = await get().obtenerDatosAnaliticos(año);
-      const solicitudesAprobadas = solicitudes.filter(s => s.estado === 'aprobada');
-
-      // Obtener saldos actuales
-      const empleadosConSaldos = await get().obtenerEmpleadosConSaldos();
-      const saldosMap = {};
-      empleadosConSaldos.forEach(emp => {
-        saldosMap[emp.email] = emp.saldoActual;
-      });
-
-      const usoEmpleados = {};
-
-      solicitudesAprobadas.forEach(solicitud => {
-        const email = solicitud.solicitante;
-        const usuario = usuarios[email] || {};
-        
-        if (!usoEmpleados[email]) {
-          const saldo = saldosMap[email] || { asignadas: 0, disponibles: 0 };
-          usoEmpleados[email] = {
-            email,
-            nombre: formatearNombre(usuario.nombre) || email,
-            puesto: usuario.puesto || 'Sin definir',
-            horasUsadas: 0,
-            horasAsignadas: saldo.asignadas || 0,
-            solicitudes: 0,
-            porcentajeUso: 0
-          };
-        }
-
-        usoEmpleados[email].horasUsadas += solicitud.horasSolicitadas || 0;
-        usoEmpleados[email].solicitudes++;
-      });
-
-      // Calcular porcentajes
-      Object.values(usoEmpleados).forEach(emp => {
-        if (emp.horasAsignadas > 0) {
-          emp.porcentajeUso = Math.round((emp.horasUsadas / emp.horasAsignadas) * 100);
-        }
-      });
-
-      return Object.values(usoEmpleados)
-        .sort((a, b) => b.horasUsadas - a.horasUsadas);
-    } catch (error) {
-      console.error('Error calculando uso por empleado:', error);
-      throw error;
-    }
-  },
-
-  // Calcular distribución por puestos
-  calcularDistribucionPorPuestos: async (año) => {
-    try {
-      const { solicitudes, usuarios } = await get().obtenerDatosAnaliticos(año);
-      const solicitudesAprobadas = solicitudes.filter(s => s.estado === 'aprobada');
-
-      const distribucionPuestos = {};
-
-      solicitudesAprobadas.forEach(solicitud => {
-        const usuario = usuarios[solicitud.solicitante] || {};
-        const puesto = usuario.puesto || 'Sin definir';
-
-        if (!distribucionPuestos[puesto]) {
-          distribucionPuestos[puesto] = {
-            puesto,
-            solicitudes: 0,
-            horasTotales: 0,
-            empleadosUnicos: new Set()
-          };
-        }
-
-        distribucionPuestos[puesto].solicitudes++;
-        distribucionPuestos[puesto].horasTotales += solicitud.horasSolicitadas || 0;
-        distribucionPuestos[puesto].empleadosUnicos.add(solicitud.solicitante);
-      });
-
-      return Object.values(distribucionPuestos).map(d => ({
-        ...d,
-        empleadosUnicos: d.empleadosUnicos.size,
-        promedioPorEmpleado: d.empleadosUnicos.size > 0 ? 
-          Math.round(d.horasTotales / d.empleadosUnicos.size) : 0
-      })).sort((a, b) => b.horasTotales - a.horasTotales);
-    } catch (error) {
-      console.error('Error calculando distribución por puestos:', error);
-      throw error;
-    }
-  },
-      //
     loadHistorialSolicitudesConCancelaciones: async (filtros = {}) => {
       try {
         const { isAdminOrOwner } = useAuthStore.getState();
@@ -2067,8 +2195,8 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
         if (filtros.año) {
           solicitudesFiltradas = solicitudesFiltradas.filter(s => {
             const añoSolicitud = new Date(s.fechaSolicitud).getFullYear();
-            const añoPrimeraFecha = s.fechas && s.fechas.length > 0 ?
-              new Date(s.fechas[0]).getFullYear() : añoSolicitud;
+            const añoPrimeraFecha = s.fechasActuales && s.fechasActuales.length > 0 ?
+              new Date(s.fechasActuales[0]).getFullYear() : añoSolicitud;
             return añoSolicitud === filtros.año || añoPrimeraFecha === filtros.año;
           });
         }
@@ -2125,8 +2253,11 @@ mapSolicitudToEventos: (solicitud) => {
   }
 
   // Cancelaciones parciales (suman)
-  if (Array.isArray(solicitud.cancelacionesParciales)) {
-    for (const c of solicitud.cancelacionesParciales) {
+  if (Array.isArray(solicitud.cancelaciones)) {
+    for (const c of solicitud.cancelaciones) {
+      if (c.esCancelacionTotal === true) {
+      continue; 
+    }
       eventos.push({
         tipo: 'cancelacion_parcial',
         fecha: c.fechaCancelacion,
@@ -2143,18 +2274,19 @@ mapSolicitudToEventos: (solicitud) => {
   }
 
   // Cancelación total (suma)
-  if (solicitud.estado === 'cancelado' && solicitud.fechaCancelacion) {
+  if (solicitud.estado === 'cancelado' && Array.isArray(solicitud.cancelaciones)) {
+    const registroCancelacionTotal = solicitud.cancelaciones[solicitud.cancelaciones.length - 1];
     eventos.push({
       tipo: 'cancelacion_total',
-      fecha: solicitud.fechaCancelacion,
-      deltaHoras: (solicitud.horasDisponiblesDespuesCancelacion ?? 0) - (solicitud.horasDisponiblesAntesCancelacion ?? 0), // positivo
-      saldoAntes: solicitud.horasDisponiblesAntesCancelacion ?? null,
-      saldoDespues: solicitud.horasDisponiblesDespuesCancelacion ?? null,
+      fecha: registroCancelacionTotal.fechaCancelacion,
+      deltaHoras: (registroCancelacionTotal.horasDisponiblesDespuesCancelacion ?? 0) - (registroCancelacionTotal.horasDisponiblesAntesCancelacion ?? 0), // positivo
+      saldoAntes: registroCancelacionTotal.horasDisponiblesAntesCancelacion ?? null,
+      saldoDespues: registroCancelacionTotal.horasDisponiblesDespuesCancelacion ?? null,
       concepto: 'Cancelación total',
       solicitudId: solicitud.id,
       ordenDia: rank.cancelacion_total,
-      motivoCancelacion: solicitud.motivoCancelacion || null,
-      fechasCanceladas: solicitud.fechasCanceladas || null
+      motivoCancelacion: registroCancelacionTotal.motivoCancelacion || null,
+      fechasCanceladas: registroCancelacionTotal.fechasCanceladas || null
     });
   }
 

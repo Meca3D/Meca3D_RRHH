@@ -11,8 +11,8 @@ import AssignmentLateOutlinedIcon from '@mui/icons-material/AssignmentLateOutlin
 import DynamicFeedOutlinedIcon from '@mui/icons-material/DynamicFeedOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
-import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
-import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
+import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
+import { AssessmentOutlined, SettingsOutlined, ThumbDownOutlined } from '@mui/icons-material';
 import { useAdminStats } from '../../../hooks/useAdminStats';
 
 const GestionAusencias = () => {
@@ -44,11 +44,20 @@ const GestionAusencias = () => {
       title: 'Crear Ausencia',
       subtitle: 'Nueva petición',
       description: 'Solicitar un Permiso o Baja',
-      label: 'Nueva',
       icon: PostAddOutlinedIcon,
       color: 'naranja.main',
       bgColor: 'naranja.fondo',
       route: '/admin/ausencias/crear'
+    },
+    {
+      id: 'penalizacion',
+      title: 'Penalizaciones por Bajas',
+      subtitle: 'por Bajas',
+      description: 'Penalizaciones asociadas a bajas',
+      icon: ThumbDownOutlinedIcon,
+      color: 'rojo.main',
+      bgColor: 'rojo.fondo',
+      route: '/admin/ausencias/penalizaciones'
     },
   ];
 

@@ -47,7 +47,7 @@ const CrearAusencia = () => {
     return () => {
       if (unsubConfig) unsubConfig();
     };
-  }, [loadFestivos, loadConfigAusencias]);
+  }, [loadConfigAusencias]);
 
   const handleTipoChange = (e) => {
     setTipo(e.target.value);

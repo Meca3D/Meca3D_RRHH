@@ -59,11 +59,6 @@ const MisAusencias = () => {
   const [ausenciaAEliminar, setAusenciaAEliminar] = useState(null);
   const [eliminando, setEliminando] = useState(false);
 
-  // Estado para menú de acciones
-  const [menuAnchor, setMenuAnchor] = useState(null);
-  const [ausenciaMenuAbierto, setAusenciaMenuAbierto] = useState(null);
-
-
   useEffect(() => {
     if (!user?.email) return;
     const unsubscribe = loadAusencias(user?.email);
@@ -171,16 +166,9 @@ const MisAusencias = () => {
     navigate(`/ausencias/agregarDias/${ausencia.id}`);
   };
 
-  // Cerrar menú
-  const handleCerrarMenu = () => {
-    setMenuAnchor(null);
-    setAusenciaMenuAbierto(null);
-  };
-
   // Acciones desde el menú
   const handleAccionMenu = (accion, ausencia) => {
-    handleCerrarMenu();
-    
+
     switch (accion) {
       case 'añadir':
         handleAñadirDias(ausencia);
@@ -220,7 +208,7 @@ const MisAusencias = () => {
   };
 
   const AusenciaCard = ({ ausencia }) => {
-    const { puedeAñadir, puedeCancelar, puedeEliminar, diasDisponibles } = puedeGestionarAusencia(ausencia);
+    const { puedeAñadir, puedeCancelar, puedeEliminar } = puedeGestionarAusencia(ausencia);
     const colorEstado = getColorEstado(ausencia.estado);
     const colorTipo = getColorTipo(ausencia.tipo);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -367,7 +355,7 @@ const MisAusencias = () => {
             {/* Duración */}
             <Grid size={{ xs: 12 }}>
               <Typography variant="body1" fontWeight={600}>
-                {capitalizeFirstLetter(ausencia.tipo)} Original: {ausencia.fechas.length} día{ausencia.fechas.length !== 1 ? 's' : ''}
+                Días de {capitalizeFirstLetter(ausencia.tipo)}: {ausencia.fechasActuales.length} día{ausencia.fechasActuales.length !== 1 ? 's' : ''}
               </Typography>
             </Grid>
 
@@ -411,7 +399,7 @@ const MisAusencias = () => {
                       {/* Obtener listas para clasificar */}
                       {(() => {
                         // Calcular el estado real de las fechas considerando el orden temporal
-                        const { activas, canceladas, agregadas } = calcularEstadoRealFechas(ausencia);
+                        const { canceladas, agregadas } = calcularEstadoRealFechas(ausencia);
                         
                         // Obtener TODAS las fechas que se añadieron en algún momento
                         const todasLasFechasAgregadas = obtenerDiasAgregados(ausencia.ediciones || []);
@@ -424,7 +412,6 @@ const MisAusencias = () => {
                         const esPasada = esFechaPasadaOHoy(fecha);
                         const esAgregada = agregadas.includes(fecha);
                         const estaCancelada = canceladas.includes(fecha);
-                        const estaActiva = ausencia.fechasActuales.includes(fecha);
                         
                         // Determinar estilo y etiqueta según el estado REAL
                         let colorTexto = esPasada?'text.secondary':'text.primary'
@@ -447,6 +434,9 @@ const MisAusencias = () => {
                           return (
                             <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
                               <Box display="flex" alignItems="center" gap={0.5}>
+                                <Typography variant="body1"color={colorTexto}>
+                                  {icono} 
+                                </Typography>
                                 <Typography
                                   variant="body2"
                                   color={colorTexto}
