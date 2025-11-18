@@ -210,7 +210,7 @@ const OrderList = () => {
                 }}
               >
                 {/* Botón de eliminar con estilo corporativo */}
-                {puedeAccederPedido(order) && (
+                {(['admin','cocinero'].includes(userProfile?.rol)||(order.creadoPor === user?.email))  && (
                   <IconButton
                     size="small"
                     sx={{ 

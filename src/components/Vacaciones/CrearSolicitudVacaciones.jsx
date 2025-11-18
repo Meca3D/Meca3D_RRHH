@@ -32,7 +32,7 @@ const CrearSolicitudVacaciones = () => {
      loadConfigVacaciones,
      loadSolicitudesVacaciones,  
      solicitudesVacaciones,      
-     obtenerDiasCancelados  } = useVacacionesStore();
+      } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
 
   const [tipoSolicitud, setTipoSolicitud] = useState('dias');
@@ -107,18 +107,16 @@ const CrearSolicitudVacaciones = () => {
     solicitudesVacaciones
       .filter(s => s.estado === 'aprobada')
       .forEach(s => {
-        const cancelados = obtenerDiasCancelados(s.cancelacionesParciales || []);
-        s.fechas?.forEach(f => {
-          const esHoyOFutura = f >= hoy;
-          const noCancelado = !cancelados.includes(f);
-          if (esHoyOFutura && noCancelado) {
+        s.fechasActuales?.forEach(f => {
+          if (f >= hoy) {
             set.add(f);
           }
         });
       });
     
     return set;
-  }, [solicitudesVacaciones, obtenerDiasCancelados]);
+  }, [solicitudesVacaciones]);
+
 
   const horasTotales = tipoSolicitud === 'dias' 
     ? fechasSeleccionadas.length * 8 

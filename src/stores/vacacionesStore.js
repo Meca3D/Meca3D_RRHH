@@ -1320,16 +1320,13 @@ export const useVacacionesStore = create((set, get) => {
           });
         });
         
-        const base=solicitudesFiltradas.sort((a, b) => new Date(a.fechas[0]) - new Date(b.fechas[0]));
-        const result = [];
-        for (const s of base) {
-        const diasCancelados = get().obtenerDiasCancelados(s.cancelacionesParciales);
-        result.push({
-          ...s,
-          _diasCanceladosSet: new Set(diasCancelados),
-        });
-      }
-      return result;
+        // Ordenar por la primera fecha actual (no cancelada)
+      return solicitudesFiltradas.sort((a, b) => {
+        const fechaA = a.fechasActuales?.[0]
+        const fechaB = b.fechasActuales?.[0]
+        return new Date(fechaA) - new Date(fechaB);
+      });
+
         
       } catch (error) {
         console.error('Error cargando vacaciones aprobadas:', error);

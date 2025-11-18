@@ -26,6 +26,8 @@ const EditarSolicitudVacaciones = () => {
   const { solicitudId } = useParams();
   const { user, userProfile } = useAuthStore();
   const { 
+    loadSolicitudesVacaciones,
+    solicitudesVacaciones,
     actualizarSolicitudVacaciones, 
     obtenerSolicitudCompleta,
     loadFestivos, 
@@ -60,97 +62,115 @@ const EditarSolicitudVacaciones = () => {
       const unsubscribe = loadConfigVacaciones();
       return () => unsubscribe()} // Cleanup al desmontar
     }, [loadConfigVacaciones, configVacaciones]);
+
+    useEffect(() => {
+      if (!user?.email) return;
+      const unsub = loadSolicitudesVacaciones(user.email);
+      return () => { if (typeof unsub === 'function') unsub(); };
+    }, [user?.email, loadSolicitudesVacaciones]);
+
   
-  // Cargar datos iniciales
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        setLoading(true);
-        
-        // Cargar festivos
-        const unsubFestivos = loadFestivos();
-        
-        // Cargar solicitud
-        const solicitud = await obtenerSolicitudCompleta(solicitudId);
-        
-        // Verificar permisos
-        if (solicitud.solicitante !== user?.email) {
-          showError('No tienes permisos para editar esta solicitud');
-          navigate('/vacaciones/solicitudes');
-          return;
-        }
+      // Cargar datos iniciales
+      useEffect(() => {
+        const cargarDatos = async () => {
+          try {
+            setLoading(true);
+            
+            // Cargar festivos
+            const unsubFestivos = loadFestivos();
+            
+            // Cargar solicitud
+            const solicitud = await obtenerSolicitudCompleta(solicitudId);
+            
+            // Verificar permisos
+            if (solicitud.solicitante !== user?.email) {
+              showError('No tienes permisos para editar esta solicitud');
+              navigate('/vacaciones/solicitudes');
+              return;
+            }
 
-        // Verificar que sea editable
-        if (solicitud.estado !== 'pendiente' &&  solicitud.estado !== 'aprobada') {
-          showError('Solo se pueden editar solicitudes pendientes o aprobadas');
-          navigate('/vacaciones/solicitudes');
-          return;
-        }
+            // Verificar que sea editable
+            if (solicitud.estado !== 'pendiente') {
+              showError('Solo se pueden editar solicitudes pendientes');
+              navigate('/vacaciones/solicitudes');
+              return;
+            }
 
-        const primeraFecha = solicitud.fechas[0];
-        if (esFechaPasadaOHoy(primeraFecha)) {
-          showError('No se pueden editar solicitudes con fechas pasadas');
-          navigate('/vacaciones/solicitudes');
-          return;
-        }
+            const primeraFecha = solicitud.fechas[0];
+            if (esFechaPasadaOHoy(primeraFecha)) {
+              showError('No se pueden editar solicitudes con fechas pasadas');
+              navigate('/vacaciones/solicitudes');
+              return;
+            }
 
-        // Establecer datos iniciales
-        setSolicitudOriginal(solicitud);
-        setFechasSeleccionadas([...solicitud.fechas]);
-        setComentarios(solicitud.comentariosSolicitante || '');
-        
-        // Determinar tipo de solicitud
-        const esHoras = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
-        const tipoOriginal = esHoras ? 'horas' : 'dias';
-        
-        setTipoSolicitud(tipoOriginal);
-        setFechasSeleccionadas([...solicitud.fechas]);
-        setComentarios(solicitud.comentariosSolicitante || '');
-        
-        if (esHoras) {
-          setHorasSolicitadas(solicitud.horasSolicitadas);
-        }
-              // ✅ NUEVO: Guardar valores originales
-        setValoresOriginales({
-          tipoOriginal: tipoOriginal,
-          fechasOriginales: [...solicitud.fechas],
-          horasOriginales: esHoras ? solicitud.horasSolicitadas : 1,
-          comentariosOriginales: solicitud.comentariosSolicitante || ''
-        });
+            // Establecer datos iniciales
+            const esHoras = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
+            const tipoOriginal = esHoras ? 'horas' : 'dias';      
+            setSolicitudOriginal(solicitud);
+            setTipoSolicitud(tipoOriginal);
+            setFechasSeleccionadas([...solicitud.fechas]);
+            setComentarios(solicitud.comentariosSolicitante || '');
+            
+            if (esHoras) {
+              setHorasSolicitadas(solicitud.horasSolicitadas);
+            }
+                  // ✅ NUEVO: Guardar valores originales
+            setValoresOriginales({
+              tipoOriginal: tipoOriginal,
+              fechasOriginales: [...solicitud.fechas],
+              horasOriginales: esHoras ? solicitud.horasSolicitadas : 1,
+              comentariosOriginales: solicitud.comentariosSolicitante || ''
+            });
 
-        // ✅ NUEVO: Inicializar valores temporales con los originales
-        setValoresTemp({
-          dias: { 
-            fechas: tipoOriginal === 'dias' ? [...solicitud.fechas] : [],
-            comentarios: tipoOriginal === 'dias' ? (solicitud.comentariosSolicitante || '') : ''
-          },
-          horas: { 
-            fechas: tipoOriginal === 'horas' ? [...solicitud.fechas] : [],
-            horas: tipoOriginal === 'horas' ? solicitud.horasSolicitadas : 1,
-            comentarios: tipoOriginal === 'horas' ? (solicitud.comentariosSolicitante || '') : ''
+            // ✅ NUEVO: Inicializar valores temporales con los originales
+            setValoresTemp({
+              dias: { 
+                fechas: tipoOriginal === 'dias' ? [...solicitud.fechas] : [],
+                comentarios: tipoOriginal === 'dias' ? (solicitud.comentariosSolicitante || '') : ''
+              },
+              horas: { 
+                fechas: tipoOriginal === 'horas' ? [...solicitud.fechas] : [],
+                horas: tipoOriginal === 'horas' ? solicitud.horasSolicitadas : 1,
+                comentarios: tipoOriginal === 'horas' ? (solicitud.comentariosSolicitante || '') : ''
+              }
+            });
+
+            return unsubFestivos;
+          } catch (error) {
+            showError('Error al cargar la solicitud: ' + error.message);
+            navigate('/vacaciones/solicitudes');
+          } finally {
+            setLoading(false);
           }
-        });
+        };
 
-        return unsubFestivos;
-      } catch (error) {
-        showError('Error al cargar la solicitud: ' + error.message);
-        navigate('/vacaciones/solicitudes');
-      } finally {
-        setLoading(false);
-      }
-    };
+        if (solicitudId && user?.email) {
+          cargarDatos();
+        }
+      }, [solicitudId, user?.email]);
 
-    if (solicitudId && user?.email) {
-      cargarDatos();
-    }
-  }, [solicitudId, user?.email]);
+      const fechasYaPedidasSet = useMemo(() => {
+        const hoy = formatYMD(new Date());
+        const set = new Set();
+        
+        solicitudesVacaciones
+          .filter(s => s.estado === 'aprobada')
+          .forEach(s => {
+            s.fechasActuales?.forEach(f => {
+              if (f >= hoy) {
+                set.add(f);
+              }
+            });
+          });
+        
+        return set;
+      }, [solicitudesVacaciones]);
 
 
     const horasLibresParaEdicion = useMemo(() => {
       if (!solicitudOriginal && !userProfile) return
     const vacasDisp = userProfile?.vacaciones?.disponibles || 0;
   const vacasPend = userProfile?.vacaciones?.pendientes || 0;
-
   
   if (solicitudOriginal?.estado === 'pendiente') {
     // Si era pendiente: liberar de pendientes
@@ -220,6 +240,7 @@ const EditarSolicitudVacaciones = () => {
     try {
       const datosActualizados = {
         fechas: ordenarFechas(fechasSeleccionadas),
+        fechasActuales: ordenarFechas(fechasSeleccionadas),
         horasSolicitadas: horasTotales,
         comentariosSolicitante: comentarios.trim()
       };
@@ -470,6 +491,7 @@ const EditarSolicitudVacaciones = () => {
                 onFechasChange={handleFechasChange}
                 esFechaSeleccionable={esFechaSeleccionable}
                 horasLibres={horasLibresParaEdicion}
+                fechasYaPedidasSet={fechasYaPedidasSet}
               />
             </CardContent>
           </Card>
