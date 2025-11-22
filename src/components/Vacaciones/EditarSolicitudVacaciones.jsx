@@ -560,11 +560,13 @@ const EditarSolicitudVacaciones = () => {
                               </Box>
                               </Box>
                           <Collapse in={mostrarListaFechas}>
-                          <Box sx={{ mt: 1 }}>
+                          <Grid container sx={{ mt: 1 }}>
                               {ordenarFechas(fechasSeleccionadas).map(f => (
-                              <Typography key={f} variant="h5" display="block">• {formatearFechaCorta(f)}</Typography>
+                                <Grid size={{xs:6,md:4}} key={f} >
+                              <Typography variant="h6" textAlign={'center'}> {formatearFechaCorta(f)}</Typography>
+                              </Grid>
                               ))}
-                          </Box>
+                          </Grid>
                           </Collapse>
                       </Box>
                       )

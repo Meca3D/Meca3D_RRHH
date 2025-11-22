@@ -150,7 +150,7 @@ export const useVacacionesStore = create((set, get) => {
     
     // Horas sueltas no se pueden cancelar
     const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechasActuales?.length === 1;
-    if (esHorasSueltas&&esAdmin) return false;
+    if (esHorasSueltas&&esAdmin) return true;
     
     // Verificar que hay días disponibles para cancelar
     const diasDisponibles = (solicitud.fechasActuales || []).filter(fecha => {
@@ -590,8 +590,7 @@ export const useVacacionesStore = create((set, get) => {
             saldoDespues.pendientes -= solicitud.horasSolicitadas;
             updateData.horasDisponiblesDespues = saldoDespues.disponibles;
           } else if (nuevoEstado === 'denegada') {
-            saldoDespues.pendientes -= solicitud.horasSolicitadas;
-            updateData.horasDisponiblesAlDenegar = saldoAntes.disponibles;
+            saldoDespues.pendientes -= solicitud.horasSolicitadas;      
           }
 
           // Actualizar solicitud
@@ -2240,6 +2239,7 @@ mapSolicitudToEventos: (solicitud) => {
       saldoDespues: solicitud.horasDisponiblesDespues ?? null,
       concepto: solicitud.esVenta ? 'Venta Aprobada' : 'Solicitud aprobada',
       esVenta: solicitud.esVenta || false,
+      cantidadARecibir:solicitud?.cantidadARecibir,
       solicitudId: solicitud.id,
       ordenDia: rank.aprobacion,
       horasSolicitadas: solicitud.horasSolicitadas,
@@ -2262,6 +2262,8 @@ mapSolicitudToEventos: (solicitud) => {
         saldoAntes: c.horasDisponiblesAntesCancelacion ?? null,
         saldoDespues: c.horasDisponiblesDespuesCancelacion ?? null,
         concepto: `Cancelación parcial`,
+        horasDevueltas:c.horasDevueltas,
+        procesadaPor: c.procesadaPor,
         solicitudId: solicitud.id,
         ordenDia: rank.cancelacion_parcial,
         fechasCanceladas: c.fechasCanceladas || [],
@@ -2280,6 +2282,10 @@ mapSolicitudToEventos: (solicitud) => {
       saldoAntes: registroCancelacionTotal.horasDisponiblesAntesCancelacion ?? null,
       saldoDespues: registroCancelacionTotal.horasDisponiblesDespuesCancelacion ?? null,
       concepto: 'Cancelación total',
+      esVenta: solicitud?.esVenta,
+      esHorasSueltas:registroCancelacionTotal.horasDevueltas<8,
+      horasDevueltas:registroCancelacionTotal.horasDevueltas,
+      procesadaPor: registroCancelacionTotal.procesadaPor,
       solicitudId: solicitud.id,
       ordenDia: rank.cancelacion_total,
       motivoCancelacion: registroCancelacionTotal.motivoCancelacion || null,
@@ -2293,8 +2299,8 @@ mapSolicitudToEventos: (solicitud) => {
       tipo: 'denegada',
       fecha: solicitud.fechaAprobacionDenegacion,
       deltaHoras: 0,
-      saldoAntes: solicitud.horasDisponiblesAlDenegar ?? null,
-      saldoDespues: solicitud.horasDisponiblesAlDenegar ?? null,
+      saldoAntes: solicitud.horasDisponiblesAntes ?? null,
+      saldoDespues: solicitud.horasDisponiblesDespues ?? null,
       concepto: solicitud.esVenta? 'Venta Denegada' : 'Solicitud denegada',
       solicitudId: solicitud.id,
       esVenta: solicitud.esVenta || false,

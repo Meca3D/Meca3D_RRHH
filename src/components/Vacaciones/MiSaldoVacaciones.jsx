@@ -19,7 +19,7 @@ import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
 
 import { useAuthStore } from '../../stores/authStore';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
-import { formatearFechaCorta, formatearFechaEspanol2 } from '../../utils/dateUtils';
+import { formatearFechaCorta, formatearFechaEspanol2, formatearFechaLarga } from '../../utils/dateUtils';
 import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../utils/vacacionesUtils';
 
 import jsPDF from 'jspdf';
@@ -353,6 +353,23 @@ autoTable(doc, {
       const abierto = !!expanded[key];
       const deltaTxt = `${e.deltaHoras >= 0 ? '+' : '-'}${formatearTiempoVacasLargo(Math.abs(e.deltaHoras))}`;
       const chipColor = (e.deltaHoras > 0 ? 'success' : e.deltaHoras < 0 ? 'error' : 'default');
+      const getColor = (e) => ( e.tipo === 'denegada' ? 'rojo.main' 
+                              : e.tipo ==='aprobacion' ? 'verde.main'
+                              : e.tipo ==='cancelacion_parcial' ? 'naranja.main'
+                              : e.tipo ==='cancelacion_total' ? 'dorado.main'
+                              : e.tipo ==='ajuste' && e.tipoAjuste==="añadir" ? 'verde.main'
+                              : e.tipo ==='ajuste' && e.tipoAjuste==="reducir" ? 'rojo.main'
+                              : e.tipo ==='ajuste' && e.tipoAjuste==="establecer" ? 'azul.main'
+                              : 'default')
+      const getFondo = (e) => (e.tipo === 'denegada' ? 'grey.100' 
+                              : e.tipo ==='aprobacion' ? 'verde.fondo'
+                              : e.tipo ==='cancelacion_parcial' ? 'naranja.fondo'
+                              : e.tipo ==='cancelacion_total' ? 'dorado.fondo'
+                              : e.tipo ==='ajuste' && e.tipoAjuste==="añadir" ? 'verde.fondo'
+                              : e.tipo ==='ajuste' && e.tipoAjuste==="reducir" ? 'rojo.fondo'
+                              : e.tipo ==='ajuste' && e.tipoAjuste==="establecer" ? 'azul.fondo'
+                              : 'default')
+      
       return (
         <Card key={key} sx={{border:'1px solid black'}}>
           <CardHeader
@@ -366,7 +383,7 @@ autoTable(doc, {
                    {formatearTiempoVacas(e.saldoAntes )?? '-'} → {formatearTiempoVacas(e.saldoDespues) ?? '-'}
                 </Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap" sx={{mb:2}}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap" sx={{mb:1}}>
                 <Typography variant="h6">
                   {e.concepto}
                 </Typography>
@@ -379,19 +396,13 @@ autoTable(doc, {
               alignItems='center' 
               borderRadius={2}
               onClick={() => toggle(key)} aria-label={abierto ? 'Contraer' : 'Expandir'} 
-              bgcolor={ e.tipo === 'denegada' ? 'grey.100' 
-                : e.tipo ==='aprobacion' ? 'verde.fondo'
-                : e.tipo ==='cancelacion_parcial' ? 'naranja.fondo'
-                : e.tipo ==='cancelacion_total' ? 'rojo.fondo'
-                : e.tipo ==='ajuste' && e.tipoAjuste==="añadir" ? 'verde.fondo'
-                : e.tipo ==='ajuste' && e.tipoAjuste==="reducir" ? 'rojo.fondo'
-                : e.tipo ==='ajuste' && e.tipoAjuste==="establecer" ? 'azul.fondo'
-                : 'default'
-              } 
-              sx={{width:'100%'}}
+              bgcolor={ getFondo(e)} 
+              sx={{width:'100%', p:0.5}}
             >       
               {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
-              {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
+              <Typography variant='h6'>
+               
+              </Typography>
               {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
 
               </Box>
@@ -399,200 +410,346 @@ autoTable(doc, {
             }           
           />
           <Collapse in={abierto} timeout="auto" unmountOnExit>
-            <CardContent>
+            <CardContent sx={{mt:-2}}>
+              <Box sx={{
+                          p: 2,                 
+                          bgcolor: getFondo(e)  ,
+                          borderLeft: '4px solid',
+                          borderColor: getColor(e),
+                          borderRadius:2
+                        }}>
               {e.tipo === 'aprobacion' && (
                 <>
                 
                   {Array.isArray(e.fechasSolicitadas) && e.fechasSolicitadas.length > 0 && (
-                    <Box sx={{mt:-2, border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1}}>
-                    
-                    <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent:'space-between',
-                      cursor: 'pointer',                    
-                    }}
-                  >
-                  <Typography fontWeight={600} variant="body1">Fechas Solicitadas: </Typography>                    
-                  </Box>
-                      <Box sx={{ }}>
-                      {e.fechasSolicitadas.map(fecha=>{
-                        return (
-                          <Typography 
-                            key={fecha} 
-                            variant='body1' 
-                            sx={{ 
-                              mb: 0.5,
-                            }}
-                          >
-                            • {formatearFechaEspanol2(fecha)} {esHorasSueltas &&`(${horasSolicitadas} ${horasSolicitadas===1?'hora':'horas'})`}
-                          </Typography>)
-                      })}
-                      </Box>
+                    <Box>
+                        <Typography fontWeight={600} variant="body1" sx={{textAlign:'center'}}>
+                        {e.fechasSolicitadas.length === 1 ? 'Día Solicitado':'Días Solicitados'} 
+                        </Typography>               
+                     {e.fechasSolicitadas.length === 1 ? (
+                         <Grid size={{ xs: 12 }}> 
+                         <Box  sx={{
+                            display: 'flex',
+                            justifyContent:esHorasSueltas?'space-between':'center',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            p: 1,   
+                            border:'1px solid',
+                            bgcolor:'white',
+                            borderColor: getColor(e),
+                            borderRadius: 2,
+                                }}>                    
+                                <Typography fontSize={'1.1rem'}>
+                                  {formatearFechaLarga(e.fechasSolicitadas[0])}
+                                </Typography>
+                                {esHorasSueltas&& (
+                                  <Chip
+                                    label ={formatearTiempoVacasLargo(horasSolicitadas)}
+                                    size="small"
+                                          sx={{ 
+                                            py:0.5,               
+                                            bgcolor: getColor(e), 
+                                            color: 'white', 
+                                            fontWeight: 700,
+                                          }}
+                                        />
+                                )}
+                                </Box>
+                                </Grid>
+                              ) : (
+                        <Grid container sx={{mt:1,}} spacing={0.5}>
+                        {e.fechasSolicitadas.map(fecha=> (
+                        <Grid size={{xs:6,md:4}} key={fecha}>
+                          <Box sx={{textAlign:'center', mb: 0.5,}}>
+                            <Chip                             
+                              label={formatearFechaCorta(fecha)}
+                              size="small"
+                              variant='outlined'
+                              sx={{
+                                fontSize: '0.95rem',
+                                p:0.5,
+                                bgcolor: 'white',
+                                color: getColor(e),
+                                borderColor: getColor(e),
+                                fontWeight: 600
+                              }}
+                            />
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                              )}
                     </Box>
                   )}
+
+                  {e.esVenta && (
+                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          💵 Venta de Vacaciones:
+                        </Typography>
+                        <Box display='flex' justifyContent={e?.cantidadARecibir?'space-between':'left'}>
+                          <Typography variant="body1" fontStyle='italic'>
+                            Venta de {formatearTiempoVacasLargo(e.horasSolicitadas)}
+                          </Typography>
+                          {e?.cantidadARecibir &&(
+                            <Typography variant="body1" fontStyle='italic'>
+                            por: {e.cantidadARecibir}€
+                          </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                  )}
+
                   {e.comentariosSolicitante && (
-                  <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Comentario trabajador:<br/></strong> {e.comentariosSolicitante}</Typography>
-                    </Box>
+                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          💬 Tus comentarios:
+                        </Typography>
+                        <Typography variant="body1" fontStyle='italic'>
+                          "{e.comentariosSolicitante}"
+                        </Typography>
+                      </Box>
                   )}
                   {e.comentariosAdmin && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'verde.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Comentario Jefe:</strong><br/> {e.comentariosAdmin}</Typography>
-                    </Box>
+                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          👨‍💼 Respuesta de administración:
+                        </Typography>
+                        <Typography variant="body1" fontStyle='italic' sx={{ whiteSpace: 'pre-wrap' }}>
+                          "{e.comentariosAdmin}"
+                        </Typography>
+                      </Box>
                   )}
                 </>
               )}
-              {e.tipo === 'cancelacion_parcial' && (
+              {(e.tipo === 'cancelacion_parcial'||e.tipo === 'cancelacion_total') && (
                 <>
-                  {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
-                     <Box sx={{mt:-2,border:'1px solid black', borderRadius:2, bgcolor:'naranja.fondo', p:1}}>
-                    
-                    <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent:'space-between',
-                      cursor: 'pointer',                    
-                    }}
-                  >
-                  <Typography fontWeight={600} variant="body1">{e.fechasCanceladas?.length===1?'Fecha Cancelada':'Fechas Canceladas'} </Typography>                    
-                  </Box>
-                      <Box sx={{ }}>
-                      {e.fechasCanceladas.map(fecha=>{
-                        return (
-                          <Typography 
-                            key={fecha} 
-                            variant='body1' 
-                            sx={{ 
-                              mb: 0.5,
-                            }}
-                          >
-                            • {formatearFechaEspanol2(fecha)} 
-                          </Typography>)
-                      })}
-                      </Box>
+                {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
+                    <Box>
+                        <Typography fontWeight={600} variant="body1" sx={{textAlign:'center'}}>
+                        {e.fechasCanceladas.length === 1 ? 'Día Cancelado':'Días Cancelados'} 
+                        </Typography>               
+                     {e.fechasCanceladas.length === 1 ? (
+                         <Grid size={{ xs: 12 }}> 
+                         <Box  sx={{
+                            display: 'flex',
+                            justifyContent:esHorasSueltas?'space-between':'center',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            p: 1,   
+                            border:'1px solid',
+                            bgcolor:'white',
+                            borderColor: getColor(e),
+                            borderRadius: 2,
+                                }}>                    
+                                <Typography fontSize={'1.1rem'}>
+                                  {formatearFechaLarga(e.fechasCanceladas[0])}
+                                </Typography>
+                                {esHorasSueltas&& (
+                                  <Chip
+                                    label ={formatearTiempoVacasLargo(e.horasDevueltas)}
+                                    size="small"
+                                          sx={{ 
+                                            py:0.5,               
+                                            bgcolor: getColor(e), 
+                                            color: 'white', 
+                                            fontWeight: 700,
+                                          }}
+                                        />
+                                )}
+                                </Box>
+                                </Grid>
+                              ) : (
+                        <Grid container sx={{mt:1,}} spacing={0.5}>
+                        {e.fechasCanceladas.map(fecha=> (
+                        <Grid size={{xs:6,md:4}} key={fecha}>
+                          <Box sx={{textAlign:'center', mb: 0.5,}}>
+                            <Chip                             
+                              label={formatearFechaCorta(fecha)}
+                              size="small"
+                              variant='outlined'
+                              sx={{
+                                fontSize: '0.95rem',
+                                p:0.5,
+                                bgcolor: 'white',
+                                color: getColor(e),
+                                borderColor: getColor(e),
+                                fontWeight: 600
+                              }}
+                            />
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                              )}
                     </Box>
+                  )}
+
+                  {e.esVenta && (
+                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          💵 Venta de Vacaciones: 
+                        </Typography>
+                        <Box display='flex' justifyContent='space-between'>
+                          <Typography variant="body1" fontStyle='italic'>
+                            Venta de {formatearTiempoVacasLargo(e.horasSolicitadas)}
+                          </Typography>
+                          <Typography variant="body1" fontStyle='italic'>
+                          ❌
+                        </Typography>                        
+                        </Box>
+                      </Box>
                   )}
                   {e.motivoCancelacion && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'naranja.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Motivo cancelación:</strong><br/> {e.motivoCancelacion}</Typography>
-                    </Box>
-                  )}
-                </>
-              )}
-              {e.tipo === 'cancelacion_total' && (
-                <>
-                  {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
-                    <Box sx={{mt:-2, border:'1px solid black', borderRadius:2, bgcolor:'rojo.fondo', p:1}}>
-                    
-                    <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent:'space-between',
-                      cursor: 'pointer',                    
-                    }}
-                  >
-                  <Typography fontWeight={600} variant="body1">{e.fechasCanceladas?.length===1?'Fecha Cancelada':'Fechas Canceladas'}</Typography>                    
-                  </Box>
-                      <Box sx={{ }}>
-                      {e.fechasCanceladas.map(fecha=>{
-                        return (
-                          <Typography 
-                            key={fecha} 
-                            variant='body1' 
-                            sx={{ 
-                              mb: 0.5,
-                            }}
-                          >
-                            • {formatearFechaEspanol2(fecha)} {esHorasSueltas &&`(${delta} ${delta===1?'hora':'horas'})`}
-                          </Typography>)
-                      })}
+
+                    <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          💬 Motivo de Cancelación:
+                        </Typography>
+                        <Typography variant="body1" fontStyle='italic' sx={{ whiteSpace: 'pre-wrap' }}>
+                          "{e.motivoCancelacion}"
+                        </Typography>
                       </Box>
-                    </Box>
                   )}
-                  {e.motivoCancelacion && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'rojo.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Motivo cancelación:</strong><br/>{e.motivoCancelacion}</Typography>
-                    </Box>
-                  )}
+                  <Box display="flex" justifyContent='space-between' alignItems="center" mt={0.5}>
+                    <Typography variant="body2" color="">
+                      Cancelado por:
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600} color="">
+                      {e.procesadaPor}
+                    </Typography>
+                  </Box>
                 </>
               )}
               {e.tipo === 'ajuste' && (
                 <>
-                <Box sx={{mt:-2,border:'1px solid black', borderRadius:2, p:1, bgcolor:e.tipoAjuste==="añadir"
-                                                                                ?'verde.fondo'
-                                                                                :e.tipoAjuste==="reducir"
-                                                                                  ?'rojo.fondo'
-                                                                                  :'azul.fondo'
-                  }}>
                   {e.comentariosSolicitante && (
-                    <Typography variant="body1">{e.comentariosSolicitante}</Typography>
+                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body1" display="block" fontWeight={600}>
+                          {e.comentariosSolicitante}
+                        </Typography>
+                      </Box>
                   )}
-                  </Box>
-                  <Box sx={{border:'1px solid black', borderRadius:2, p:1, mt:1, bgcolor:e.tipoAjuste==="añadir"
-                                                                            ?'verde.fondo'
-                                                                            :e.tipoAjuste==="reducir"
-                                                                              ?'rojo.fondo'
-                                                                              :'azul.fondo'}}>
+
                   {e.comentariosAdmin && (
-                    <Typography variant="body1" sx={{whiteSpace:'pre-wrap'}}>{e.comentariosAdmin}</Typography>
+                    <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                      <Typography variant="body1" fontStyle='italic' sx={{ whiteSpace: 'pre-wrap' }}>
+                        "{e.comentariosAdmin}"
+                      </Typography>
+                    </Box>
                   )}
-                </Box>
                 </>
               )}
               {e.tipo === 'denegada' && (
                 <>
+                                
                   {Array.isArray(e.fechasSolicitadas) && e.fechasSolicitadas.length > 0 && (
-                    <Box sx={{mt:-2, border:'1px solid black', borderRadius:2, bgcolor:'azul.fondo', p:1}}>
-                    
-                    <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent:'space-between',
-                      cursor: 'pointer',                    
-                    }}
-                  >
-                  <Typography fontWeight={600} variant="body1">Fechas Denegadas: </Typography>                    
-                  </Box>
-                      <Box sx={{ }}>
-                      {e.fechasSolicitadas.map(fecha=>{
-                        return (
-                          <Typography 
-                            key={fecha} 
-                            variant='body1' 
-                            sx={{ 
-                              mb: 0.5,
-                            }}
-                          >
-                            • {formatearFechaEspanol2(fecha)} {esHorasSueltas &&`(${horasSolicitadas} ${horasSolicitadas===1?'hora':'horas'})`}
-                          </Typography>)
-                      })}
-                      </Box>
+                    <Box>
+                        <Typography fontWeight={600} variant="body1" sx={{textAlign:'center'}}>
+                        {e.fechasSolicitadas.length === 1 ? 'Día Denegado':'Días Denegados'} 
+                        </Typography>               
+                     {e.fechasSolicitadas.length === 1 ? (
+                         <Grid size={{ xs: 12 }}> 
+                         <Box  sx={{
+                            display: 'flex',
+                            justifyContent:esHorasSueltas?'space-between':'center',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            p: 1,   
+                            border:'1px solid',
+                            bgcolor:'white',
+                            borderColor: getColor(e),
+                            borderRadius: 2,
+                                }}>                    
+                                <Typography fontSize={'1.1rem'}>
+                                  {formatearFechaLarga(e.fechasSolicitadas[0])}
+                                </Typography>
+                                {esHorasSueltas&& (
+                                  <Chip
+                                    label ={formatearTiempoVacasLargo(horasSolicitadas)}
+                                    size="small"
+                                          sx={{ 
+                                            py:0.5,               
+                                            bgcolor: getColor(e), 
+                                            color: 'white', 
+                                            fontWeight: 700,
+                                          }}
+                                        />
+                                )}
+                                </Box>
+                                </Grid>
+                              ) : (
+                        <Grid container sx={{mt:1,}} spacing={0.5}>
+                        {e.fechasSolicitadas.map(fecha=> (
+                        <Grid size={{xs:6,md:4}} key={fecha}>
+                          <Box sx={{textAlign:'center', mb: 0.5,}}>
+                            <Chip                             
+                              label={formatearFechaCorta(fecha)}
+                              size="small"
+                              variant='outlined'
+                              sx={{
+                                fontSize: '0.95rem',
+                                p:0.5,
+                                bgcolor: 'white',
+                                color: getColor(e),
+                                borderColor: getColor(e),
+                                fontWeight: 600
+                              }}
+                            />
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                              )}
                     </Box>
                   )}
+
+                  {e.esVenta && (
+                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          💵 Venta de Vacaciones:
+                        </Typography>
+                        <Box display='flex' justifyContent={'space-between'}>
+                          <Typography variant="body1" fontStyle='italic'>
+                            Venta de {formatearTiempoVacasLargo(e.horasSolicitadas)}
+                          </Typography>
+                          <Typography variant="body1" fontStyle='italic'>
+                            ❌
+                          </Typography>
+                        </Box>
+                      </Box>
+                  )}
+
                   {e.comentariosSolicitante && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'grey.100', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Comentario trabajador:</strong><br/> {e.comentariosSolicitante}</Typography>
-                    </Box>
+                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          💬 Tus comentarios:
+                        </Typography>
+                        <Typography variant="body1" fontStyle='italic'>
+                          "{e.comentariosSolicitante}"
+                        </Typography>
+                      </Box>
                   )}
                   {e.comentariosAdmin && (
-                    <Box sx={{border:'1px solid black', borderRadius:2, bgcolor:'rojo.fondo', p:1, mt:1}}>
-                    <Typography variant="body1"><strong>Comentario admin:</strong><br/>{e.comentariosAdmin}</Typography>
-                    </Box>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Collapse>
-        </Card>
-      );
-    })}
-  </Box>
-)}
+                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          👨‍💼 Respuesta de administración:
+                        </Typography>
+                        <Typography variant="body1" fontStyle='italic' sx={{ whiteSpace: 'pre-wrap' }}>
+                          "{e.comentariosAdmin}"
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
+                </Box>
+              </CardContent>
+            </Collapse>
+          </Card>
+        );
+      })}
+    </Box>
+  )}
         </Box>
       </Container>
     </LocalizationProvider>

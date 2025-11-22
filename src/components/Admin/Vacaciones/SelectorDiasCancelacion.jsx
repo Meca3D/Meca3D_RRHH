@@ -16,16 +16,23 @@ const SelectorDiasCancelacion = ({
  const { obtenerDiasCancelados, obtenerDiasDisfrutados } = useVacacionesStore();
   
  
-  const diasCancelados = obtenerDiasCancelados(solicitud.cancelacionesParciales || []);
+  const diasCancelados = obtenerDiasCancelados(solicitud.cancelaciones || []);
   const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
   
-  // ✅ NUEVA: Lógica para días disponibles
-  const diasDisponiblesParaCancelar = solicitud.fechas.filter(fecha => {
-    const yaFueCancelado = diasCancelados.includes(fecha);
+  // Usar fechasActuales (que ya excluye cancelados) y filtrar los disfrutados
+  const diasDisponiblesParaCancelar = (solicitud.fechasActuales || []).filter(fecha => {
+    const estaDisfrutado = diasDisfrutados.includes(fecha);
     const esFechaPasada = esFechaPasadaOHoy(fecha);
-    const estaDisponible = esAdmin ? !yaFueCancelado : (!yaFueCancelado && !esFechaPasada);
-    return estaDisponible;
+    
+    // Admin puede cancelar TODO excepto días ya cancelados (que no están en fechasActuales)
+    // Usuario solo puede cancelar días futuros no disfrutados
+    if (esAdmin) {
+      return true; // Admin puede cancelar todos los de fechasActuales (incluso disfrutados)
+    } else {
+      return !esFechaPasada && !estaDisfrutado; // Usuario: solo futuros no disfrutados
+    }
   });
+
 
   const handleToggleDia = (fecha) => {
     const noSeleccionable = !diasDisponiblesParaCancelar.includes(fecha); 
@@ -81,8 +88,11 @@ const SelectorDiasCancelacion = ({
           
           let estado = 'disponible';
           if (estaCancelado) estado = 'cancelado';
+          else if (estaDisfrutado && esAdmin && esSeleccionable) estado = 'disfrutadoSeleccionable'; // Admin puede cancelar disfrutados
           else if (estaDisfrutado) estado = 'disfrutado';
           else if (!esSeleccionable) estado = 'noSeleccionable';
+
+
 
           return (
             <Grid size={{ xs: 6, sm: 4 }} key={index}>
@@ -101,7 +111,22 @@ const SelectorDiasCancelacion = ({
                   padding: '0 12px',
                   fontWeight: '500',
                   transition: 'background-color 0.2s',
-                  // ✅ NUEVOS: Estilos por estado
+
+                  ...(estado === 'disfrutadoSeleccionable' && !estaSeleccionado && {
+                    backgroundColor: 'verde.fondo',
+                    color: 'success.main',
+                    border: '1px solid',
+                    borderColor: 'success.main',
+                    fontStyle: 'italic',
+                    cursor: 'pointer'
+                  }),
+                  ...(estado === 'disfrutadoSeleccionable' && estaSeleccionado && {
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    border: '1px solid',
+                    borderColor: 'primary.main',
+                    fontStyle: 'italic'
+                  }),
                   ...(estado === 'cancelado' && {
                     backgroundColor: 'rojo.fondo',
                     color: 'error.main',

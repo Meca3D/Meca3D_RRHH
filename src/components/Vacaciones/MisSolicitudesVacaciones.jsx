@@ -50,7 +50,6 @@ const MisSolicitudesVacaciones = () => {
   // Estados principales
   const [tabActual, setTabActual] = useState(0);
   const [solicitudExpandida, setSolicitudExpandida] = useState({});
-  const [fechasExpandida, setFechasExpandida] = useState(null);
   const [cancelacionesExpanded, setCancelacionesExpanded] = useState({});
   
   // Estados para cancelación
@@ -118,7 +117,7 @@ const MisSolicitudesVacaciones = () => {
           await eliminarSolicitudVacaciones(
             solicitudACancelar.id,
             solicitudACancelar.horasSolicitadas,
-            solicitudACancelar.empleadoId
+            solicitudACancelar.solicitante
           );
           showSuccess(solicitudACancelar.esVenta?'Venta de Vacaciones eliminada correctamente':'Solicitud de Vacciones eliminada correctamente');
           setDialogoCancelacionDias(false);
@@ -224,7 +223,8 @@ const MisSolicitudesVacaciones = () => {
     const diasCancelados = obtenerDiasCancelados(solicitud.cancelaciones)
     const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
     const cancelaciones = solicitud.cancelaciones || [];
-    const tieneCancelaciones = cancelaciones.length > 0;    const [menuOpen, setMenuOpen] = useState(false);
+    const tieneCancelaciones = cancelaciones.length > 0;    
+    const [menuOpen, setMenuOpen] = useState(false);
     const menuButtonRef = React.useRef(null);
 
     const handleAbrirMenu = (event) => {
@@ -251,7 +251,7 @@ const MisSolicitudesVacaciones = () => {
                   </Box>                 
                   )}
                 <Typography variant="body1" fontWeight={600} sx={{color:"azul.main"}} >
-                  Solicitada: {formatearFechaCorta(solicitud.fechaSolicitudOriginal||solicitud.fechaSolicitud)}
+                  Solicitada: {formatearFechaCorta(solicitud.fechaSolicitud)}
                 </Typography>
                 {solicitud.estado==="cancelado" && (
                   <Typography variant="body1" fontWeight={600} sx={{color:"dorado.main"}}>
@@ -349,7 +349,7 @@ const MisSolicitudesVacaciones = () => {
                     <ListItemIcon>
                       <CancelIcon fontSize="small" sx={{ color: 'warning.main' }} />
                     </ListItemIcon>
-                    <ListItemText primary="Cancelar días" />
+                    <ListItemText primary={solicitud.estado==="pendiente"?"Eliminar":"Cancelar días"} />
                   </MenuItem>
                 )}
               </Menu>
@@ -400,7 +400,7 @@ const MisSolicitudesVacaciones = () => {
                   : 'verde.main'
                    }}>
                   <Typography variant="h6" display="block">
-                    Saldo al aprobar {solicitud?.esAjusteSaldo?'el ajuste':'la solicitud'}
+                    Saldo al aprobarse {solicitud?.esAjusteSaldo?'el ajuste':'la solicitud'}
                   </Typography>
                   <Divider  sx={{bgcolor:'black', mt:0}} />
                   <Grid container sx={{ mt: 0.5 }}>
@@ -429,7 +429,7 @@ const MisSolicitudesVacaciones = () => {
           {/*  Lista de fechas con estados visuales */}
           {!solicitud?.esAjusteSaldo && !solicitud.esVenta && (
             <>
-          {solicitud.fechasActuales.length === 1 ? (
+          {(solicitud.fechas.length === 1)? (
             <Grid size={{ xs: 12 }}>
             <Box  justifyContent='space-around' alignItems={'center'} 
                 sx={{
@@ -439,11 +439,15 @@ const MisSolicitudesVacaciones = () => {
                   alignItems: 'center',
                   cursor: 'pointer',
                   p: 1,
-                  bgcolor: `${colorEstado.fondo}.fondo`,
+                  border:'2px solid',
+                  borderColor: `${colorEstado.bgcolor}`,
                   borderRadius: 2,
             }}>
-            <Typography fontSize={'1.15rem'}>
-              {formatearFechaLarga(solicitud.fechasActuales[0])}
+            <Typography fontSize={'1.15rem'} 
+              sx={{textDecoration:solicitud.fechasActuales.length===0?'line-through':'none',
+                color:solicitud.fechasActuales.length===0?'error.main':''
+               }}>
+              {solicitud.fechasActuales.length===0?'❌ ':''}{formatearFechaLarga(solicitud.fechas[0])}
             </Typography>
             {solicitud.horasSolicitadas<8 && (
               <Chip
@@ -462,26 +466,23 @@ const MisSolicitudesVacaciones = () => {
           ) : (
             <Grid size={{ xs: 12 }}>        
               <Box
-                onClick={() => setFechasExpandida(fechasExpandida === solicitud.id ? null : solicitud.id)}
                 sx={{
                   width:'100%',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent:'space-between',
+                  justifyContent:'center',
                   cursor: 'pointer',
                   p: 1,
                   mt:1,
-                  bgcolor: `${colorEstado.fondo}.fondo`,
-                  borderRadius: 2,          
+                  border:'2px solid',
+                  borderColor: `${colorEstado.fondo}.main`,
+                  borderRadius: 3,         
                 }}
               >
-                <Typography variant="h6">
+                <Typography fontSize={'1.15rem'}>
                   Fechas solicitadas ({solicitud.fechas.length})
                 </Typography>
-                {fechasExpandida === solicitud.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               </Box>
-              
-              <Collapse in={fechasExpandida === solicitud.id}>
                 <Grid container sx={{mt:0.5,}} spacing={0.5}>
                   {ordenarFechas(solicitud.fechas).map(fecha => {
                     const estaCancelado = diasCancelados.includes(fecha);
@@ -537,7 +538,6 @@ const MisSolicitudesVacaciones = () => {
                     )
                   })}
                 </Grid>
-              </Collapse>
             </Grid>
           )}
           </>
@@ -582,7 +582,7 @@ const MisSolicitudesVacaciones = () => {
                 <Divider sx={{ my: 2, bgcolor: 'black' }} />
                 
                 <Typography sx={{ mb: 1, fontWeight: 600, fontSize: '1.1rem' }}>
-                  ❌ Días Cancelados: {diasCancelados.length} {diasCancelados.length === 1 ? 'día' : 'días'}
+                  ❌ Días Cancelados: {diasCancelados.length === 1 ? formatearTiempoVacasLargo(cancelaciones[0].horasDevueltas) : `${diasCancelados.length} dias`}
                 </Typography>
 
                 <Box
@@ -596,7 +596,7 @@ const MisSolicitudesVacaciones = () => {
                     p: 1.5,
                     bgcolor:'warning.lighter',
                     borderRadius: 2,
-                    border: '1px solid',
+                    border: '2px solid',
                     borderColor: 'warning.main',
                     '&:hover': { bgcolor: 'warning.light' }
                   }}
@@ -698,7 +698,8 @@ const MisSolicitudesVacaciones = () => {
                                 size="small"
                                 variant='outlined'
                                 sx={{
-                                  fontSize: '0.75rem',
+                                  p:0.75,
+                                  fontSize: '1rem',
                                   mb: 0.5,
                                   bgcolor: 'white',
                                   color: cancelacion.esCancelacionTotal?'error.main':'warning.main',
@@ -766,61 +767,6 @@ const MisSolicitudesVacaciones = () => {
               </Grid>
           )}
           </Collapse>
-          {/* Acciones*/}
-          <Grid size={{xs:12, sm:3, md:2}}>
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                flexDirection: { xs: 'row', sm: 'column' },
-                justifyContent: { xs: 'space-between', sm: 'flex-end' },
-                alignItems: { xs: 'center', sm: 'center' },
-                height: '100%'
-              }}
-            >
-              {/* Editar - solo si se puede */}
-              {puedeEditar && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                  <IconButton
-                    size="medium"
-                    onClick={() => handleEditarSolicitud(solicitud)}
-                    sx={{ 
-                      color:"azul.main",
-                      border:'1px solid blue',
-                      '&:hover': { bgcolor: 'azul.fondo', transform: 'scale(1.05)' },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <EditIcon  sx={{ fontSize: '2rem' }} />
-                  </IconButton>
-                  <Typography variant="body2" sx={{ textAlign: 'center' }}>
-                    Editar
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Cancelar - solo si se puede */}
-              {(puedeCancelar || puedeCancelarDias) && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                  <IconButton
-                    size="medium"
-                    onClick={() => handleAbrirCancelacionDias(solicitud)}
-                    sx={{ 
-                      color:"rojo.main",
-                      border:'1px solid red',
-                      '&:hover': { bgcolor: 'rojo.fondo', transform: 'scale(1.05)' },
-                      transition: 'all 0.2s ease'
-                    }}
-                    title={solicitud.estado === 'pendiente' ? 'Eliminar solicitud' : 'Cancelar días'}
-                  >
-                    <EventBusyOutlinedIcon  sx={{ fontSize: '2rem' }} />
-                  </IconButton>
-                  <Typography variant="body2" sx={{ textAlign: 'center' }}>
-                    {solicitud.estado === 'pendiente' ? 'Eliminar' : 'Cancelar Días'}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </Grid>
         </Grid>
       </CardContent>
     </Card>
@@ -966,7 +912,7 @@ const MisSolicitudesVacaciones = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle display='flex' justifyContent='center' bgcolor='error.main' color='white'>
           {solicitudACancelar?.estado === 'pendiente' 
             ? 'Eliminar Solicitud' 
             : solicitudACancelar?.esVenta 
@@ -978,9 +924,9 @@ const MisSolicitudesVacaciones = () => {
           {solicitudACancelar && (
             <>
               {/* Info de la solicitud */}
-              <Alert severity="info" sx={{ mb: 2 }}>
+              <Alert severity="info" sx={{ my: 2 }}>
                 {solicitudACancelar.estado === 'pendiente' ? (
-                  'Esta solicitud aún está pendiente de aprobación. Al eliminarla, se devolverán las horas pendientes al saldo.'
+                  'Esta solicitud aún está pendiente de aprobación. Se devolverán las horas pendientes al saldo.'
                 ) : solicitudACancelar.esVenta ? (
                   'Se cancelará la venta de vacaciones y se devolverán las horas a tu saldo.'
                 ) : (

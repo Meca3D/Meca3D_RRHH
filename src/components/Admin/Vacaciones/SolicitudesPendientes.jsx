@@ -527,7 +527,7 @@ useEffect(() => {
                         {/* Detalles de la solicitud */}
                         <Box sx={{ mb: 2, textAlign:"center" }}>
                           <Typography variant="body1"  gutterBottom>
-                           Solicitado: {formatearFechaCorta(solicitud.fechaSolicitud)}
+                           Solicitado el: {formatearFechaCorta(solicitud.fechaSolicitud)}
                           </Typography>
                           {solicitud.esVenta && (
                             <Box sx={{ display:'flex', justifyContent:'center', alignItems:'center', color:'success.dark',}}>
@@ -571,8 +571,8 @@ useEffect(() => {
                                 <Grid container   sx={{}}>
                                 {ordenarFechas(solicitud.fechas).map((fecha, index) => (
                                   <Grid size={{xs:6,md:4}} key={index}>
-                                  <Typography  variant="body1" textAlign="center" sx={{fontSize:'1.3rem'}} >
-                                    • {formatearFechaCorta(fecha)}
+                                  <Typography  variant="body1" textAlign="center" sx={{fontSize:'1.2rem'}} >
+                                    {formatearFechaCorta(fecha)}
                                   </Typography>
                                   </Grid>
                                 ))}
