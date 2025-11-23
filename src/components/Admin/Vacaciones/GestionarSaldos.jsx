@@ -422,7 +422,7 @@ const GestionarSaldos = () => {
           
           {empleadosFiltrados.map((empleado) => {
             
-            const saldo = empleado.saldoActual || { asignadas: 0, disponibles: 0, pendientes: 0 };
+            const saldo = empleado.saldoActual || { disponibles: 0, pendientes: 0 };
             const estaSeleccionado = empleadosSeleccionados.includes(empleado.email);
             
             return (
@@ -713,7 +713,7 @@ const GestionarSaldos = () => {
                       
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent:'flex-end', mt:1 }}>
                           <Chip 
-                            label={`${ajuste.tipoAjuste} ${ajuste.horasSolicitadas}h`}
+                            label={<Typography fontSize={'0.85rem'}>{ajuste.tipoAjuste} {formatearTiempoVacasLargo(ajuste.horasSolicitadas)}</Typography>}
                             size="small"
                             color={
                               ajuste.tipoAjuste === 'añadir' ? 'success' :
@@ -724,17 +724,17 @@ const GestionarSaldos = () => {
                         
                       }
                       secondary={
-                        <Box component={'span'} sx={{display:'flex', flexDirection:'column', gap:0.5, mt:2  }}>
-                          <Typography component='span' variant="body1"  fontWeight={700} color='black'>
+                        <Box component={'span'} sx={{display:'flex', color:'black', flexDirection:'column', gap:0.5, mt:2  }}>
+                          <Typography component='span' variant="h6"  fontWeight={700} color='black'>
                             {ajuste.solicitanteNombre || ajuste.solicitante}
                           </Typography>
-                          <Typography component='span' variant="body2" fontStyle={'italic'}>
+                          <Typography component='span' variant="body1" fontStyle={'italic'}>
                             {ajuste.motivoAjuste}
                           </Typography>
-                          <Typography component='span' variant="subtitle2" >
+                          <Typography component='span' variant="body1" >
                             {formatearFechaCorta(ajuste.fechaSolicitud)}
                           </Typography>
-                          <Typography component='span' variant="subtitle2" >
+                          <Typography component='span' variant="body1" >
                             Por: {ajuste.realizadoPorNombre}
                           </Typography>
                         </Box>

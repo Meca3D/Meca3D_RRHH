@@ -1,6 +1,6 @@
 // components/Vacaciones/VentaVacaciones.jsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
@@ -27,7 +27,12 @@ const VentaVacaciones = () => {
 
   const vacasDisp = userProfile?.vacaciones?.disponibles || 0;
   const vacasPend = userProfile?.vacaciones?.pendientes || 0;
-  const horasDisponiblesParaVender = vacasDisp - vacasPend;
+  const horasLibresReal = vacasDisp - vacasPend;
+  const horasLibresRef = useRef(horasLibresReal);
+  if (!saving) {
+    horasLibresRef.current = horasLibresReal;
+  }
+  const horasDisponiblesParaVender = saving ? horasLibresRef.current : horasLibresReal;
   const tarifaHoraExtra = userProfile?.tarifasHorasExtra?.normal || null;
 
   useEffect(() => {
@@ -68,9 +73,8 @@ const VentaVacaciones = () => {
       navigate('/vacaciones');
     } catch (err) {
       showError(`Error: ${err.message}`);
-    } finally {
       setSaving(false);
-    }
+    } 
   };
 
   const cantidadARecibir = tarifaHoraExtra && horasAVender && parseInt(horasAVender) > 0
@@ -87,7 +91,7 @@ const VentaVacaciones = () => {
          
         sx={{ 
           overflow:'hidden',
-          background: 'linear-gradient(135deg, #66BB6A 0%, #43A047 100%)',
+          background: 'linear-gradient(135deg, #4f9252ff 0%, #1b761fff 100%)',
           boxShadow: '0 4px 20px rgba(67, 160, 71, 0.3)',
           zIndex: 1100
         }}
@@ -133,23 +137,21 @@ const VentaVacaciones = () => {
       <Container maxWidth="md" sx={{ py: 3 }}>
         <Box component="form" onSubmit={handleSubmit}>
           {/* Aviso de horas disponibles */}
-          <Alert 
-            severity="info" 
-            icon={<EuroIcon />}
-            sx={{ mb: 3, fontSize: '1rem' }}
+          <Card 
+            sx={{ borderRadius:3, bgcolor:'info.main', color:'white', mb: 3, p:2 }}
           >
-            <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-              Vacaciones disponibles para vender
+            <Typography variant="body1" textAlign='center' sx={{  fontWeight: 600, mb: 0.5 }}>
+               Vacaciones disponibles para vender
             </Typography>
-            <Typography  textAlign='center' variant="h6" sx={{  }}>
+            <Typography  textAlign='center' variant="h6" sx={{fontWeight: 600,  }}>
               {formatearTiempoVacasLargo(horasDisponiblesParaVender)}
             </Typography>
-          </Alert>
+          </Card>
 
           {/* Campo de horas a vender */}
           <Card sx={{ mb: 3, boxShadow: 3 }}>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              <Typography variant="h6" textAlign='center' sx={{ mb: 2, fontWeight: 600 }}>
                 ¿Cuántas horas deseas vender?
               </Typography>
               <TextField
@@ -189,19 +191,17 @@ const VentaVacaciones = () => {
               {/* Card: Horas a vender */}
               <Grid size={{ xs: 6, md: 4 }}>
                 <Card 
-                  sx={{ 
-                    
-                    bgcolor: 'success.light', 
+                  sx={{                   
+                    bgcolor: 'success.main', 
                     color: 'success.contrastText',
-                    boxShadow: 3,
-                    height: '100%'
+                    boxShadow: 3
                   }}
                 >
-                  <CardContent sx={{px:1,py:1}}>
-                    <Typography fontSize='1.1rem'  textAlign='center' sx={{ }}>
+                  <CardContent sx={{px:1}}>
+                    <Typography fontSize='1rem'  textAlign='center' sx={{ }}>
                       Vacaciones a Vender
                     </Typography>
-                    <Typography variant="h6"  textAlign='center' sx={{ fontWeight: 700, mt: 1 }}>
+                    <Typography fontSize='1.15rem'  textAlign='center' sx={{ fontWeight: 700, mt: 1 }}>
                       {formatearTiempoVacasLargo(parseInt(horasAVender))}
                     </Typography>
                   </CardContent>
@@ -212,17 +212,16 @@ const VentaVacaciones = () => {
               <Grid size={{ xs: 6, md: 4 }}>
                 <Card 
                   sx={{ 
-                    bgcolor: 'info.light', 
+                    bgcolor: 'info.main', 
                     color: 'info.contrastText',
                     boxShadow: 3,
-                    height: '100%'
                   }}
                 >
-                  <CardContent sx={{px:1,py:1}}>
-                    <Typography fontSize='1.1rem' textAlign='center' sx={{}}>
+                  <CardContent sx={{px:1}}>
+                    <Typography fontSize='1rem' textAlign='center' sx={{}}>
                       Vacaciones tras Aprobación
                     </Typography>
-                    <Typography variant="h6" textAlign='center' sx={{ fontWeight: 700, mt: 1 }}>
+                    <Typography fontSize='1.15rem' textAlign='center' sx={{ fontWeight: 700, mt: 1 }}>
                       {formatearTiempoVacasLargo(horasRestantes)}
                     </Typography>
                   </CardContent>
@@ -236,7 +235,6 @@ const VentaVacaciones = () => {
                     bgcolor: tarifaHoraExtra ? 'warning.light' : 'grey.100',
                     color: tarifaHoraExtra ? 'warning.contrastText' : 'rojo.main',
                     boxShadow: 3,
-                    height: '100%'
                   }}
                 >
                   <CardContent>
@@ -272,10 +270,10 @@ const VentaVacaciones = () => {
               fontSize: '1.5rem',
               py: 2,
               borderRadius: 3,
-              background: 'linear-gradient(135deg, #66BB6A 0%, #43A047 100%)',
+              bgcolor: 'success.main',
               fontWeight: 600,
               textTransform: 'none',
-              boxShadow: '0 4px 15px rgba(67, 160, 71, 0.3)',
+              boxShadow: '0 4px 15px rgba(67, 160, 69, 0.3)',
               '&:hover': {
                 background: 'linear-gradient(135deg, #43A047 0%, #388E3C 100%)',
                 boxShadow: '0 6px 20px rgba(67, 160, 71, 0.4)',

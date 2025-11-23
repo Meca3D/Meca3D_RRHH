@@ -1,5 +1,5 @@
 // components/Vacaciones/CrearSolicitudVacaciones.jsx
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardHeader, CardContent, AppBar, Toolbar,
@@ -44,7 +44,12 @@ const CrearSolicitudVacaciones = () => {
 
   const vacasDisp = userProfile?.vacaciones?.disponibles || 0;
   const vacasPend = userProfile?.vacaciones?.pendientes || 0;
-  const horasLibres = vacasDisp - vacasPend;
+  const horasLibresReal = vacasDisp - vacasPend;
+  const horasLibresRef = useRef(horasLibresReal);
+  if (!saving) {
+    horasLibresRef.current = horasLibresReal;
+  }
+  const horasLibres = saving ? horasLibresRef.current : horasLibresReal;
 
   useEffect(() => {
     if (!user?.email) return;
@@ -90,12 +95,10 @@ const CrearSolicitudVacaciones = () => {
         horasSolicitadas: horasTotales,
         comentariosSolicitante: comentarios.trim()
       });
-
       showSuccess('Solicitud creada correctamente');
       navigate('/vacaciones');
     } catch (err) {
       showError(`Error: ${err.message}`);
-    } finally {
       setSaving(false);
     }
   };

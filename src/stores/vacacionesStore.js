@@ -219,6 +219,8 @@ export const useVacacionesStore = create((set, get) => {
       estado: res.aplicar ? 'aprobada' : 'pendiente',
       comentariosAdmin: res.aplicar ? (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') : '',
       fechaAprobacionDenegacion: res.aplicar ? formatYMD(new Date()) : '',
+      timestampAprobacionDenegacion: res.aplicar ? new Date() : '', 
+
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -476,6 +478,7 @@ export const useVacacionesStore = create((set, get) => {
           estado: resAuto.aplicar ? 'aprobada' : 'pendiente',
           comentariosAdmin: resAuto.aplicar ? (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') : '',
           fechaAprobacionDenegacion: resAuto.aplicar ? formatYMD(new Date()) : '',
+          timestampAprobacionDenegacion: resAuto.aplicar ? new Date() : '', 
           horasDisponiblesAntes: '', // Se calculará en transacción si aplica
           horasDisponiblesDespues: '' // Se calculará en transacción si aplica
         };
@@ -580,6 +583,7 @@ export const useVacacionesStore = create((set, get) => {
             estado: nuevoEstado,
             comentariosAdmin: comentariosAdmin || '',
             fechaAprobacionDenegacion: formatYMD(new Date()),
+            timestampAprobacionDenegacion: new Date(), 
             updatedAt: new Date(),
             horasDisponiblesAntes: saldoAntes.disponibles,
             horasDisponiblesDespues: saldoAntes.disponibles // Default, se ajusta si aplica
@@ -592,17 +596,7 @@ export const useVacacionesStore = create((set, get) => {
           } else if (nuevoEstado === 'denegada') {
             saldoDespues.pendientes -= solicitud.horasSolicitadas;      
           }
-
-          // Actualizar solicitud
-          transaction.update(solicitudRef, updateData);
-
-          // Actualizar saldo del usuario
-          transaction.update(userDocRef, {
-            'vacaciones': saldoDespues,
-            updatedAt: new Date()
-          });
       
-
         // ✅ Si es una solicitud de venta aprobada, crear registro de horas extra
         if (nuevoEstado === 'aprobada' && solicitud?.esVenta === true) {
         const tarifaNormal = userData.tarifasHorasExtra?.normal;
@@ -634,11 +628,17 @@ export const useVacacionesStore = create((set, get) => {
           // Crear el documento dentro de la transacción
           transaction.set(newHoraExtraRef, horaExtraData);
           // Añadir el ID de hora extra a la solicitud de vacaciones
-          updateData.horasExtraId = newHoraExtraRef.id;
-          
+          updateData.horasExtraId = newHoraExtraRef.id;        
         }
-
       }
+          // Actualizar solicitud
+          transaction.update(solicitudRef, updateData);
+
+          // Actualizar saldo del usuario
+          transaction.update(userDocRef, {
+            'vacaciones': saldoDespues,
+            updatedAt: new Date()
+          });
     })
     // Notificar al solicitante del cambio de estado
     try {
@@ -726,7 +726,7 @@ export const useVacacionesStore = create((set, get) => {
         const { solicitudesVacaciones } = get();
         
         const solicitudesPendientesCaducadas = solicitudesVacaciones.filter(solicitud => {
-          const primeraFecha = solicitud.fechasActuales[0];
+          const primeraFecha = solicitud?.fechas[0];
           return solicitud.estado === 'pendiente' && esFechaPasadaOHoy(primeraFecha) && !solicitud.esVenta;
         });
 
@@ -1313,7 +1313,7 @@ export const useVacacionesStore = create((set, get) => {
         
         // Filtrar por año si se especifica
         const solicitudesFiltradas = solicitudesAprobadas.filter(solicitud => {
-          return solicitud.fechasActuales.some(fecha => {
+          return solicitud.fechasActuales?.some(fecha => {
             const fechaAño = new Date(fecha).getFullYear();
             return fechaAño === año;
           });
@@ -1841,6 +1841,7 @@ export const useVacacionesStore = create((set, get) => {
           fechaSolicitud: formatYMD(new Date()),
           estado: 'aprobada',
           fechaAprobacionDenegacion: formatYMD(new Date()),
+          timestampAprobacionDenegacion: new Date(), 
           tipoSolicitud: 'ajuste_saldo',
           tipoAjuste: tipoAjuste,
           comentariosSolicitante: `Ajuste de saldo realizado por ${userProfile?.nombre || user?.email}`,
@@ -1970,6 +1971,7 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
         fechaSolicitud: formatYMD(new Date()),
         estado: 'aprobada',
         fechaAprobacionDenegacion: formatYMD(new Date()),
+        timestampAprobacionDenegacion: new Date(), 
         tipoSolicitud: 'ajuste_saldo',
         tipoAjuste: tipoAjuste,
         comentariosSolicitante: `Ajuste de saldo realizado por ${userProfile?.nombre || user?.email}`,
@@ -2046,7 +2048,10 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
         ...doc.data()
       }));
 
-      const emails = [...new Set(ajustes.map(a => a.solicitante))];
+      const emails = [...new Set([
+        ...ajustes.map(a => a.solicitante),
+        ...ajustes.map(a => a.realizadoPor)
+      ].filter(Boolean))];
 
       // 2) resolver datos de usuario (nombre, puesto, etc.)
       // Usa la util existente en la store
@@ -2211,13 +2216,14 @@ mapSolicitudToEventos: (solicitud) => {
   const eventos = [];
   const rank = { ajuste: 0, aprobacion: 1, cancelacion_parcial: 2, cancelacion_total: 3, denegada: 4 };
 
-  // Ajustes de saldo (auto-aprobados para trazabilidad)
+  // Ajustes de saldo
   if (solicitud.esAjusteSaldo) {
     const fecha = solicitud.fechaAprobacionDenegacion || solicitud.fechaSolicitud;
     eventos.push({
       tipo: 'ajuste',
       tipoAjuste: solicitud.tipoAjuste, // 'añadir' | 'reducir' | 'establecer'
       fecha,
+      timestamp: solicitud.timestampAprobacionDenegacion, 
       deltaHoras: (solicitud.horasDisponiblesDespues ?? 0) - (solicitud.horasDisponiblesAntes ?? 0),
       saldoAntes: solicitud.horasDisponiblesAntes ?? null,
       saldoDespues: solicitud.horasDisponiblesDespues ?? null,
@@ -2234,6 +2240,7 @@ mapSolicitudToEventos: (solicitud) => {
     eventos.push({
       tipo: 'aprobacion',
       fecha: solicitud.fechaAprobacionDenegacion,
+      timestamp: solicitud.timestampAprobacionDenegacion,
       deltaHoras: (solicitud.horasDisponiblesDespues ?? 0) - (solicitud.horasDisponiblesAntes ?? 0), // suele ser negativo
       saldoAntes: solicitud.horasDisponiblesAntes ?? null,
       saldoDespues: solicitud.horasDisponiblesDespues ?? null,
@@ -2258,6 +2265,7 @@ mapSolicitudToEventos: (solicitud) => {
       eventos.push({
         tipo: 'cancelacion_parcial',
         fecha: c.fechaCancelacion,
+        timestamp: c.createdAt,
         deltaHoras: (c.horasDisponiblesDespuesCancelacion ?? 0) - (c.horasDisponiblesAntesCancelacion ?? 0), // positivo
         saldoAntes: c.horasDisponiblesAntesCancelacion ?? null,
         saldoDespues: c.horasDisponiblesDespuesCancelacion ?? null,
@@ -2278,6 +2286,7 @@ mapSolicitudToEventos: (solicitud) => {
     eventos.push({
       tipo: 'cancelacion_total',
       fecha: registroCancelacionTotal.fechaCancelacion,
+      timestamp: registroCancelacionTotal.createdAt,
       deltaHoras: (registroCancelacionTotal.horasDisponiblesDespuesCancelacion ?? 0) - (registroCancelacionTotal.horasDisponiblesAntesCancelacion ?? 0), // positivo
       saldoAntes: registroCancelacionTotal.horasDisponiblesAntesCancelacion ?? null,
       saldoDespues: registroCancelacionTotal.horasDisponiblesDespuesCancelacion ?? null,
@@ -2298,6 +2307,7 @@ mapSolicitudToEventos: (solicitud) => {
     eventos.push({
       tipo: 'denegada',
       fecha: solicitud.fechaAprobacionDenegacion,
+      timestamp: solicitud.timestampAprobacionDenegacion,
       deltaHoras: 0,
       saldoAntes: solicitud.horasDisponiblesAntes ?? null,
       saldoDespues: solicitud.horasDisponiblesDespues ?? null,
@@ -2318,7 +2328,7 @@ mapSolicitudToEventos: (solicitud) => {
 getEventosSaldoUsuarioPeriodo: async (usuarioEmail, inicioYMD, finYMD) => {
   const { mapSolicitudToEventos, ordenarEventosPorDiaCadena } = get();
   
-  // 1. Consultar directamente desde Firestore en lugar de memoria
+  // 1. Consultar directamente desde Firestore
   const solicitudesQuery = query(
     collection(db, 'VACACIONES'),
     where('solicitante', '==', usuarioEmail),
@@ -2331,104 +2341,48 @@ getEventosSaldoUsuarioPeriodo: async (usuarioEmail, inicioYMD, finYMD) => {
     ...doc.data()
   }));
   
-  // 2) Aplanar a eventos
+  // 2. Aplanar a eventos
   const todosEventos = solicitudesUsuario.flatMap(s => mapSolicitudToEventos(s));
   
-  // 3) Filtrar por periodo [inicioYMD, finYMD]
+  // 3. Filtrar por periodo [inicioYMD, finYMD]
   const enRango = todosEventos.filter(e => e.fecha >= inicioYMD && e.fecha <= finYMD);
   
-  // 4) Ordenar por fecha y por cadena de saldos
-  const { eventosOrdenados, saldoInicial } = ordenarEventosPorDiaCadena(enRango, null);
+  // 4. Ordenar por fecha y timestamp (más reciente primero)
+  const eventosOrdenados = ordenarEventosPorDiaCadena(enRango);
   
-  // 5) Devolver
-  return { eventos: eventosOrdenados, saldoInicial };
-  },
+  // 5. El saldo inicial es el saldoAntes del primer evento (más antiguo)
+  const saldoInicial = eventosOrdenados.length > 0 
+    ? (eventosOrdenados[0]?.saldoAntes || 0)
+    : 0;
+  
+  // 6. Devolver eventos ordenados y saldo inicial
+  return { 
+    eventos: eventosOrdenados, 
+    saldoInicial 
+  };
+},
 
-// Orden estable por día encadenando saldoAntes -> saldoDespues
-ordenarEventosPorDiaCadena: (eventos, saldoInicialPeriodo = null) => {
-  const rank = { ajuste: 0, aprobacion: 1, cancelacion_parcial: 2, cancelacion_total: 3, denegada: 4 };
 
-  // Fechas en orden ascendente
-  const fechas = [...new Set(eventos.map(e => e.fecha))].sort();
+ordenarEventosPorDiaCadena: (eventos) => {
+  if (!Array.isArray(eventos) || eventos.length === 0) return [];
 
-  let cursor = saldoInicialPeriodo;
-  let saldoInicialDetectado = saldoInicialPeriodo ?? null;
-  let salida = [];
-  const valorDespues = (ev) =>
-  typeof ev.saldoDespues === 'number'
-    ? ev.saldoDespues
-    : (typeof ev.saldoAntes === 'number' && typeof ev.deltaHoras === 'number'
-        ? ev.saldoAntes + ev.deltaHoras
-        : null);
-
-    // Devuelve el saldo de arranque del día: un saldoAntes que no es saldoDespues de ningún otro evento del día
-    const findSourceSaldoDelDia = (arr) => {
-      const afters = new Set(arr.map(valorDespues).filter(v => typeof v === 'number'));
-      const sources = arr
-        .map(ev => ev.saldoAntes)
-        .filter(v => typeof v === 'number' && !afters.has(v));
-      return sources.length ? sources[0] : null;
-    };
-
-  for (const f of fechas) {
-    // Eventos del día f (orden preliminar por tipo para estabilidad si falta info)
-    const restantes = eventos
-      .filter(e => e.fecha === f)
-      .sort((a, b) => (a.ordenDia ?? rank[a.tipo] ?? 99) - (b.ordenDia ?? rank[b.tipo] ?? 99));
-
-    // Intentar fijar un saldo de arranque del día encadenando por balances
-    const source = findSourceSaldoDelDia(restantes);
-    if (cursor == null && source != null) {
-      cursor = source;
-      if (saldoInicialDetectado == null) saldoInicialDetectado = source;
-    } else if (cursor == null) {
-      // Fallback: si no se pudo inferir, usa el primer saldoAntes disponible para no bloquear la cadena
-      const cand = restantes.find(x => typeof x.saldoAntes === 'number');
-      if (cand) {
-        cursor = cand.saldoAntes;
-        if (saldoInicialDetectado == null) saldoInicialDetectado = cand.saldoAntes;
-      }
+  // Ordenar primero por fecha, luego por timestamp si existe
+  return eventos.sort((b, a) => {
+    // Comparar por fecha string
+    const fechaComparison = (b.fecha || '').localeCompare(a.fecha || '');
+    
+    if (fechaComparison !== 0) {
+      return fechaComparison; // Fechas diferentes, ordenar por fecha
     }
 
-    const ordenadosDia = [];
-    while (restantes.length) {
-      // 1) Buscar el que empareja exacto con cursor
-      let idx = -1;
-      if (cursor != null) {
-        idx = restantes.findIndex(ev => typeof ev.saldoAntes === 'number' && ev.saldoAntes === cursor);
-      }
-
-      // 2) Si no hay match exacto, elegir el más cercano por |saldoAntes - cursor| y, en empate, por rank
-      if (idx === -1) {
-        let mejor = -1, mejorDist = Infinity, mejorOrden = Infinity;
-        restantes.forEach((ev, i) => {
-          if (typeof ev.saldoAntes === 'number' && cursor != null) {
-            const dist = Math.abs(ev.saldoAntes - cursor);
-            const ord = ev.ordenDia ?? (rank[ev.tipo] ?? 99);
-            if (dist < mejorDist || (dist === mejorDist && ord < mejorOrden)) {
-              mejor = i; mejorDist = dist; mejorOrden = ord;
-            }
-          }
-        });
-        idx = mejor !== -1 ? mejor : 0; // último recurso: primero de la lista
-      }
-
-      const ev = restantes.splice(idx, 1)[0];
-      ordenadosDia.push(ev);
-
-      // Avanzar el cursor con preferencia por saldoDespues (si no, saldoAntes+delta)
-      if (typeof ev.saldoDespues === 'number') {
-        cursor = ev.saldoDespues;
-      } else if (typeof ev.deltaHoras === 'number' && typeof ev.saldoAntes === 'number') {
-        cursor = ev.saldoAntes + ev.deltaHoras;
-      } // si faltan datos, mantenemos cursor como está
+    // Misma fecha: ordenar por timestamp si ambos lo tienen
+    const timestampA = a.timestamp?.toMillis?.() || a.timestamp?.getTime?.() || 0;
+    const timestampB = b.timestamp?.toMillis?.() || b.timestamp?.getTime?.() || 0;
+      return timestampB - timestampA; // Más reciente ultimo
     }
+  )
+},
 
-    salida = salida.concat(ordenadosDia);
-  }
-
-  return { eventosOrdenados: salida, saldoInicial: saldoInicialDetectado };
-  },
 
     // Calcular días laborables de un año (lunes a viernes menos festivos)
 calcularDiasLaborables: (año, todosLosFestivos) => {

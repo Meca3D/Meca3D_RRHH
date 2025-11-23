@@ -255,7 +255,7 @@ const MisSolicitudesVacaciones = () => {
                 </Typography>
                 {solicitud.estado==="cancelado" && (
                   <Typography variant="body1" fontWeight={600} sx={{color:"dorado.main"}}>
-                  Cancelada: {formatearFechaCorta(solicitud.fechaCancelacion)}
+                  Cancelada: {formatearFechaCorta(solicitud.cancelaciones[cancelaciones.length-1].fechaCancelacion)}
                   </Typography>
                 )}
                  {solicitud.estado === 'aprobada' && (
@@ -392,6 +392,7 @@ const MisSolicitudesVacaciones = () => {
               )}    
               {solicitudExpandida[solicitud.id] ? <ExpandLessIcon sx={{fontSize:'2rem'}}/> : <ExpandMoreIcon sx={{fontSize:'2rem'}} />}        
               </Box>
+              <Grid size={{ xs: 12 }}>
                <Collapse in={solicitudExpandida[solicitud.id]}>
               {/*  Mostrar saldos en solicitudes aprobadas */}
                 {solicitud.horasDisponiblesAntes !== undefined && solicitud.horasDisponiblesAntes !=solicitud.horasDisponiblesDespues && (
@@ -399,26 +400,31 @@ const MisSolicitudesVacaciones = () => {
                   ? solicitud.tipoAjuste=="reducir"?"rojo.main":solicitud.tipoAjuste=="añadir"?"verde.main":"azul.main"
                   : 'verde.main'
                    }}>
-                  <Typography variant="h6" display="block">
+                  <Typography variant="h6" textAlign="center">
                     Saldo al aprobarse {solicitud?.esAjusteSaldo?'el ajuste':'la solicitud'}
                   </Typography>
                   <Divider  sx={{bgcolor:'black', mt:0}} />
                   <Grid container sx={{ mt: 0.5 }}>
                     <Grid size={{ xs: 12 }}>
+                      <Box display='flex' justifyContent='space-between'>
                       <Typography variant="h6" display="block">
-                        Antes: {formatearTiempoVacasLargo(solicitud.horasDisponiblesAntes)}
+                        Antes:
                       </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
                       <Typography variant="h6" display="block">
-                        Después: {formatearTiempoVacasLargo(solicitud.horasDisponiblesDespues || 0)}
+                        {formatearTiempoVacasLargo(solicitud.horasDisponiblesAntes)}
                       </Typography>
+                      </Box>
                     </Grid>
                     {solicitud.esVenta && solicitud.cantidadARecibir && (
                     <Grid size={{ xs: 12 }}>
+                      <Box display='flex' justifyContent='space-between'>
                       <Typography variant="h6" sx={{ color:'success.dark', fontStyle: 'italic' }}>
-                        Cantidad a Recibir: {solicitud.cantidadARecibir}€
+                        Cantidad a Recibir:
                       </Typography>
+                      <Typography variant="h6" sx={{ color:'success.dark', fontStyle: 'italic' }}>
+                        {solicitud.cantidadARecibir}€
+                      </Typography>
+                      </Box>
                       </Grid>
                     )}
                   </Grid>
@@ -767,6 +773,7 @@ const MisSolicitudesVacaciones = () => {
               </Grid>
           )}
           </Collapse>
+          </Grid>
         </Grid>
       </CardContent>
     </Card>

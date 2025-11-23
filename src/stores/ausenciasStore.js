@@ -1,10 +1,11 @@
 // stores/ausenciasStore.js
 
 import { create } from 'zustand';
-import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, setDoc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuthStore } from './authStore';
 import { formatYMD, esFechaPasadaOHoy } from '../utils/dateUtils';
+import { useVacacionesStore } from './vacacionesStore';
 
 export const useAusenciasStore = create((set, get) => {
   let unsubscribeAusencias = null;
@@ -150,6 +151,54 @@ export const useAusenciasStore = create((set, get) => {
         }
       };
     },
+
+    // 1. Función para cargar las ausencias (bajas/permisos) aprobadas
+    loadAusenciasAprobadas: async (año) => {
+      try {
+        const ausenciasQuery = query(
+          collection(db, 'AUSENCIAS'),
+          where('estado', '==', 'aprobada')
+        );
+        
+        const querySnapshot = await getDocs(ausenciasQuery);
+        const solicitudesAprobadas = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // Filtrar por año
+        return solicitudesAprobadas.filter(solicitud => {
+          return (solicitud.fechasActuales || []).some(fecha => new Date(fecha).getFullYear() === año);
+        });
+
+      } catch (error) {
+        console.error('Error cargando ausencias aprobadas:', error);
+        return [];
+      }
+    },
+
+    // 2. Función principal para combinar todos los tipos de ausencia
+    loadAusenciasCombinadas: async (año) => {
+      try {
+        // Obtener datos de ambos stores en paralelo
+        const [vacaciones, ausencias] = await Promise.all([
+          useVacacionesStore.getState().loadVacacionesAprobadas(año),
+          get().loadAusenciasAprobadas(año)
+        ]);
+
+        // Devolver datos unificados y listos para el componente
+        return {
+          vacaciones: vacaciones.map(v => ({ ...v, tipoAusencia: 'vacaciones' })),
+          bajas: ausencias.filter(a => a.tipo === 'baja').map(b => ({ ...b, tipoAusencia: 'baja' })),
+          permisos: ausencias.filter(a => a.tipo === 'permiso').map(p => ({ ...p, tipoAusencia: 'permiso' }))
+        };
+
+      } catch (error) {
+        console.error('Error al combinar ausencias:', error);
+        return { vacaciones: [], bajas: [], permisos: [] };
+      }
+    },
+
 
     // Evaluar auto-aprobación según configuración
     evaluarAutoAprobacion: (ausencia) => {

@@ -371,7 +371,7 @@ autoTable(doc, {
                               : 'default')
       
       return (
-        <Card key={key} sx={{border:'1px solid black'}}>
+        <Card elevation={5} key={key} sx={{border:'1px solid black'}} onClick={() => toggle(key)} aria-label={abierto ? 'Contraer' : 'Expandir'} >
           <CardHeader
             title={
               <>
@@ -383,28 +383,12 @@ autoTable(doc, {
                    {formatearTiempoVacas(e.saldoAntes )?? '-'} → {formatearTiempoVacas(e.saldoDespues) ?? '-'}
                 </Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap" sx={{mb:1}}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap" sx={{}}>
                 <Typography variant="h6">
-                  {e.concepto}
+                  {(e.esVenta&&e.tipo === 'cancelacion_total')?'Venta Cancelada':e.concepto}
                 </Typography>
                 <Chip color={chipColor} size="small" label={<Typography fontSize='1rem'>{deltaTxt}</Typography>} />
                 
-              </Box>
-            <Box 
-              display='flex'
-              justifyContent='space-around'
-              alignItems='center' 
-              borderRadius={2}
-              onClick={() => toggle(key)} aria-label={abierto ? 'Contraer' : 'Expandir'} 
-              bgcolor={ getFondo(e)} 
-              sx={{width:'100%', p:0.5}}
-            >       
-              {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
-              <Typography variant='h6'>
-               
-              </Typography>
-              {abierto ? <ExpandLess sx={{fontSize:'2rem', color:'black'}}/> : <ExpandMore sx={{fontSize:'2rem', color:'black'}}/>}
-
               </Box>
               </>
             }           
@@ -569,7 +553,7 @@ autoTable(doc, {
                               size="small"
                               variant='outlined'
                               sx={{
-                                fontSize: '0.95rem',
+                                fontSize: '1rem',
                                 p:0.5,
                                 bgcolor: 'white',
                                 color: getColor(e),

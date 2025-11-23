@@ -22,13 +22,14 @@ import {
   Schedule as ScheduleIcon
 } from '@mui/icons-material';
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
+import { useAusenciasStore } from '../../../stores/ausenciasStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { capitalizeFirstLetter } from '../../Helpers';
 import { formatearFechaCorta, formatYMD, obtenerDiasCalendario, navegarMes, formatearMesAno, esFinDeSemana, formatearFechaLarga } from '../../../utils/dateUtils';
 import { formatearTiempoVacas } from '../../../utils/vacacionesUtils';
 
 
-const CalendarioVacacionesAdmin = () => {
+const CalendarioAusencias = () => {
   const navigate = useNavigate();
   const { 
     loadConfigVacaciones,
@@ -454,7 +455,7 @@ const CalendarioVacacionesAdmin = () => {
           <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate('/admin/vacaciones')}
+            onClick={() => navigate('/admin')}
             sx={{
               bgcolor: 'rgba(255,255,255,0.1)',
               '&:hover': {
@@ -477,7 +478,7 @@ const CalendarioVacacionesAdmin = () => {
                 lineHeight: 1.2
               }}
             >
-              Calendario de Vacaciones
+              Calendario de Ausencias
             </Typography>
             <Typography 
               variant="caption" 
@@ -1119,4 +1120,4 @@ const CalendarioVacacionesAdmin = () => {
   );
 };
 
-export default CalendarioVacacionesAdmin;
+export default  CalendarioAusencias;

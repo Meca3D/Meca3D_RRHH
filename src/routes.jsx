@@ -33,7 +33,7 @@ import GestionFestivos from './components/Admin/Utilidades/GestionFestivos';
 import CalculadoraAjusteCalendario from './components/Admin/Utilidades/CalculadoraAjusteCalendario';
 import GestionNivelesSalariales from './components/Admin/Utilidades/GestionNivelesSalariales';
 import SolicitudesPendientes from './components/Admin/Vacaciones/SolicitudesPendientes';
-import CalendarioVacacionesAdmin from './components/Admin/Vacaciones/CalendarioVacacionesAdmin';
+import CalendarioAusencias from './components/Admin/Vacaciones/CalendarioAusencias';
 import HistorialSolicitudes from './components/Admin/Vacaciones/HistorialSolicitudes';
 import EstadisticasVacasAdmin from './components/Admin/Vacaciones/EstadisticasVacasAdmin';
 import SaldosVacaciones from './components/Admin/Vacaciones/SaldosVacaciones';
@@ -153,7 +153,7 @@ const AppRoutes = () => {
         {/* Rutas de Gestión de Vacaciones */}
         <Route path="admin/vacaciones" element={<AusenciasRoute><GestionVacaciones /></AusenciasRoute>} />
         <Route path="admin/vacaciones/pendientes" element={<AusenciasRoute><SolicitudesPendientes /></AusenciasRoute>} />
-        <Route path="admin/vacaciones/calendario" element={<AusenciasRoute><CalendarioVacacionesAdmin /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/calendario" element={<AusenciasRoute><CalendarioAusencias /></AusenciasRoute>} />
         <Route path="admin/vacaciones/historial" element={<AusenciasRoute><HistorialSolicitudes /></AusenciasRoute>} />
         <Route path="admin/vacaciones/saldos" element={<AusenciasRoute><GestionarSaldos /></AusenciasRoute>} />
         <Route path="admin/vacaciones/evolucionsaldos" element={<AusenciasRoute><SaldosVacaciones /></AusenciasRoute>} />
