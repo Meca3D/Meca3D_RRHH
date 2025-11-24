@@ -44,12 +44,12 @@ const MisAusencias = () => {
 
   // Estados principales
   const [tabActual, setTabActual] = useState(0);
-  const [ausenciaExpandida, setAusenciaExpandida] = useState(null);
+  const [ausenciaExpandida, setAusenciaExpandida] = useState({});
   
   // Estados para cancelación
   const [dialogoCancelacion, setDialogoCancelacion] = useState(false);
   const [ausenciaACancelar, setAusenciaACancelar] = useState(null);
-  const [diasACancelar, setDiasACancelar] = useState([]); // ⬅️ Array de fechas
+  const [diasACancelar, setDiasACancelar] = useState([]); 
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
   const [cancelando, setCancelando] = useState(false);
   const [cancelacionesExpanded, setCancelacionesExpanded] = useState({});
@@ -184,6 +184,13 @@ const MisAusencias = () => {
     }
   };
 
+    const toggleAusenciaExpanded = (ausenciaId) => {
+    setAusenciaExpandida(prev => ({
+      ...prev,
+      [ausenciaId]: !prev[ausenciaId]
+    }));
+  };
+
   // Toggle para acordeón de cancelaciones parciales
   const toggleCancelacionesExpanded = (ausenciaId) => {
     setCancelacionesExpanded(prev => ({
@@ -226,7 +233,7 @@ const MisAusencias = () => {
     return (
       <Card elevation={2} sx={{ mb: 2 }}>
         <CardContent>
-          <Grid container spacing={2}>
+          <Grid container spacing={1}>
             {/* Cabecera con estado y tipo */}
           
             <Grid size={{ xs: 12 }}>
@@ -322,16 +329,10 @@ const MisAusencias = () => {
             </Grid>
 
             {/* Fechas importantes */}
-            <Grid size={{ xs: 12 }}>
+                <Grid size={{ xs: 12 }}>
               <Typography variant="body1"  display="block">
                 Solicitada: {formatearFechaCorta(ausencia.fechaSolicitud)}
               </Typography>
-
-              {ausencia.fechaEdicion && (
-                <Typography variant="body1" color='primary.main' display="block">
-                  Modificada: {formatearFechaCorta(ausencia.fechaEdicion)}
-                </Typography>
-              )}
 
               {ausencia.estado === 'aprobado' && (
                 <Typography variant="body1" color="success.main" display="block">
@@ -352,50 +353,66 @@ const MisAusencias = () => {
               )}
             </Grid>
 
-            {/* Duración */}
-            <Grid size={{ xs: 12 }}>
+
+              {/* Duración */}
+              <Grid size={{ xs: 12 }}>
+              <Box
+                onClick={() => toggleAusenciaExpanded(ausencia.id)}
+                sx={{
+                  
+                  width:'100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent:'space-between',
+                  cursor: 'pointer',         
+                }}
+              >
               <Typography variant="body1" fontWeight={600}>
                 Días de {capitalizeFirstLetter(ausencia.tipo)}: {ausencia.fechasActuales.length} día{ausencia.fechasActuales.length !== 1 ? 's' : ''}
               </Typography>
+              {ausenciaExpandida[ausencia.id] ? <ExpandLessIcon sx={{fontSize:'2rem'}} /> : <ExpandMoreIcon sx={{fontSize:'2rem'}}/>}
+              </Box>
             </Grid>
 
+            <Collapse in={ausenciaExpandida[ausencia.id]}> 
             {/* Lista de fechas */}
             <Grid size={{ xs: 12 }}>
-              {ausencia.fechas.length === 1 ? (
+              {(ausencia.fechas.length === 1 && ausencia.fechasActuales.length<=1) ? (
                 <Box
                   sx={{
                     p: 1.5,
-                    bgcolor: `${colorEstado.fondo}.fondo`,
+                    border:'2px solid',
+                    borderColor: `${colorEstado.bgcolor}`,
                     borderRadius: 2,
                     textAlign: 'center'
                   }}
                 >
-                  <Typography variant="body1" fontWeight={600}>
-                    {formatearFechaLarga(ausencia.fechas[0])}
+                <Typography fontSize={'1.15rem'} 
+                  sx={{textDecoration:ausencia.fechasActuales.length===0?'line-through':'none',
+                    color:ausencia.fechasActuales.length===0?'error.main':''
+                  }}>
+                    {ausencia.fechasActuales.length===0?'❌ ':''}{formatearFechaLarga(ausencia.fechasActuales.length===1?ausencia.fechasActuales[0]:ausencia.fechas[0])}
                   </Typography>
                 </Box>
               ) : (
                 <>
                   <Box
-                    onClick={() => setAusenciaExpandida(ausenciaExpandida === ausencia.id ? null : ausencia.id)}
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
+                      justifyContent: 'center',
                       cursor: 'pointer',
-                      p: 1.5,
-                      bgcolor: `${colorEstado.fondo}.fondo`,
-                      borderRadius: 2,
-                      '&:hover': { bgcolor: `${colorEstado.fondo}.fondoFuerte` },
+                      p: 1,
+                      border:'2px solid',
+                      borderColor: `${colorEstado.fondo}.main`,
+                      borderRadius: 3,
                     }}
                   >
-                    <Typography variant="body1" fontWeight={600}>
+                    <Typography fontSize={'1.15rem'} fontWeight={600}>
                       Fechas de la ausencia
                     </Typography>
-                    {ausenciaExpandida === ausencia.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                   </Box>
-                  <Collapse in={ausenciaExpandida === ausencia.id}>
-                    <Grid container sx={{ mt: 1, pl: 2 }} spacing={1}>
+                    <Grid container sx={{ my: 1 }} spacing={0.5}>
                       {/* Obtener listas para clasificar */}
                       {(() => {
                         // Calcular el estado real de las fechas considerando el orden temporal
@@ -424,21 +441,27 @@ const MisAusencias = () => {
                           colorTexto = 'error.main';
                           decoracion = 'line-through';
                           etiqueta = '(Cancelado)';
-                          icono = '❌';
+                          icono = '❌ ';
                         } else if (esAgregada) {
                           // Fecha añadida (puede ser nueva o reactivada)
                           colorTexto = 'success.main';
                           etiqueta = '(Añadido)';
-                          icono = '➕';
-                        }   
+                          icono = '➕ ';
+                        }  else if (esPasada) {
+                           // Fecha disfrutada
+                          colorTexto = 'text.secondary';
+                          decoracion = 'none';
+                          etiqueta = '(Disfrutado)';
+                          icono = '✅ ';
+                        }
                           return (
                             <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
-                              <Box display="flex" alignItems="center" gap={0.5}>
+                              <Box display="flex" justifyContent='center' alignItems="center">
                                 <Typography variant="body1"color={colorTexto}>
                                   {icono} 
                                 </Typography>
                                 <Typography
-                                  variant="body2"
+                                  variant="body1"
                                   color={colorTexto}
                                   sx={{ 
                                     textDecoration: decoracion,
@@ -446,7 +469,7 @@ const MisAusencias = () => {
                                     fontWeight: esAgregada ? 600 : 400
                                   }}
                                 >
-                                  {icono} {formatearFechaCorta(fecha)}
+                                  {formatearFechaCorta(fecha)}
                                 </Typography>
                                 {etiqueta && (
                                   <Typography 
@@ -463,7 +486,7 @@ const MisAusencias = () => {
                         });
                       })()}
                     </Grid>
-                    {ausencia.fechas !== ausencia.fechasActuales && (
+                    {ausencia.ediciones || ausencia.cancelaciones && (
                       <>
                       <Divider sx={{bgcolor:'black', mt:1}} />
                       <Grid container sx={{ mt: 1, pl: 2 }} spacing={0.5}>
@@ -482,7 +505,6 @@ const MisAusencias = () => {
                       </Grid>
                       </>
                       )}
-                  </Collapse>
 
                 </>
               )}
@@ -677,15 +699,15 @@ const MisAusencias = () => {
                           </Typography>
                             {cancelacion.esCancelacionTotal && (
                               <Chip 
-                                label="TOTAL" 
-                                size="small" 
-                                sx={{ 
+                              label="TOTAL" 
+                              size="small" 
+                              sx={{ 
                                   ml: 1, 
                                   bgcolor: 'error.main', 
                                   color: 'white',
                                   fontWeight: 700
                                 }} 
-                              />
+                                />
                             )}
                         </Box>
 
@@ -747,6 +769,7 @@ const MisAusencias = () => {
                 </Collapse>
               </Grid>
             )}
+            </Collapse>
           </Grid>
         </CardContent>
       </Card>

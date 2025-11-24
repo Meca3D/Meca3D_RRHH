@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { arrayUnion, collection, onSnapshot, doc, updateDoc, writeBatch, query, where, orderBy, getDoc, getDocs, setDoc, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuthStore } from './authStore';
-import { formatYMD, esFinDeSemana, esFechaPasadaOHoy} from '../utils/dateUtils';
+import { formatYMD, esFinDeSemana, esFechaPasadaOHoy, esFechaPasada} from '../utils/dateUtils';
 import { formatearNombre } from '../components/Helpers';
 import { formatearTiempoVacasLargo } from '../utils/vacacionesUtils';
 

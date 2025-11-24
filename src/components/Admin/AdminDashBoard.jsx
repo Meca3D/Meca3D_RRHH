@@ -36,8 +36,8 @@ const AdminDashboard = () => {
   const { configVacaciones, loadConfigVacaciones, procesarSolicitudesCaducadas } = useVacacionesStore();
   const { configAusencias, loadConfigAusencias } = useAusenciasStore();
   const {
-    trabajadoresVacacionesHoy,
-    trabajadoresVacacionesMañana,
+    trabajadoresAusentesHoy,
+    trabajadoresAusentesMañana,
     solicitudesPendientes,
     permisosPendientes,
     autoAprobacionActiva,
@@ -95,19 +95,19 @@ const AdminDashboard = () => {
   // Estadísticas del panel de administración
   const adminStats = [
     {
-      title: trabajadoresVacacionesHoy===1 ? 'Trabajador' : 'Trabajadores',
-      value: loadingStats ? '...' : trabajadoresVacacionesHoy.toString(),
-      subtitle: trabajadoresVacacionesHoy===1? 'Ausente Hoy':'Ausentes Hoy',
+      title: trabajadoresAusentesHoy===1 ? 'Trabajador' : 'Trabajadores',
+      value: loadingStats ? '...' : trabajadoresAusentesHoy.toString(),
+      subtitle: trabajadoresAusentesHoy===1? 'Ausente Hoy':'Ausentes Hoy',
       icon: TodayOutlinedIcon,
-      ...getVacacionesColor(trabajadoresVacacionesHoy),
+      ...getVacacionesColor(trabajadoresAusentesHoy),
       action: () => navigate('/admin/vacaciones/calendario')
     },
     {
-      title: trabajadoresVacacionesMañana===1 ? 'Trabajador' : 'Trabajadores',
-      value: loadingStats ? '...' : trabajadoresVacacionesMañana.toString(),
-      subtitle: trabajadoresVacacionesMañana===1? 'Ausente Mañana':'Ausentes Mañana',
+      title: trabajadoresAusentesMañana===1 ? 'Trabajador' : 'Trabajadores',
+      value: loadingStats ? '...' : trabajadoresAusentesMañana.toString(),
+      subtitle: trabajadoresAusentesMañana===1? 'Ausente Mañana':'Ausentes Mañana',
       icon: EventOutlinedIcon,
-      ...getVacacionesColor(trabajadoresVacacionesMañana),
+      ...getVacacionesColor(trabajadoresAusentesMañana),
       action: () => navigate('/admin/vacaciones/calendario')
     },
 /*     {

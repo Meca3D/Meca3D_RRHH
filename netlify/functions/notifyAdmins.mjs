@@ -54,18 +54,36 @@ export const handler = async (event) => {
     // Definir título según acción
 // Definir título según acción
 const titles = {
-  'cancelacion': '🔴 Cancelación de vacaciones',
-  'cancelacion_parcial': '🟡 Cancelación parcial de vacaciones',
-  'solicitud': '📬 Nueva solicitud de vacaciones',
-  'nueva_ausencia': '📋 Nueva solicitud de permiso',
-  'baja_registrada': '🏥 Baja médica registrada',
-  'permiso_auto_aprobado': '✅ Permiso auto-aprobado',
-  'ausencia_auto_aprobada': '✅ Ausencia auto-aprobada',
-  'cancelacion_ausencia': '⚠️ Cancelación de ausencia'
+  // Vacaciones
+      'solicitud': esVenta ? '💰 Nueva venta de vacaciones' : '🏖️ Nueva solicitud de vacaciones',
+      'cancelacion': '🔴 Cancelación de vacaciones',
+      'cancelacion_parcial': '🟡 Cancelación parcial de vacaciones',
+      'vacaciones_eliminada': '🗑️ Solicitud de vacaciones eliminada',
+      
+      // Ausencias (Bajas/Permisos)
+      'nueva_ausencia': '📋 Nueva solicitud de ausencia',
+      'baja_registrada': '🏥 Baja registrada',
+      'ausencia_aprobada_auto': '✅ Ausencia auto-aprobada',
+      'edicion_ausencia': '📝 Modificación de ausencia',
+      'cancelacion_parcial_ausencia': '✂️ Días de ausencia cancelados',
+      'cancelacion_total_ausencia': '🚫 Ausencia cancelada',
+      'eliminacion_ausencia': '🗑️ Ausencia eliminada',
+      
+      // Default
+      'default': '🔔 Nueva notificación de RRHH'
 };
 
 
     const notificationTitle = titles[accion] || titles.solicitud;
+    let notificationBody = mensaje;
+    let targetUrl = urlDestino;
+    if (!targetUrl) {
+      if (accion.includes('ausencia') || accion.includes('baja')) {
+        targetUrl = '/admin/ausencias'; 
+      } else {
+        targetUrl = '/admin/vacaciones';
+      }
+    }
     // Enviar notificación a cada admin
     const notificaciones = [];
     
@@ -96,12 +114,12 @@ const titles = {
       const message = {
         data: {
           title: notificationTitle,
-          body: body,
-          url: '/gestion-vacaciones',
-          type: accion || 'vacaciones_pendiente',
+          body: notificationBody,
+          url: targetUrl, 
+          type: accion || 'general',
           timestamp: new Date().toISOString()
         },
-        tokens
+        tokens: validTokens
       };
 
       notificaciones.push(

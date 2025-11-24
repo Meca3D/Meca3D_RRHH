@@ -33,6 +33,7 @@ export const esFinDeSemana = (fecha) => {
 export const esFechaPasada = (fecha) => {
   const date = typeof fecha === 'string' ? parseISO(fecha) : fecha;
   const hoy = new Date();
+   hoy.setHours(0, 0, 0, 0);
   return isBefore(date, hoy);
 };
 
@@ -44,6 +45,7 @@ export const esFechaHoy = (fecha) => {
 export const esFechaPasadaOHoy = (fecha) => {
   const date = typeof fecha === 'string' ? parseISO(fecha) : fecha;
   const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
   return isBefore(date, hoy) || isSameDay(date, hoy);
 };
 

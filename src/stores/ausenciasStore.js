@@ -152,52 +152,108 @@ export const useAusenciasStore = create((set, get) => {
       };
     },
 
-    // 1. Función para cargar las ausencias (bajas/permisos) aprobadas
-    loadAusenciasAprobadas: async (año) => {
+    // ============================================
+    // FUNCIONES PARA CALENDARIO DE AUSENCIAS
+    // ============================================
+
+    // Cargar ausencias aprobadas de todos los empleados para un año específico
+    loadAusenciasAprobadas: async (año = new Date().getFullYear()) => {
       try {
+        const { isAdminOrOwner } = useAuthStore.getState();
+        
+        if (!isAdminOrOwner) {
+          console.log('Sin permisos de administración para acceder a ausencias aprobadas');
+          return [];
+        }
+        
+        // Query directo a Firestore para ausencias aprobadas
         const ausenciasQuery = query(
           collection(db, 'AUSENCIAS'),
-          where('estado', '==', 'aprobada')
+          where('estado', '==', 'aprobado'),
+          orderBy('fechaSolicitud', 'desc')
         );
         
         const querySnapshot = await getDocs(ausenciasQuery);
-        const solicitudesAprobadas = querySnapshot.docs.map(doc => ({
+        const ausenciasAprobadas = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         
-        // Filtrar por año
-        return solicitudesAprobadas.filter(solicitud => {
-          return (solicitud.fechasActuales || []).some(fecha => new Date(fecha).getFullYear() === año);
+        // Filtrar por año si se especifica
+        const ausenciasFiltradas = ausenciasAprobadas.filter(ausencia => {
+          return ausencia.fechasActuales?.some(fecha => {
+            const fechaAño = new Date(fecha).getFullYear();
+            return fechaAño === año;
+          });
         });
-
+        
+        // Ordenar por la primera fecha actual
+        return ausenciasFiltradas.sort((a, b) => {
+          const fechaA = a.fechasActuales?.[0]
+          const fechaB = b.fechasActuales?.[0]
+          return new Date(fechaA) - new Date(fechaB);
+        });
+        
       } catch (error) {
         console.error('Error cargando ausencias aprobadas:', error);
+        set({ error: error.message });
         return [];
       }
     },
 
-    // 2. Función principal para combinar todos los tipos de ausencia
-    loadAusenciasCombinadas: async (año) => {
+    // Combinar vacaciones + ausencias para el calendario
+    getAusenciasCombinadas: async (año = new Date().getFullYear()) => {
       try {
-        // Obtener datos de ambos stores en paralelo
-        const [vacaciones, ausencias] = await Promise.all([
-          useVacacionesStore.getState().loadVacacionesAprobadas(año),
-          get().loadAusenciasAprobadas(año)
-        ]);
-
-        // Devolver datos unificados y listos para el componente
+        // 1. Cargar vacaciones desde vacacionesStore
+        const { loadVacacionesAprobadas } = useVacacionesStore.getState();
+        const vacaciones = await loadVacacionesAprobadas(año);
+        
+        // 2. Cargar ausencias (bajas + permisos)
+        const ausencias = await get().loadAusenciasAprobadas(año);
+        
+        // 3. Clasificar ausencias por tipo
+        const bajas = ausencias.filter(a => a.tipo === 'baja');
+        const permisos = ausencias.filter(a => a.tipo === 'permiso');
+        
+        // 4. Agregar campo tipoAusencia para facilitar identificación
         return {
           vacaciones: vacaciones.map(v => ({ ...v, tipoAusencia: 'vacaciones' })),
-          bajas: ausencias.filter(a => a.tipo === 'baja').map(b => ({ ...b, tipoAusencia: 'baja' })),
-          permisos: ausencias.filter(a => a.tipo === 'permiso').map(p => ({ ...p, tipoAusencia: 'permiso' }))
+          bajas: bajas.map(b => ({ ...b, tipoAusencia: 'baja' })),
+          permisos: permisos.map(p => ({ ...p, tipoAusencia: 'permiso' })),
+          todas: [
+            ...vacaciones.map(v => ({ ...v, tipoAusencia: 'vacaciones' })),
+            ...bajas.map(b => ({ ...b, tipoAusencia: 'baja' })),
+            ...permisos.map(p => ({ ...p, tipoAusencia: 'permiso' }))
+          ]
         };
-
+        
       } catch (error) {
-        console.error('Error al combinar ausencias:', error);
-        return { vacaciones: [], bajas: [], permisos: [] };
+        console.error('Error obteniendo ausencias combinadas:', error);
+        return { vacaciones: [], bajas: [], permisos: [], todas: [] };
       }
     },
+
+    // Obtener ausencias de un día específico
+    getAusenciasPorDia: (fecha, ausenciasCombinadas) => {
+      if (!ausenciasCombinadas?.todas) return [];
+      
+      return ausenciasCombinadas.todas.filter(ausencia => {
+        return ausencia.fechasActuales?.includes(fecha);
+      });
+    },
+
+    // Contar ausencias por día (para heatmap)
+    contarAusenciasPorDia: (fecha, ausenciasCombinadas) => {
+      const ausenciasDia = get().getAusenciasPorDia(fecha, ausenciasCombinadas);
+      
+      return {
+        total: ausenciasDia.length,
+        vacaciones: ausenciasDia.filter(a => a.tipoAusencia === 'vacaciones').length,
+        bajas: ausenciasDia.filter(a => a.tipoAusencia === 'baja').length,
+        permisos: ausenciasDia.filter(a => a.tipoAusencia === 'permiso').length
+      };
+    },
+
 
 
     // Evaluar auto-aprobación según configuración

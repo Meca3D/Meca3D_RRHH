@@ -13,15 +13,14 @@ export const useAdminStats = () => {
     solicitudesVacaciones,
     loadSolicitudesVacaciones,
     loadConfigVacaciones,
-    obtenerDiasCancelados
   } = useVacacionesStore();
 
   const {configAusencias, loadConfigAusencias, ausencias, loadAusencias} = useAusenciasStore();
   const {showError} = useUIStore();
 
   const [stats, setStats] = useState({
-    trabajadoresVacacionesHoy: 0,
-    trabajadoresVacacionesMañana: 0,
+    trabajadoresAusentesHoy: 0,
+    trabajadoresAusentesMañana: 0,
     solicitudesPendientes: 0,
     permisosPendientes:0,
     autoAprobacionActiva: false,
@@ -57,33 +56,33 @@ export const useAdminStats = () => {
       try {
         const hoy = formatYMD(new Date());
         const mañana = formatYMD(addDays(new Date(), 1));
+        // Función auxiliar para contar empleados únicos ausentes en una fecha
+        const contarAusentesEnFecha = (fechaCheck) => {
+          const trabajadoresAusentes = new Set();
 
-        // Filtrar solo solicitudes aprobadas
-        const solicitudesAprobadas = solicitudesVacaciones.filter(
-          (sol) => sol.estado === 'aprobada'
-        );
+        // 1. Revisar VACACIONES
+          solicitudesVacaciones.forEach(sol => {
+            if (sol.estado === 'aprobada' && Array.isArray(sol.fechasActuales)) {
+              if (sol.fechasActuales.includes(fechaCheck)) {
+                trabajadoresAusentes.add(sol.solicitante);
+              }
+            }
+          });
 
-        // Contar trabajadores de vacaciones HOY
-        const trabajadoresHoy = new Set(
-          solicitudesAprobadas
-            .filter((s) => Array.isArray(s.fechas) && s.fechas.includes(hoy))
-            .filter((s) => {
-              const cancelados = obtenerDiasCancelados(s.cancelacionesParciales || []);
-              return !cancelados.includes(hoy);
-            })
-            .map((s) => s.solicitante)
-        ).size;
+          // 2. Revisar AUSENCIAS (Bajas y Permisos)
+          ausencias.forEach(aus => {           
+            if (aus.estado==='aprobado' && Array.isArray(aus.fechasActuales)) {
+              if (aus.fechasActuales.includes(fechaCheck)) {
+                trabajadoresAusentes.add(aus.solicitante);
+              }
+            }
+          });
 
-        // Contar trabajadores de vacaciones MAÑANA
-        const trabajadoresMañana = new Set(
-          solicitudesAprobadas
-            .filter((s) => Array.isArray(s.fechas) && s.fechas.includes(mañana))
-            .filter((s) => {
-              const cancelados = obtenerDiasCancelados(s.cancelacionesParciales || []);
-              return !cancelados.includes(mañana);
-            })
-            .map((s) => s.solicitante)
-        ).size;
+          return trabajadoresAusentes.size;
+        };
+
+        const trabajadoresHoy = contarAusentesEnFecha(hoy);
+        const trabajadoresMañana = contarAusentesEnFecha(mañana);
 
         // Contar solicitudes pendientes
         const pendientes = solicitudesVacaciones.filter(
@@ -99,8 +98,8 @@ export const useAdminStats = () => {
         const autoAprobacion = configVacaciones?.autoAprobar?.habilitado || false;
 
         setStats({
-          trabajadoresVacacionesHoy: trabajadoresHoy,
-          trabajadoresVacacionesMañana: trabajadoresMañana,
+          trabajadoresAusentesHoy: trabajadoresHoy,
+          trabajadoresAusentesMañana: trabajadoresMañana,
           solicitudesPendientes: pendientes,
           permisosPendientes: permisosPendientes,
           autoAprobacionActiva: autoAprobacion,

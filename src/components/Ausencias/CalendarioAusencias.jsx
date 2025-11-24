@@ -5,7 +5,7 @@ import { Box, Typography, IconButton, Paper, Divider } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
 import {
-  formatYMD, formatearMesAno, obtenerDiasCalendario, navegarMes, esFinDeSemana, esFechaPasadaOHoy
+  formatYMD, formatearMesAno, obtenerDiasCalendario, navegarMes, esFinDeSemana, esFechaPasada
 } from '../../utils/dateUtils';
 
 const DIAS = ['L','M','X','J','V','S','D'];
@@ -35,7 +35,7 @@ const CalendarioAusencias = ({
     const fechaStr = formatYMD(dia);
     
     // Bloquear días pasados para trabajadores
-    if (!esAdmin && esFechaPasadaOHoy(fechaStr)) {
+    if (!esAdmin && esFechaPasada(fechaStr)) {
       return;
     }
     
@@ -60,7 +60,7 @@ const CalendarioAusencias = ({
     const esFestivoDia = esFestivo(fechaStr);
     const esFinSemana = esFinDeSemana(dia);
     const esFechaOriginal = fechasOriginales.includes(fechaStr);
-    const esDiaPasado = !esAdmin && esFechaPasadaOHoy(fechaStr);
+    const esDiaPasado = !esAdmin && esFechaPasada(fechaStr);
     const esSeleccionable=!esDiaPasado && !esFestivoDia ;
 
   
