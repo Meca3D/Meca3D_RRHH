@@ -56,6 +56,7 @@ const OwnerProfile = ({ open, onClose }) => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [notificacionesAusencias, setNotificacionesAusencias] = useState(userProfile.notificacionesAusencias ?? true);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -97,6 +98,7 @@ const OwnerProfile = ({ open, onClose }) => {
       });
       setPreviewUrl(userProfile.photoURL || '');
     }
+    setNotificacionesAusencias(userProfile.notificacionesAusencias ?? true);
   }, [userProfile, editMode]);
 
   // ✅ Subir imagen a ImgBB
@@ -150,11 +152,13 @@ const OwnerProfile = ({ open, onClose }) => {
         setUploadingPhoto(true);
         photoURL = await uploadImageToImgBB(selectedFile);
       }
-
+      console.log('Datos que se intentan guardar:', notificacionesAusencias);
       // Actualizar perfil usando el store
       await updateUserProfile({
         ...formData,
-        photoURL
+        photoURL,
+        notificacionesAusencias
+        
       });
 
       showSuccess('Perfil actualizado correctamente');
@@ -265,6 +269,13 @@ const OwnerProfile = ({ open, onClose }) => {
           showError('Error al desactivar notificaciones',error);
         }
       }
+    };
+
+     // Manejar activación/desactivación de notificaciones de Ausencias
+    const handleAusenciasNotificationToggle = async (event) => {
+      const wantsEnable = event.target.checked;
+      setNotificacionesAusencias(wantsEnable?true:false)
+      
     };
   
   // Enviar notificación de prueba
@@ -466,43 +477,52 @@ const OwnerProfile = ({ open, onClose }) => {
                 {/* ✅ Sección de Notificaciones */}
                 {!changePasswordMode && (
                   <>                  
-                    <Box  sx={{ mb: 2 }}>
+                    <Box  sx={{ mb: 2, width:'100%' }}>
                       <Typography variant="body1" sx={{display: 'flex', alignItems: 'center', gap: 1, mb:1 }}>
                         <NotificationsIcon color={editMode?"primary":"action"} />
-                        Notificaciones Push
+                        Notificaciones
                       </Typography>
-                      
-                      <Box
-                        display="flex"
-                        justifyContent="space-between" 
-                        alignItems="center"
-                        width="100%" 
-                      >
-
                         <FormControlLabel
                           control={
                             <Switch
+                              sx={{mr:1}}
                               checked={notificationsEnabled}
                               onChange={handleNotificationToggle}
                               disabled={!editMode || loadingNotifications}
                               color={editMode ? "primary" : "action"}
                             />
                           }
-                          label="" 
+                          label={<Typography fontSize='0.8rem'>
+                          Habilitar notificaciones Push
+                          </Typography>} 
                         />
-                          <Button
+                      <FormControlLabel
+                          control={
+                            <Switch
+                              sx={{mr:1}}
+                              checked={notificacionesAusencias}
+                              onChange={handleAusenciasNotificationToggle}
+                              disabled={!editMode || loadingNotifications}
+                              color={editMode ? "primary" : "action"}
+                            />
+                          }
+                          label={<Typography fontSize='0.8rem'>
+                          Notificaciones diarias de ausencias
+                          </Typography>} 
+                        />
+                        
+                        <Button
                             variant="outlined"
                             size="small"
+                            fullWidth
                             color={editMode ? "primary" : "action"}
                             onClick={handleSendTestNotification}
                             disabled={sendingTest || !editMode || !notificationsEnabled}
-                            sx={{width:'65%', borderRadius:2}}
+                            sx={{borderRadius:2,p:1}}
                           >
                             {sendingTest ? 'Enviando...' : 'Enviar notificación de prueba'}
                           </Button>
-                        
-                      </Box>
-                      
+                          
                       {permission === 'denied' && (
                         <Alert severity="warning" sx={{ mt: 1, fontSize: '0.875rem' }}>
                           Las notificaciones están bloqueadas en este navegador. 

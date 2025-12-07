@@ -171,6 +171,15 @@ const HistorialAusencias = () => {
     setPaginaActual(1);
   }, [ausencias, filtros, datosUsuarios]);
 
+      const handleClickEstadistica = (filtroEstado) => {
+        if (filtros.estado === filtroEstado) {
+          setFiltros(prev => ({ ...prev, estado: 'todos' }))
+        } else {
+          setFiltros(prev => ({ ...prev, estado: filtroEstado }));
+          setPaginaActual(1);
+        }
+      };
+
   // Estadísticas
   const estadisticas = useMemo(() => {
     return {
@@ -553,7 +562,7 @@ const HistorialAusencias = () => {
             <Grid size={{ xs: 12 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" width={'100%'} sx={{mb:-2}}>
               <Typography variant="body1" fontWeight={600}>
-                {capitalizeFirstLetter(ausencia.tipo)} Original: {ausencia.fechas.length} día{ausencia.fechas.length !== 1 ? 's' : ''}
+               Días de {capitalizeFirstLetter(ausencia.tipo)}: {ausencia.fechasActuales.length} día{ausencia.fechasActuales.length !== 1 ? 's' : ''}
               </Typography>
             <IconButton onClick={() => onToggleExpand(ausencia.id)}
                 >
@@ -565,7 +574,7 @@ const HistorialAusencias = () => {
             <Grid size={{ xs: 12 }}>
             <Collapse in={isExpanded} >
             {/* Lista de fechas */}
-              {ausencia.fechas.length === 1 ? (
+              {ausencia.fechasActuales.length === 1 ? (
                 <>
                 <Box
                   sx={{
@@ -583,7 +592,7 @@ const HistorialAusencias = () => {
                   </Typography>
                 </Box>
                   <Typography variant="body1" textAlign='center' sx={{mb:1}}>
-                    • {formatearFechaLarga(ausencia.fechas[0])}
+                    • {formatearFechaLarga(ausencia.fechasActuales[0])}
                   </Typography>
                   </>
               ) : (
@@ -635,7 +644,7 @@ const HistorialAusencias = () => {
                         }   
                           return (
                             <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
-                              <Box display="flex" alignItems="center" gap={0.5}>
+                              <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
                                 <Typography
                                   variant="body1"
                                   color={colorTexto}
@@ -663,7 +672,7 @@ const HistorialAusencias = () => {
                         });
                       })()}
                     </Grid>
-                    {ausencia.fechas !== ausencia.fechasActuales && (
+                    {ausencia.fechas.length !== ausencia.fechasActuales.length && (
                       <>
                       <Divider sx={{bgcolor:'black', mt:1}} />
                       <Grid container sx={{ my: 1, pl: 2 }}>
@@ -777,7 +786,7 @@ const HistorialAusencias = () => {
                             Días añadidos ({edicion.fechasAgregadas.length}):
                           </Typography>
                           <Grid container sx={{ display: 'flex' }}>
-                            {edicion.fechasAgregadas.map(fecha => (
+                            {edicion.fechasAgregadas.sort().map(fecha => (
                               <Grid size={{xs:4,md:3}} key={fecha}>
                               <Chip
                                 label={formatearFechaCorta(fecha)}
@@ -1002,7 +1011,8 @@ const HistorialAusencias = () => {
         {/* Estadísticas */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid size={{ xs: 6, md: 3 }}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.50', borderRadius: 2 }}>
+            <Paper onClick={() => handleClickEstadistica('aprobado')} 
+              sx={{ p: 2, textAlign: 'center', bgcolor: 'success.50', borderRadius: 2,  }}>
               <Typography variant="h4" fontWeight={700} color="success.main">
                 {estadisticas.aprobadas}
               </Typography>
@@ -1010,7 +1020,8 @@ const HistorialAusencias = () => {
             </Paper>
           </Grid>
           <Grid size={{ xs: 6, md: 3 }}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'info.50', borderRadius: 2 }}>
+            <Paper onClick={() => handleClickEstadistica('pendiente')}
+              sx={{ p: 2, textAlign: 'center', bgcolor: 'info.50', borderRadius: 2 }}>
               <Typography variant="h4" fontWeight={700} color="info.main">
                 {estadisticas.pendientes}
               </Typography>
@@ -1018,7 +1029,8 @@ const HistorialAusencias = () => {
             </Paper>
           </Grid>
           <Grid size={{ xs: 6, md: 3 }}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'error.50', borderRadius: 2 }}>
+            <Paper onClick={() => handleClickEstadistica('rechazado')}
+              sx={{ p: 2, textAlign: 'center', bgcolor: 'error.50', borderRadius: 2 }}>
               <Typography variant="h4" fontWeight={700} color="error.main">
                 {estadisticas.rechazadas}
               </Typography>
@@ -1026,7 +1038,8 @@ const HistorialAusencias = () => {
             </Paper>
           </Grid>
           <Grid size={{ xs: 6, md: 3 }}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.50', borderRadius: 2 }}>
+            <Paper onClick={() => handleClickEstadistica('cancelado')}
+              sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.50', borderRadius: 2 }}>
               <Typography variant="h4" fontWeight={700} color="warning.main">
                 {estadisticas.canceladas}
               </Typography>

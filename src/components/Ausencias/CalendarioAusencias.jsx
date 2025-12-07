@@ -43,6 +43,11 @@ const CalendarioAusencias = ({
     if (fechasOriginales.includes(fechaStr)) {
       return;
     }
+
+    // Bloquear fechas originales (no se pueden deseleccionar al añadir)
+    if (esFinDeSemana(fechaStr)||esFestivo(fechaStr)) {
+      return;
+    }
     
     if (fechasSeleccionadas.includes(fechaStr)) {
       onFechasChange(fechasSeleccionadas.filter(f => f !== fechaStr));
@@ -61,7 +66,7 @@ const CalendarioAusencias = ({
     const esFinSemana = esFinDeSemana(dia);
     const esFechaOriginal = fechasOriginales.includes(fechaStr);
     const esDiaPasado = !esAdmin && esFechaPasada(fechaStr);
-    const esSeleccionable=!esDiaPasado && !esFestivoDia ;
+    const esSeleccionable=!esDiaPasado && !esFestivoDia && !esFinSemana;
 
   
   

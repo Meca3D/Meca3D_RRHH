@@ -141,12 +141,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       // Actualizar en Firestore
       const userRef = doc(db, 'USUARIOS', userProfile.email);
-      await updateDoc(userRef, {
-        nombre: profileData.nombre,
-        nivel: profileData.nivel,
-        fechaIngreso: profileData.fechaIngreso,
-        photoURL: profileData.photoURL
-      });
+      await updateDoc(userRef, profileData);
 
       // Actualizar en Firebase Auth
       await updateProfile(auth.currentUser, {
@@ -339,14 +334,13 @@ const loadUserProfileFunction = (userEmail, set) => {
             favoritos: userData.favoritos || [],
             puesto: userData.puesto,
             nivel: userData.nivel,
-            vacaDias: userData.vacaDias,
-            vacaHoras: userData.vacaHoras,
             vacaciones:{
               disponibles: userData.vacaciones.disponibles || 0,
               pendientes: userData.vacaciones.pendientes ||0
             },
             configuracionNomina: userData.configuracionNomina,
             tarifasHorasExtra: userData.tarifasHorasExtra,
+            notificacionesAusencias: userData.notificacionesAusencias || false,
             visible: userData.visible !== false
           },
           userRole: userData.rol,

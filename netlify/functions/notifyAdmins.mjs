@@ -34,7 +34,8 @@ export const handler = async (event) => {
     // Obtener todos los usuarios con roles admin, owner o leaveAdmin
     const usuariosSnapshot = await admin.firestore()
       .collection('USUARIOS')
-      .where('rol', 'in', ['admin', 'owner', 'leaveAdmin'])
+      //.where('rol', 'in', ['admin', 'owner', 'leaveAdmin'])
+      .where('rol', 'in', ['admin', 'leaveAdmin'])
       .get();
 
     console.log(`${usuariosSnapshot.size} administrador(es) encontrado(s)`);
@@ -51,7 +52,7 @@ export const handler = async (event) => {
         : `${nombreSolicitante} solicita ${diasSolicitados} de vacaciones`;
     }
 
-    // Definir título según acción
+    
 // Definir título según acción
 const titles = {
   // Vacaciones

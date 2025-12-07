@@ -234,8 +234,7 @@ const MisAusencias = () => {
       <Card elevation={2} sx={{ mb: 2 }}>
         <CardContent>
           <Grid container spacing={1}>
-            {/* Cabecera con estado y tipo */}
-          
+            {/* Cabecera con estado y tipo */}       
             <Grid size={{ xs: 12 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Chip
@@ -458,7 +457,7 @@ const MisAusencias = () => {
                             <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
                               <Box display="flex" justifyContent='center' alignItems="center">
                                 <Typography variant="body1"color={colorTexto}>
-                                  {icono} 
+                                  {icono}
                                 </Typography>
                                 <Typography
                                   variant="body1"
@@ -486,7 +485,7 @@ const MisAusencias = () => {
                         });
                       })()}
                     </Grid>
-                    {ausencia.ediciones || ausencia.cancelaciones && (
+                    {ausencia?.ediciones || ausencia?.cancelaciones && (
                       <>
                       <Divider sx={{bgcolor:'black', mt:1}} />
                       <Grid container sx={{ mt: 1, pl: 2 }} spacing={0.5}>
@@ -527,7 +526,7 @@ const MisAusencias = () => {
             {/* Respuesta del admin */}
             {ausencia.comentariosAdmin && (
               <Grid size={{ xs: 12 }}>
-                <Box sx={{ p: 1.5, bgcolor: '#e3f2fd', borderRadius: 2, borderLeft: '3px solid #2196F3' }}>
+                <Box sx={{ mt:1, p: 1.5, bgcolor: '#e3f2fd', borderRadius: 2, borderLeft: '3px solid #2196F3' }}>
                   <Typography variant="body1" color="primary" fontStyle='italic' display="block" fontWeight={600}>
                     👨‍💼 Respuesta de administración:
                   </Typography>

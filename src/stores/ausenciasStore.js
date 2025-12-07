@@ -293,7 +293,10 @@ export const useAusenciasStore = create((set, get) => {
           // Empleado crea ausencia → evaluar auto-aprobación
           const resAuto = get().evaluarAutoAprobacion(ausenciaData);
           estadoFinal = resAuto.aplicar ? 'aprobado' : 'pendiente';
-          comentariosAdminFinal = resAuto.aplicar 
+          comentariosAdminFinal = ausenciaData.tipo==="baja" 
+          
+          ? 'Baja registrada correctamente.'          
+          : resAuto.aplicar 
             ? (get().configAusencias?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') 
             : '';
           fechaAprobacion = resAuto.aplicar ? formatYMD(new Date()) : '';

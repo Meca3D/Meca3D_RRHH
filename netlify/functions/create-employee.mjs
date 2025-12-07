@@ -138,6 +138,7 @@ const {
       fechaIngreso: fechaIngreso || '', // String en formato YYYY-MM-DD
       nivel: Number(nivel) || 1, // Número 1-21
       favoritos: [],
+      notificacionesAusencias: rol === 'owner' ? true : false,
       visible:true
     });
 

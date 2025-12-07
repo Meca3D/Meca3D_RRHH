@@ -546,10 +546,10 @@ const HistorialSolicitudes = () => {
                   >
                   {solicitud?.esAjusteSaldo 
                     ? <Grid size={{ xs: 12 }}>
-                    <Typography  sx={{ fontWeight: 600, fontSize:'1.3rem', mt:3, textAlign:'center' }}>
+                    <Typography  sx={{ fontWeight: 600, fontSize:'1rem', mt:3}}>
                       Ajuste de saldo             
                       </Typography>
-                      <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', textAlign:'center', color: 
+                      <Typography  sx={{ fontWeight: 600, fontSize:'1rem', color: 
                         solicitud.tipoAjuste=="reducir"?"rojo.main":solicitud.tipoAjuste=="añadir"?"verde.main":"azul.main" }}>
                       {capitalizeFirstLetter(solicitud.tipoAjuste)} {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
                       </Typography>
@@ -1279,7 +1279,9 @@ const HistorialSolicitudes = () => {
                   <Box display='flex' justifyContent='space-between'>
                   {obtenerDiasDisfrutados(solicitudACancelar).length > 0 && (
                     <Chip
-                      label={`${obtenerDiasDisfrutados(solicitudACancelar).length} día${obtenerDiasDisfrutados(solicitudACancelar).length === 1 ? '' : 's'} ya disfrutado${obtenerDiasDisfrutados(solicitudACancelar).length === 1 ? '' : 's'}`}
+                      label={(obtenerDiasDisfrutados(solicitudACancelar).length === 1 && solicitudACancelar.horasSolicitadas<8)
+                        ? `${formatearTiempoVacasLargo(solicitudACancelar.horasSolicitadas)} ya disfrutada${solicitudACancelar.horasSolicitadas===1?'':'s'}`
+                        : `${obtenerDiasDisfrutados(solicitudACancelar).length} día${obtenerDiasDisfrutados(solicitudACancelar).length === 1 ? '' : 's'} ya disfrutado${obtenerDiasDisfrutados(solicitudACancelar).length === 1 ? '' : 's'}`}
                       size="small"
                       color="success"
                       sx={{ mr: 1, mb: 2 }}

@@ -377,7 +377,7 @@ const CrearAusencia = () => {
               transition: 'all 0.3s ease'
             }}
           >
-            {saving ? 'Enviando...' : 'Enviar solicitud'}
+            {saving && tipo==="baja"? 'Registrando...' : saving && tipo==='permiso' ? 'Enviando...' : tipo==='baja' ? 'Registrar Baja' : 'Enviar solicitud'}
           </Button>
         </Box>
       </Container>
