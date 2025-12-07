@@ -26,6 +26,7 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         // No cachear el service worker de Firebase
+        maximumFileSizeToCacheInBytes: 5242880,
         navigateFallbackDenylist: [/firebase-messaging-sw\.js$/]
       },
       devOptions: {
