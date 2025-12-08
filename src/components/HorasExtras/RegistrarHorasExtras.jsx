@@ -25,17 +25,17 @@ const RegistrarHorasExtras = () => {
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
     tipo: 'normal',
-    horas: 0,
-    minutos: 0,
+    horas: '',
+    minutos: '',
     tarifa: userProfile?.tarifasHorasExtra?.normal || 15
   });
 
   const [saving, setSaving] = useState(false);
 
   const importeCalculado = calcularImporteHorasExtra(
-    formData.horas, 
-    formData.minutos, 
-    formData.tarifa
+    Number(formData.horas), 
+    Number(formData.minutos), 
+    Number(formData.tarifa)
   );
 
   const handleSubmit = async (e) => {
@@ -46,12 +46,12 @@ const RegistrarHorasExtras = () => {
       return;
     }
     
-    if (formData.horas === 0 && formData.minutos === 0) {
+    if (Number(formData.horas) === 0 && Number(formData.minutos) === 0) {
       showError('Debes introducir al menos 1 minuto');
       return;
     }
 
-    if (formData.minutos >= 60) {
+    if (Number(formData.minutos) >= 60) {
       showError('Los minutos deben ser menores a 60');
       return;
     }
@@ -254,10 +254,14 @@ const RegistrarHorasExtras = () => {
                     label="Horas"
                     value={formData.horas}
                     onWheel={(e) => e.target.blur()}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      horas: Math.max(0, parseInt(e.target.value) || 0)
-                    })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ 
+                        ...formData, 
+                        // Si está vacío, guarda "", si no, aplica el Math.max
+                        horas: val === '' ? '' : Math.max(0, parseInt(val))
+                      })
+                    }}
                     slotProps={{ 
                       htmlInput:{
                         min: 0
@@ -287,10 +291,14 @@ const RegistrarHorasExtras = () => {
                     label="Minutos"
                     value={formData.minutos}
                     onWheel={(e) => e.target.blur()}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      minutos: Math.max(0, Math.min(59, parseInt(e.target.value) || 0))
-                    })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ 
+                        ...formData, 
+                        // Si está vacío, guarda "", si no, aplica los límites 0-59
+                        minutos: val === '' ? '' : Math.max(0, Math.min(59, parseInt(val)))
+                      })
+                    }}
                     slotProps={{
                       htmlInput:{
                          min: 0, max: 59, step: 5

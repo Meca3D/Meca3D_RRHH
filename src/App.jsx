@@ -13,12 +13,13 @@ import { corporateTheme } from './theme/corporateTheme';
 import { standarTheme } from './theme/standardTheme';
 import { NotificationManager } from './components/NotificationManager';
 import { useNotifications } from './hooks/useNotifications';
-
+import { useBeforeInstallPrompt } from './hooks/useBeforeInstallPrompt';
 
 
 
 
   function App() {
+    useBeforeInstallPrompt()
     useEffect(() => {
       useAuthStore.getState().initAuthListener();
     }, []);

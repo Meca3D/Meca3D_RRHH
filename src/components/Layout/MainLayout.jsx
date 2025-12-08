@@ -27,8 +27,6 @@ import {  iniciales } from '../Helpers';
 
 const MainLayout = () => {
 
-  useBeforeInstallPrompt()
-
   const [profileOpen, setProfileOpen] = useState(false);
   const {user, userProfile, isAuthenticated, canManageUsers, isCocinero, isOwner, isLeaveAdmin} = useAuthStore();
   const location = useLocation();

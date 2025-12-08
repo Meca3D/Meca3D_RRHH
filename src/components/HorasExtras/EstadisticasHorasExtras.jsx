@@ -20,10 +20,11 @@ import { useAuthStore } from '../../stores/authStore';
 import { useHorasExtraStore } from '../../stores/horasExtraStore';
 import { useNominaStore } from '../../stores/nominaStore';
 import { 
+  convertirHorasDecimalesAHorasYMinutos,
   tiposHorasExtra, 
   formatCurrency, 
   formatDate, 
-  formatearTiempo 
+  formatearTiempo, 
 } from '../../utils/nominaUtils';
 
  const CustomPieChartLegend = (props) => {
@@ -565,8 +566,8 @@ const EstadisticasHorasExtras = () => {
                           <YAxis yAxisId="importe" orientation="right" />
                           <Tooltip 
                             formatter={(value, name) => [
-                              name === 'horas' ? `${value.toFixed(1)}h` : formatCurrency(value),
-                              name === 'horas' ? 'Horas' : 'Importe'
+                              name === 'Horas' ? `${convertirHorasDecimalesAHorasYMinutos(value)}` : formatCurrency(value),
+                              name === 'Horas' ? 'Horas' : 'Importe'
                             ]}
                           />
                           <Legend 
