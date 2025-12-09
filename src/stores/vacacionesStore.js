@@ -1835,6 +1835,7 @@ export const useVacacionesStore = create((set, get) => {
         const solicitudAjuste = {
           solicitante: empleadoEmail,
           fechas: [], // Sin fechas específicas
+          fechasActuales: [], // Sin fechas específicas
           horasSolicitadas: Math.abs(horas),
           horasDisponiblesAntes: saldoActual.disponibles,
           horasDisponiblesDespues: nuevoSaldo.disponibles,

@@ -508,6 +508,7 @@ const CrearEmpleado = () => {
               }}
               >
                   <Typography sx={{fontWeight:'bold'}} fontSize="1.1rem">{empleado.nombre}</Typography>
+                  <Typography sx={{}} fontSize="0.75rem">{empleado.id}</Typography>
                   <Typography sx={{}} fontSize="0.85rem">{empleado.puesto}</Typography>
                   <Typography sx={{}} fontSize="0.85rem">Fecha Ingreso:{empleado.fechaIngreso}</Typography>
                   <Typography sx={{}} fontSize="0.85rem">Nivel Salarial:{empleado.nivel}</Typography>
