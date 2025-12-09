@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
-import { doc, updateDoc, arrayUnion, getDoc, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { messaging, vapidKey, db } from '../firebase/config';
 import { useAuthStore } from '../stores/authStore';
 

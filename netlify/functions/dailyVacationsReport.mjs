@@ -1,5 +1,4 @@
 import admin from 'firebase-admin';
-import { schedule } from '@netlify/functions';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -11,14 +10,15 @@ if (!admin.apps.length) {
   });
 }
 
-const handler = async () => {
+// ✅ Handler principal (sin import de schedule)
+export default async (req, context) => {
   console.log('=== Iniciando reporte diario de ausencias ===');
   try {
     const hoy = new Date();
     const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
     console.log('Fecha:', fechaHoy);
 
-    // Mapa para almacenar ausentes: email -> { tipo: 'vacaciones'|'baja'|'permiso' }
+    // Mapa para almacenar ausentes
     const ausentesMap = new Map();
 
     // ---------------------------------------------------------
@@ -30,14 +30,11 @@ const handler = async () => {
       .get();
 
     console.log(`Solicitudes de vacaciones analizadas: ${vacacionesSnapshot.size}`);
-    
+
     for (const doc of vacacionesSnapshot.docs) {
       const solicitud = doc.data();
-      
-      if (Array.isArray(solicitud.fechasActuales)) {
-        if (solicitud.fechasActuales.includes(fechaHoy)) {
-          ausentesMap.set(solicitud.solicitante, { tipo: 'vacaciones' });
-        }
+      if (Array.isArray(solicitud.fechasActuales) && solicitud.fechasActuales.includes(fechaHoy)) {
+        ausentesMap.set(solicitud.solicitante, { tipo: 'vacaciones' });
       }
     }
 
@@ -46,19 +43,16 @@ const handler = async () => {
     // ---------------------------------------------------------
     const ausenciasSnapshot = await admin.firestore()
       .collection('AUSENCIAS')
-      .where('estado', '==', 'aprobada')
+      .where('estado', '==', 'aprobado')
       .get();
 
     console.log(`Solicitudes de ausencias analizadas: ${ausenciasSnapshot.size}`);
 
     for (const doc of ausenciasSnapshot.docs) {
       const solicitud = doc.data();
-      
-      // Las ausencias siempre deberían tener fechasActuales
       if (Array.isArray(solicitud.fechasActuales) && solicitud.fechasActuales.includes(fechaHoy)) {
-        // Sobrescribe vacaciones si coinciden (la baja tiene prioridad visual)
         ausentesMap.set(solicitud.solicitante, { 
-          tipo: solicitud.tipo || 'ausencia' // 'baja' o 'permiso'
+          tipo: solicitud.tipo || 'ausencia'
         });
       }
     }
@@ -80,7 +74,6 @@ const handler = async () => {
     // ---------------------------------------------------------
     const datosUsuarios = {};
     
-    // Batch o promesas paralelas para optimizar
     await Promise.all(emailsAusentes.map(async (email) => {
       const userDoc = await admin.firestore().collection('USUARIOS').doc(email).get();
       if (userDoc.exists) {
@@ -91,7 +84,6 @@ const handler = async () => {
           .split(' ')
           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
           .join(' ');
-        
         datosUsuarios[email] = { nombre: nombreFormateado };
       } else {
         datosUsuarios[email] = { nombre: email };
@@ -129,9 +121,9 @@ const handler = async () => {
       lineasMensaje.push(`📝 Permisos: ${grupos.permiso.join(', ')}`);
     }
 
-    const titulo = `📋 Reporte: ${emailsAusentes.length} ausencias hoy`;
+    const titulo = `📋 Ausencias hoy: ${emailsAusentes.length}`;
     const mensajeCuerpo = lineasMensaje.join('\n');
-
+    
     console.log('Titulo:', titulo);
     console.log('Cuerpo:', mensajeCuerpo);
 
@@ -140,13 +132,15 @@ const handler = async () => {
     // ---------------------------------------------------------
     const ownersSnapshot = await admin.firestore()
       .collection('USUARIOS')
-      //.where('rol', '==', 'owner')
-      .where('rol', '==', 'admin')
+      .where('rol', '==', 'owner')
       .get();
 
     if (ownersSnapshot.size === 0) {
       console.log('No hay owners para notificar');
-      return new Response(JSON.stringify({ success: true, notificados: 0 }));
+      return new Response(
+        JSON.stringify({ success: true, notificados: 0 }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const notificaciones = [];
@@ -154,7 +148,14 @@ const handler = async () => {
 
     for (const ownerDoc of ownersSnapshot.docs) {
       const ownerEmail = ownerDoc.id;
-      const fcmTokens = ownerDoc.data()?.fcmTokens || [];
+      const ownerData = ownerDoc.data();
+      const fcmTokens = ownerData?.fcmTokens || [];
+
+      // Verificar preferencia de notificaciones
+      if (ownerData?.notificacionesAusencias === false) {
+        console.log(`Owner ${ownerEmail} tiene deshabilitadas las notificaciones`);
+        continue;
+      }
 
       if (fcmTokens.length === 0) continue;
 
@@ -168,8 +169,8 @@ const handler = async () => {
       const message = {
         data: {
           title: titulo,
-          body: mensajeCuerpo.replace(/<b>|<\/b>/g, ''), // Quitar HTML para notificación push simple
-          url: '/admin', // O '/admin/ausencias/calendario' si prefieres
+          body: mensajeCuerpo,
+          url: '/admin',
           type: 'reporte_ausencias',
           timestamp: new Date().toISOString()
         },
@@ -186,6 +187,7 @@ const handler = async () => {
     const resultados = await Promise.all(notificaciones);
     const exitosos = resultados.filter(r => r.success > 0).length;
 
+    console.log('=== Reporte completado ===');
     return new Response(
       JSON.stringify({
         success: true,
@@ -206,4 +208,6 @@ const handler = async () => {
   }
 };
 
-export default schedule("0 5 * * 1-5", handler);
+export const config = {
+  schedule: "0 5 * * 1-5" // Lunes a viernes a las 5:00 AM UTC (7:00 AM Madrid en invierno)
+};
