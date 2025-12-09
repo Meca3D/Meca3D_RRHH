@@ -8,19 +8,8 @@ export function initPWA() {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
-      console.log('Nueva versión disponible')
-      const { showActionSnackbar, hideSnackbar } = useUIStore.getState()
-      
-      showActionSnackbar(
-        'Nueva versión disponible',
-        'Actualizar',
-        async () => {
-          hideSnackbar()
-          await updateSW(true)
-        },
-        'info',
-        true
-      )
+      console.log('Nueva versión crítica detectada. Actualizando...');
+      updateSW(true); // Esto fuerza la recarga de la página
     },
     onOfflineReady() {
       console.log('App lista para funcionar offline')

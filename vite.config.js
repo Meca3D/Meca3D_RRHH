@@ -27,7 +27,29 @@ export default defineConfig({
         navigateFallback: '/index.html',
         // No cachear el service worker de Firebase
         maximumFileSizeToCacheInBytes: 5242880,
-        navigateFallbackDenylist: [/firebase-messaging-sw\.js$/]
+        navigateFallbackDenylist: [/firebase-messaging-sw\.js$/],
+        runtimeCaching: [
+          {
+            // Para HTML, JS, CSS y JSON: Siempre intentar red primero
+            urlPattern: ({ request }) => request.destination === 'document' ||
+                                         request.destination === 'script' ||
+                                         request.destination === 'style' ||
+                                         request.destination === 'image',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'archivos-siempre-frescos',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 // 1 día
+              },
+              networkTimeoutSeconds: 5 // Si tarda más de 5s, usa caché
+            }
+          }
+        ],
+        // Limpieza de cachés antiguas
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
       },
       devOptions: {
         enabled: false
