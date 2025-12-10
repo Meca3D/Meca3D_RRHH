@@ -191,20 +191,22 @@ const VentaVacaciones = () => {
               {/* Card: Horas a vender */}
               <Grid size={{ xs: 6, md: 4 }}>
                 <Card 
-                  sx={{                   
+                  sx={{
+                    py:2,
+                    px:1,                   
                     bgcolor: 'success.main', 
                     color: 'success.contrastText',
                     boxShadow: 3
                   }}
                 >
-                  <CardContent sx={{px:1}}>
+                  
                     <Typography fontSize='1rem'  textAlign='center' sx={{ }}>
                       Vacaciones a Vender
                     </Typography>
                     <Typography fontSize='1.15rem'  textAlign='center' sx={{ fontWeight: 700, mt: 1 }}>
                       {formatearTiempoVacasLargo(parseInt(horasAVender))}
                     </Typography>
-                  </CardContent>
+                  
                 </Card>
               </Grid>
 
@@ -212,19 +214,21 @@ const VentaVacaciones = () => {
               <Grid size={{ xs: 6, md: 4 }}>
                 <Card 
                   sx={{ 
+                    py:2,
+                    px:1,
                     bgcolor: 'info.main', 
                     color: 'info.contrastText',
                     boxShadow: 3,
                   }}
                 >
-                  <CardContent sx={{px:1}}>
+               
                     <Typography fontSize='1rem' textAlign='center' sx={{}}>
                       Vacaciones tras Aprobación
                     </Typography>
                     <Typography fontSize='1.15rem' textAlign='center' sx={{ fontWeight: 700, mt: 1 }}>
                       {formatearTiempoVacasLargo(horasRestantes)}
                     </Typography>
-                  </CardContent>
+              
                 </Card>
               </Grid>
 
@@ -232,13 +236,14 @@ const VentaVacaciones = () => {
               <Grid size={{ xs: 12, md: 4 }}>
                 <Card 
                   sx={{ 
+                    p:2,
                     bgcolor: tarifaHoraExtra ? 'warning.light' : 'grey.100',
                     color: tarifaHoraExtra ? 'warning.contrastText' : 'rojo.main',
                     boxShadow: 3,
                   }}
                 >
-                  <CardContent>
-                    <Typography fontSize='1.1rem'  textAlign='center' sx={{ }}>
+                 
+                    <Typography fontSize='1.2rem'  textAlign='center' sx={{ }}>
                       Dinero a recibir
                     </Typography>
                     {tarifaHoraExtra ? (
@@ -250,9 +255,16 @@ const VentaVacaciones = () => {
                         Configura los datos de horas extra para ver la cantidad. Este dato es solo informativo y no impide enviar la solicitud.
                       </Typography>
                     )}
-                  </CardContent>
+          
                 </Card>
               </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Card elevation={5} sx={{ p:2, color:'rojo.main' }}> 
+                      <Typography fontWeight="bold" textAlign='center'sx={{ fontSize: '0.9rem' }}>
+                        Si se aprueba la venta, recuerda apuntar las horas vendidas en el parte para que el importe se incluya en la nómina.
+                      </Typography>
+                </Card>
+                </Grid>
             </Grid>
           )}
 
