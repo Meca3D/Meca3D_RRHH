@@ -209,5 +209,5 @@ export default async (req, context) => {
 };
 
 export const config = {
-  schedule: "0 5 * * 1-5" // Lunes a viernes a las 5:00 AM UTC (7:00 AM Madrid en invierno)
+  schedule: "30 6 * * 1-5" // Lunes a viernes a las 5:00 AM UTC (7:00 AM Madrid en invierno)
 };

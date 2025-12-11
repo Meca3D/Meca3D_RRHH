@@ -415,6 +415,16 @@ const MisSolicitudesVacaciones = () => {
                       </Typography>
                       </Box>
                     </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Box display='flex' justifyContent='space-between'>
+                      <Typography variant="h6" display="block">
+                        Después: 
+                      </Typography>
+                      <Typography variant="h6" display="block">
+                        {formatearTiempoVacasLargo(solicitud.horasDisponiblesDespues || 0)}
+                      </Typography>
+                      </Box>
+                    </Grid>
                     {solicitud.esVenta && solicitud.cantidadARecibir && (
                     <Grid size={{ xs: 12 }}>
                       <Box display='flex' justifyContent='space-between'>
