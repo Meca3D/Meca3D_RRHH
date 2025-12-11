@@ -45,9 +45,6 @@ const CalendarioAusencias = ({
     }
 
     // Bloquear fechas originales (no se pueden deseleccionar al añadir)
-    if (esFinDeSemana(fechaStr)||esFestivo(fechaStr)) {
-      return;
-    }
     
     if (fechasSeleccionadas.includes(fechaStr)) {
       onFechasChange(fechasSeleccionadas.filter(f => f !== fechaStr));
@@ -113,6 +110,16 @@ const CalendarioAusencias = ({
         cursor: 'not-allowed',
     };
   }
+  
+  // Festivo 
+  if (esFestivoDia) {
+    return {
+      ...base,
+      bgcolor: '#f44f68ff',
+      color: "#fff",
+      border: '1px dashed #d32f2f',
+    };
+  }
 
     // Día pasado (bloqueado para trabajadores)
     if (esDiaPasado) {
@@ -124,15 +131,6 @@ const CalendarioAusencias = ({
       };
     }
 
-    // Festivo 
-    if (esFestivoDia) {
-      return {
-        ...base,
-        bgcolor: '#f44f68ff',
-        color: "#fff",
-        border: '1px dashed #d32f2f',
-      };
-    }
 
     // Fin de semana
     if (esFinSemana) {

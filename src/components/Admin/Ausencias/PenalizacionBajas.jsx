@@ -133,10 +133,10 @@ const PenalizacionBajas = () => {
 
       // 2. Calcular porcentaje de penalización
       let porcentaje = 0;
-      if (diasBajaTotales <= 5) porcentaje = 0;
-      else if (diasBajaTotales <= 10) porcentaje = 0.25;
-      else if (diasBajaTotales <= 15) porcentaje = 0.5;
-      else if (diasBajaTotales <= 20) porcentaje = 0.75;
+      if (diasBajaTotales <= 7) porcentaje = 0;
+      else if (diasBajaTotales <= 14) porcentaje = 0.25;
+      else if (diasBajaTotales <= 21) porcentaje = 0.5;
+      else if (diasBajaTotales <= 28) porcentaje = 0.75;
       else porcentaje = 1.0;
 
       // 3. Calcular penalización en horas (redondear hacia abajo)
@@ -325,31 +325,31 @@ const PenalizacionBajas = () => {
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #4caf50', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">≤ 5 días de baja</Typography>
+                  <Typography variant="body1" color="">≤ 7 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="success.main">0%</Typography>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #ff9800', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">6-10 días de baja</Typography>
+                  <Typography variant="body1" color="">8-14 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="warning.main">25%</Typography>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #ff5722', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">11-15 días de baja</Typography>
+                  <Typography variant="body1" color="">15-21 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="error.light">50%</Typography>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #f44336', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">16-20 días de baja</Typography>
+                  <Typography variant="body1" color="">22-28 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="error.main">75%</Typography>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #d32f2f', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">&gt; 20 días de baja</Typography>
+                  <Typography variant="body1" color="">&gt; 28 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="error.dark">100%</Typography>
                 </Paper>
               </Grid>
@@ -437,9 +437,9 @@ const PenalizacionBajas = () => {
                         mb: 0,
                         p: 1.5,
                         bgcolor: 
-                            empleado.diasBajaTotales > 20 ? 'error.lighter' :
-                            empleado.diasBajaTotales > 15 ? 'warning.lighter' :
-                            empleado.diasBajaTotales > 10 ? 'info.lighter' : 'success.lighter',
+                            empleado.diasBajaTotales > 28 ? 'error.lighter' :
+                            empleado.diasBajaTotales > 21 ? 'warning.lighter' :
+                            empleado.diasBajaTotales > 14 ? 'info.lighter' : 'success.lighter',
                         borderRadius: 2
                         }}
                     >

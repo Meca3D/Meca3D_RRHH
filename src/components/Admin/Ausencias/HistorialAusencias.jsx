@@ -1270,7 +1270,7 @@ const HistorialAusencias = () => {
                 </Box>
                  <Box sx={{display:'flex', justifyContent:'space-between'}}>
                 <Typography variant="body1">
-                  Días disponibles:
+                  Días registrados:
                 </Typography>
                 <Typography variant="body1">
                   {ausenciaSeleccionada.fechasActuales.length}
