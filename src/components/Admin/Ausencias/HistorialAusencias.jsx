@@ -25,9 +25,11 @@ import {
   Clear,
   DynamicFeedOutlined as DynamicFeedOutlinedIcon,
   AddCircleOutline as AddIcon,
+  Delete as DeleteIcon,
   Rule as RuleIcon,
   MoreVert as MoreVertIcon
 } from '@mui/icons-material';
+import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
 import { useAusenciasStore } from '../../../stores/ausenciasStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
@@ -42,9 +44,9 @@ const HistorialAusencias = () => {
     loadAusencias,
     obtenerDiasCancelados,
     obtenerDiasAgregados,
-    calcularEstadoRealFechas,
     añadirDiasAusencia,
-    cancelarDiasAusencia
+    cancelarDiasAusencia,
+    eliminarAusencia
   } = useAusenciasStore();
   const { obtenerDatosUsuarios: obtenerDatosAuth } = useAuthStore();
   const { showSuccess, showError } = useUIStore();
@@ -56,6 +58,7 @@ const HistorialAusencias = () => {
   const [exportando, setExportando] = useState(false);
 
   // Estados de diálogos
+  const [dialogoEliminacion, setDialogoEliminacion] = useState(false);
   const [dialogAñadirDias, setDialogAñadirDias] = useState(false);
   const [dialogCancelarDias, setDialogCancelarDias] = useState(false);
   const [ausenciaSeleccionada, setAusenciaSeleccionada] = useState(null);
@@ -82,10 +85,6 @@ const HistorialAusencias = () => {
   // Estados de paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const ausenciasPorPagina = 10;
-
-  // Menu de acciones
-  const [menuAnchor, setMenuAnchor] = useState(null);
-  const [ausenciaMenu, setAusenciaMenu] = useState(null);
 
   // Cargar ausencias y datos de usuarios
   useEffect(() => {
@@ -223,21 +222,8 @@ const HistorialAusencias = () => {
 
   const totalPaginas = Math.ceil(ausenciasFiltradas.length / ausenciasPorPagina);
 
-  // Handlers de menú
-  const handleAbrirMenu = (event, ausencia) => {
-    event.stopPropagation();
-    setMenuAnchor(event.currentTarget);
-    setAusenciaMenu(ausencia);
-  };
-
-  const handleCerrarMenu = () => {
-    setMenuAnchor(null);
-    setAusenciaMenu(null);
-  };
-
   // Abrir dialog añadir días
   const handleAbrirAñadirDias = (ausencia) => {
-    handleCerrarMenu();
     setAusenciaSeleccionada(ausencia);
     setNuevasFechas([]);
     setMotivoEdicion('');
@@ -280,11 +266,34 @@ const HistorialAusencias = () => {
 
   // Abrir dialog cancelar días
   const handleAbrirCancelarDias = (ausencia) => {
-    handleCerrarMenu();
     setAusenciaSeleccionada(ausencia);
     setDiasACancelar([]);
     setMotivoCancelacion('');
     setDialogCancelarDias(true);
+  };
+
+    // Abrir dialog eliminar solicitud
+  const handleAbrirEliminar = (ausencia) => {
+    setAusenciaSeleccionada(ausencia);
+    setDialogoEliminacion(true);
+  };
+
+   // Confirmar eliminación
+  const handleConfirmarEliminacion = async () => {
+    setProcesando(true);
+    try {
+      await eliminarAusencia(ausenciaSeleccionada.id, ausenciaSeleccionada,true);
+
+      const tipoTexto = ausenciaSeleccionada.tipo === 'baja' ? 'Baja' : 'Permiso';
+      showSuccess(`${tipoTexto} eliminado correctamente`);
+
+      setDialogoEliminacion(false);
+      setAusenciaSeleccionada(null);
+    } catch (error) {
+      showError('Error al eliminar: ' + error.message);
+    } finally {
+      setProcesando(false);
+    }
   };
 
   // Confirmar cancelar días
@@ -391,9 +400,6 @@ const HistorialAusencias = () => {
 
   // Componente Card de Ausencia
   const AusenciaCard = ({ ausencia, isExpanded, onToggleExpand }) => {
-  const { activas, canceladas, agregadas } = calcularEstadoRealFechas(ausencia);
-  const todasLasFechasAgregadas = obtenerDiasAgregados(ausencia.ediciones || []);
-  const todasLasFechas = [...new Set([...ausencia.fechas, ...todasLasFechasAgregadas])];
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef(null);
 
@@ -497,21 +503,60 @@ const HistorialAusencias = () => {
                         }}
                     >
                     {puedeAñadirDias && (
+                      <Box>
                     <MenuItem onClick={() => handleAbrirAñadirDias(ausencia)}>
                         <ListItemIcon>
                         <AddIcon fontSize="small" sx={{ color: 'success.main' }} />
                         </ListItemIcon>
-                        <ListItemText primary="Añadir días" />
+                        <ListItemText primary="Añadir días"
+                        slotProps={{
+                            primary:{
+                              fontSize:'1.2rem'
+                            }
+                          }}
+                        sx={{
+                          py:1
+                        }} 
+                    />
                     </MenuItem>
+                    <Divider sx={{bgcolor:'black'}}/>
+                     </Box>
                     )}
                     {puedeCancelarDias && (
+                      <Box>
                     <MenuItem onClick={() => handleAbrirCancelarDias(ausencia)}>
                         <ListItemIcon>
                         <CancelIcon fontSize="small" sx={{ color: 'warning.main' }} />
                         </ListItemIcon>
-                        <ListItemText primary="Cancelar días" />
+                        <ListItemText primary="Cancelar días"
+                        slotProps={{
+                            primary:{
+                              fontSize:'1.2rem'
+                            }
+                          }}
+                        sx={{
+                          py:1
+                        }} 
+                         />
                     </MenuItem>
+                    <Divider sx={{bgcolor:'black'}}/>
+                      </Box>
                     )}
+                    <MenuItem onClick={() => handleAbrirEliminar(ausencia)}>
+                      <ListItemIcon>
+                        <DeleteForeverOutlinedIcon fontSize="small" sx={{ color: 'error.main' }} />
+                      </ListItemIcon>
+                      <ListItemText  primary={`Eliminar ${ausencia.tipo === 'baja' ? 'baja' : 'permiso'}`}
+                      slotProps={{
+                            primary:{
+                              fontSize:'1.2rem'
+                            }
+                          }}
+                        sx={{
+                          py:1
+                        }} 
+                        />
+                    </MenuItem>
                 </Menu>
                     </>
                     )}
@@ -617,27 +662,30 @@ const HistorialAusencias = () => {
                     <Grid container sx={{ mb: 1 }}>
                       {/* Obtener listas para clasificar */}
                       {(() => {
-                        
-                      return ordenarFechas(todasLasFechas).map(fecha => {
-                        const esPasada = esFechaPasadaOHoy(fecha);
-                        const esAgregada = agregadas.includes(fecha);
-                        const estaCancelada = canceladas.includes(fecha);
-                        const estaActiva = ausencia.fechasActuales.includes(fecha);
+                         const todasLasFechas = [...new Set([...ausencia.fechas, ...ausencia.fechasActuales])];
+                          return ordenarFechas(todasLasFechas).map(fecha => {
+                            const esPasada = esFechaPasadaOHoy(fecha);
+                            
+                            // Clasificación simple basada en presencia en cada array
+                            const estaEnOriginales = ausencia.fechas.includes(fecha);
+                            const estaEnActuales = ausencia.fechasActuales.includes(fecha);                        
+                            const esAgregada = !estaEnOriginales && estaEnActuales;
+                            const estaCancelada = estaEnOriginales && !estaEnActuales; 
                         
                         // Determinar estilo y etiqueta según el estado REAL
-                        let colorTexto = esPasada?'text.secondary':'text.primary'
+                        let colorTexto = 'text.primary'
                         let etiqueta = '';
                         let decoracion = 'none';
                         let icono = '•';
                         
                         if (estaCancelada) {
-                          // Fecha cancelada y NO reactivada
+                          // Fecha cancelada 
                           colorTexto = 'error.main';
                           decoracion = 'line-through';
                           etiqueta = '(Cancelado)';
                           icono = '❌';
                         } else if (esAgregada) {
-                          // Fecha añadida (puede ser nueva o reactivada)
+                          // Fecha añadida 
                           colorTexto = 'success.main';
                           etiqueta = '(Añadido)';
                           icono = '➕';
@@ -645,18 +693,23 @@ const HistorialAusencias = () => {
                           return (
                             <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
                               <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-                                <Typography
-                                  variant="body1"
-                                  color={colorTexto}
-                                  sx={{ 
-                                    textDecoration: decoracion,
-                                    opacity: esPasada ? 0.8 : 1,
-                                    fontStyle: esPasada? 'italic': 'normal',
-                                    fontWeight: 500
-                                  }}
-                                >
-                                  {icono} {formatearFechaCorta(fecha)}
-                                </Typography>
+                                <Box display='flex' gap={1}>
+                                  <Typography>
+                                    {icono}
+                                  </Typography>
+                                  <Typography
+                                    variant="body1"
+                                    color={colorTexto}
+                                    sx={{ 
+                                      textDecoration: decoracion,
+                                      opacity: esPasada ? 0.9 : 1,
+                                      fontStyle: esPasada? 'italic': 'normal',
+                                      fontWeight: 500
+                                    }}
+                                  >
+                                    {formatearFechaCorta(fecha)}
+                                  </Typography>
+                                </Box>
                                 {etiqueta && (
                                   <Typography 
                                     variant="body1" 
@@ -1225,26 +1278,6 @@ const HistorialAusencias = () => {
         )}
       </Container>
 
-      {/* Menú de acciones */}
-      <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={handleCerrarMenu}
-      >
-        <MenuItem onClick={() => handleAbrirAñadirDias(ausenciaMenu)}>
-          <ListItemIcon>
-            <AddIcon fontSize="small" sx={{ color: 'success.main' }} />
-          </ListItemIcon>
-          <ListItemText>Añadir días</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleAbrirCancelarDias(ausenciaMenu)}>
-          <ListItemIcon>
-            <CancelOutlined fontSize="small" sx={{ color: 'error.main' }} />
-          </ListItemIcon>
-          <ListItemText>Cancelar días</ListItemText>
-        </MenuItem>
-      </Menu>
-
       {/* Dialog Añadir Días */}
       <Dialog
         open={dialogAñadirDias && ausenciaSeleccionada !== null}
@@ -1466,6 +1499,64 @@ const HistorialAusencias = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Diálogo de eliminación */}
+            <Dialog
+              open={dialogoEliminacion && ausenciaSeleccionada !== null}
+              onClose={() => !procesando && setDialogoEliminacion(false)}
+              maxWidth="xs"
+              fullWidth
+            >
+              <DialogTitle sx={{textAlign:'center', bgcolor:'rojo.main', color:'white', fontSize:'1.25rem', fontWeight:700}}>
+                Eliminar {ausenciaSeleccionada?.tipo === 'baja' ? 'baja' : 'permiso'}
+              </DialogTitle>
+              <DialogContent >
+                {ausenciaSeleccionada && (
+                  <Box sx={{ p: 2 }} >
+                    <Typography variant="body1" textAlign='center' mb={1}>
+                      ¿Estás seguro de que quieres <strong>eliminar permanentemente</strong> {ausenciaSeleccionada.tipo=="baja"?'esta baja':'este permiso'}?
+                    </Typography>
+                     <Box sx={{ p: 1.5, bgcolor: '#f5f5f5', borderRadius: 2, borderLeft: `3px solid ${ausenciaSeleccionada.tipo==="baja"?'red':'purple'}` }}>
+                    <Typography variant="h6" display="flex" >
+                      {datosUsuarios[ausenciaSeleccionada.solicitante]?.nombre}
+                    </Typography>                 
+                    <Typography variant="body1" >
+                      {ausenciaSeleccionada.tipo === 'baja' ? 'Baja' : 'Permiso'}
+                    </Typography>
+                    <Typography variant="body1" >
+                      {ausenciaSeleccionada.motivo}
+                    </Typography>
+                    <Typography variant="body1" display="flex" >
+                      {ausenciaSeleccionada.fechasActuales.length} {ausenciaSeleccionada.fechasActuales.length === 1 ? 'día' : 'días'}
+                    </Typography>
+                    </Box>
+                    <Typography variant="body1" color="error" mt={1} textAlign={'center'} fontStyle="italic">
+                      Esta acción no se puede deshacer.
+                    </Typography>
+                  </Box>
+                )}
+              </DialogContent>
+              <DialogActions sx={{ px: 3, mb: 2, justifyContent: 'space-between' }}>
+                <Button
+                  onClick={() => setDialogoEliminacion(false)}
+                  disabled={procesando}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ textTransform: 'none', p: 1.5, fontSize:'1.15rem' }}
+                >
+                  Volver
+                </Button>
+                <Button
+                  onClick={handleConfirmarEliminacion}
+                  disabled={procesando}
+                  variant="contained"
+                  color="error"
+                  sx={{ textTransform: 'none', p:1.5, fontSize:'1.15rem' }}
+                  startIcon={procesando ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
+                >
+                  {procesando ? 'Eliminando...' : 'Eliminar'}
+                </Button>
+              </DialogActions>
+            </Dialog>
     </>
   );
 };

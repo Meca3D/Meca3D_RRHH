@@ -145,7 +145,7 @@ const ConfiguracionVacacionesAdmin = () => {
             <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate('/admin/configuracion')}
+            onClick={() => navigate('/admin')}
             sx={{
                 bgcolor: 'rgba(255,255,255,0.1)',
                 '&:hover': {

@@ -38,7 +38,6 @@ const MisAusencias = () => {
     loadAusencias,
     eliminarAusencia,
     loading,
-    calcularEstadoRealFechas
   } = useAusenciasStore();
   const { showSuccess, showError } = useUIStore();
 
@@ -290,28 +289,61 @@ const MisAusencias = () => {
                       }
                     }}
                   >
-                                {puedeAñadir && (
+                  {puedeAñadir && (
+                    <Box>
                   <MenuItem onClick={() => handleAccionMenu('añadir', ausencia)}>
                     <ListItemIcon>
                       <AddIcon fontSize="small" sx={{ color: 'success.main' }} />
                     </ListItemIcon>
-                    <ListItemText primary="Añadir días" />
+                    <ListItemText primary="Añadir días"
+                    slotProps={{
+                      primary:{
+                        fontSize:'1.2rem'
+                      }
+                    }}
+                  sx={{
+                    py:1
+                  }} 
+                    />
                   </MenuItem>
+                  <Divider sx={{bgcolor:'black'}}/>
+                  </Box>
                 )}
                 {puedeCancelar && (
+                  <Box>
                   <MenuItem onClick={() => handleAccionMenu('cancelar', ausencia)}>
                     <ListItemIcon>
                       <CancelIcon fontSize="small" sx={{ color: 'warning.main' }} />
                     </ListItemIcon>
-                    <ListItemText primary="Cancelar días" />
+                    <ListItemText primary="Cancelar días"
+                    slotProps={{
+                        primary:{
+                          fontSize:'1.2rem'
+                        }
+                      }}
+                    sx={{
+                      py:1
+                    }} 
+                      />
                   </MenuItem>
+                  <Divider sx={{bgcolor:'black'}}/>
+                 </Box>
                 )}
                 {puedeEliminar && (
                   <MenuItem onClick={() => handleAccionMenu('eliminar', ausencia)}>
                     <ListItemIcon>
                       <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} />
                     </ListItemIcon>
-                    <ListItemText primary={'Eliminar '+ capitalizeFirstLetter(ausencia.tipo)} />
+                    <ListItemText primary={'Eliminar '+ capitalizeFirstLetter(ausencia.tipo)} 
+                        slotProps={{
+                              primary:{
+                                fontSize:'1.2rem'
+                              }
+                            }}
+                          sx={{
+                            py:1
+                          }} 
+                          />
                   </MenuItem>
                 )}
               </Menu>
@@ -414,49 +446,39 @@ const MisAusencias = () => {
                     <Grid container sx={{ my: 1 }} spacing={0.5}>
                       {/* Obtener listas para clasificar */}
                       {(() => {
-                        // Calcular el estado real de las fechas considerando el orden temporal
-                        const { canceladas, agregadas } = calcularEstadoRealFechas(ausencia);
-                        
-                        // Obtener TODAS las fechas que se añadieron en algún momento
-                        const todasLasFechasAgregadas = obtenerDiasAgregados(ausencia.ediciones || []);
-                        
-                        // Todas las fechas únicas = originales + todas las agregadas (estén canceladas o no)
-                        const todasLasFechas = [...new Set([...ausencia.fechas, ...todasLasFechasAgregadas])];
-
-
-                      return ordenarFechas(todasLasFechas).map(fecha => {
-                        const esPasada = esFechaPasadaOHoy(fecha);
-                        const esAgregada = agregadas.includes(fecha);
-                        const estaCancelada = canceladas.includes(fecha);
-                        
-                        // Determinar estilo y etiqueta según el estado REAL
-                        let colorTexto = esPasada?'text.secondary':'text.primary'
-                        let etiqueta = '';
-                        let decoracion = 'none';
-                        let icono = '•';
-                        
-                        if (estaCancelada) {
-                          // Fecha cancelada y NO reactivada
-                          colorTexto = 'error.main';
-                          decoracion = 'line-through';
-                          etiqueta = '(Cancelado)';
-                          icono = '❌ ';
-                        } else if (esAgregada) {
-                          // Fecha añadida (puede ser nueva o reactivada)
-                          colorTexto = 'success.main';
-                          etiqueta = '(Añadido)';
-                          icono = '➕ ';
-                        }  else if (esPasada) {
-                           // Fecha disfrutada
-                          colorTexto = 'text.secondary';
-                          decoracion = 'none';
-                          etiqueta = '(Disfrutado)';
-                          icono = '✅ ';
-                        }
-                          return (
-                            <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
-                              <Box display="flex" justifyContent='center' alignItems="center">
-                                <Typography variant="body1"color={colorTexto}>
+                        const todasLasFechas = [...new Set([...ausencia.fechas, ...ausencia.fechasActuales])];
+                        return ordenarFechas(todasLasFechas).map(fecha => {
+                          const esPasada = esFechaPasadaOHoy(fecha);
+                          
+                          // Clasificación simple basada en presencia en cada array
+                          const estaEnOriginales = ausencia.fechas.includes(fecha);
+                          const estaEnActuales = ausencia.fechasActuales.includes(fecha);                          
+                          const esAgregada = !estaEnOriginales && estaEnActuales;
+                          const estaCancelada = estaEnOriginales && !estaEnActuales; 
+                      
+                      // Determinar estilo y etiqueta según el estado REAL
+                      let colorTexto = 'text.primary'
+                      let etiqueta = '';
+                      let decoracion = 'none';
+                      let icono = '•';
+                      
+                      if (estaCancelada) {
+                        // Fecha cancelada 
+                        colorTexto = 'error.main';
+                        decoracion = 'line-through';
+                        etiqueta = '(Cancelado)';
+                        icono = '❌';
+                      } else if (esAgregada) {
+                        // Fecha añadida 
+                        colorTexto = 'success.main';
+                        etiqueta = '(Añadido)';
+                        icono = '➕';
+                      }   
+                        return (
+                          <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
+                            <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+                              <Box display='flex' gap={1}>
+                                <Typography>
                                   {icono}
                                 </Typography>
                                 <Typography
@@ -464,23 +486,25 @@ const MisAusencias = () => {
                                   color={colorTexto}
                                   sx={{ 
                                     textDecoration: decoracion,
+                                    opacity: esPasada ? 0.9 : 1,
                                     fontStyle: esPasada? 'italic': 'normal',
-                                    fontWeight: esAgregada ? 600 : 400
+                                    fontWeight: 500
                                   }}
                                 >
                                   {formatearFechaCorta(fecha)}
                                 </Typography>
-                                {etiqueta && (
-                                  <Typography 
-                                    variant="caption" 
-                                    color={colorTexto}
-                                    sx={{ fontStyle: 'italic' }}
-                                  >
-                                    
-                                  </Typography>
-                                )}
                               </Box>
-                            </Grid>
+                              {etiqueta && (
+                                <Typography 
+                                  variant="body1" 
+                                  color={colorTexto}
+                                  sx={{ fontStyle: 'italic' }}
+                                >
+                                  
+                                </Typography>
+                              )}
+                            </Box>
+                          </Grid>
                           );
                         });
                       })()}
@@ -1034,43 +1058,48 @@ const MisAusencias = () => {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>
-          🗑️ Eliminar {ausenciaAEliminar?.tipo === 'baja' ? 'baja' : 'permiso'}
+        <DialogTitle sx={{textAlign:'center', bgcolor:'rojo.main', color:'white', fontSize:'1.25rem', fontWeight:700}}>
+          Eliminar {ausenciaAEliminar?.tipo === 'baja' ? 'baja' : 'permiso'}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent >
           {ausenciaAEliminar && (
-            <Alert severity="error">
-              <Typography variant="body2" mb={1}>
-                ¿Estás seguro de que quieres <strong>eliminar permanentemente</strong> esta ausencia?
+            <Box sx={{ p: 2 }} >
+              <Typography variant="body1" textAlign='center' mb={1}>
+                ¿Estás seguro de que quieres <strong>eliminar permanentemente</strong> {ausenciaAEliminar.tipo=="baja"?'esta baja':'este permiso'}?
               </Typography>
-              <Typography variant="body2" fontWeight={600}>
-                {ausenciaAEliminar.tipo === 'baja' ? 'Baja' : 'Permiso'}: {ausenciaAEliminar.motivo}
+                <Box sx={{ p: 1.5, bgcolor: '#f5f5f5', borderRadius: 2, borderLeft: `3px solid ${ausenciaAEliminar.tipo==="baja"?'red':'purple'}` }}>                
+              <Typography variant="body1" >
+                {ausenciaAEliminar.tipo === 'baja' ? 'Baja' : 'Permiso'}
               </Typography>
-              <Typography variant="caption" display="block">
-                {ausenciaAEliminar.fechasActuales.length} día(s) • {formatearFechaCorta(ausenciaAEliminar.fechasActuales[0])}
+              <Typography variant="body1" >
+                {ausenciaAEliminar.motivo}
               </Typography>
-              <Typography variant="body2" color="error" mt={1} fontStyle="italic">
+              <Typography variant="body1" display="flex" >
+                {ausenciaAEliminar.fechasActuales.length} {ausenciaAEliminar.fechasActuales.length === 1 ? 'día' : 'días'}
+              </Typography>
+              </Box>
+              <Typography variant="body1" color="error" mt={1} textAlign={'center'} fontStyle="italic">
                 Esta acción no se puede deshacer.
               </Typography>
-            </Alert>
+            </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
           <Button
             onClick={() => setDialogoEliminacion(false)}
             disabled={eliminando}
             color="primary"
             variant="outlined"
-            sx={{ textTransform: 'none', px: 2, py: 1.5 }}
+            sx={{ textTransform: 'none',  p:1.5, fontSize:'1.15rem'  }}
           >
-            Cancelar
+            Volver
           </Button>
           <Button
             onClick={handleConfirmarEliminacion}
             disabled={eliminando}
             variant="contained"
             color="error"
-            sx={{ textTransform: 'none', px: 2, py: 1.5 }}
+            sx={{ textTransform: 'none',  p:1.5, fontSize:'1.15rem'  }}
             startIcon={eliminando ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
           >
             {eliminando ? 'Eliminando...' : 'Eliminar'}

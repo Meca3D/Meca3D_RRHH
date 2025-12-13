@@ -642,12 +642,12 @@ export const useAusenciasStore = create((set, get) => {
     },
 
     // Eliminar ausencia completamente (solo si no tiene días pasados)
-    eliminarAusencia: async (ausenciaId, ausencia) => {
+    eliminarAusencia: async (ausenciaId, ausencia, esAdmin=false) => {
       try {
         
         // Verificar que no tenga días pasados
         const tieneDiasPasados = ausencia.fechasActuales.some(f => esFechaPasadaOHoy(f));
-        if (tieneDiasPasados) {
+        if (tieneDiasPasados && !esAdmin) {
           throw new Error('No se puede eliminar una ausencia con días pasados. Usa cancelar en su lugar.');
         }
         
@@ -655,6 +655,7 @@ export const useAusenciasStore = create((set, get) => {
         await deleteDoc(ausenciaRef);
         
         // Notificar a admins
+        if (!esAdmin) {
         try {
           const { userProfile } = useAuthStore.getState();
           const { formatearNombre } = await import('../components/Helpers');
@@ -677,6 +678,7 @@ export const useAusenciasStore = create((set, get) => {
         }
         
         return true;
+      }
       } catch (error) {
         set({ error: error.message });
         throw error;

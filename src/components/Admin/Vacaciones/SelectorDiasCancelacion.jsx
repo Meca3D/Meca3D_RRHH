@@ -3,7 +3,6 @@ import {
   Box, Typography, Chip, Alert, Grid, FormControlLabel, Checkbox
 } from '@mui/material';
 import { formatearFechaCorta, esFechaPasadaOHoy, ordenarFechas } from '../../../utils/dateUtils';
-import { formatearTiempoVacasLargo, formatearTiempoVacas } from '../../../utils/vacacionesUtils';
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
 
 const SelectorDiasCancelacion = ({ 
