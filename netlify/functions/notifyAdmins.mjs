@@ -57,6 +57,7 @@ const titles = {
   // Vacaciones
       'solicitud': esVenta ? '💰 Nueva venta de vacaciones' : '🏖️ Nueva solicitud de vacaciones',
       'cancelacion': '🔴 Cancelación de vacaciones',
+      'ampliacion_vacaciones': '🔵 Ampliación de vacaciones',
       'cancelacion_parcial': '🟡 Cancelación parcial de vacaciones',
       'vacaciones_eliminada': '🗑️ Solicitud de vacaciones eliminada',
       
@@ -76,9 +77,10 @@ const titles = {
 
     const notificationTitle = titles[accion] || titles.solicitud;
     let notificationBody = mensaje;
-    let targetUrl = urlDestino;
+    let targetUrl = null;
+    const a = accion || '';
     if (!targetUrl) {
-      if (accion.includes('ausencia') || accion.includes('baja')) {
+      if (a.includes('ausencia') || a.includes('baja')) {
         targetUrl = '/admin/ausencias'; 
       } else {
         targetUrl = '/admin/vacaciones';
@@ -119,7 +121,7 @@ const titles = {
           type: accion || 'general',
           timestamp: new Date().toISOString()
         },
-        tokens: validTokens
+        tokens
       };
 
       notificaciones.push(

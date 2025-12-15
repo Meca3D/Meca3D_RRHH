@@ -215,7 +215,8 @@ export const useVacacionesStore = create((set, get) => {
       ...solicitudData,
       fechaSolicitud: formatYMD(new Date()),
       fechasActuales: solicitudData.esVenta ? [] : [...solicitudData.fechas], 
-      cancelaciones: [], 
+      cancelaciones: [],
+      ampliaciones: [], 
       estado: res.aplicar ? 'aprobada' : 'pendiente',
       comentariosAdmin: res.aplicar ? (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') : '',
       fechaAprobacionDenegacion: res.aplicar ? formatYMD(new Date()) : '',
@@ -288,6 +289,7 @@ export const useVacacionesStore = create((set, get) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              accion:'solicitud',
               solicitante: solicitudData.solicitante, // Email (para buscar en Firestore)
               nombreSolicitante: nombreSolicitante, 
               diasSolicitados: formatearTiempoVacasLargo(solicitudData.horasSolicitadas),
@@ -1445,6 +1447,142 @@ export const useVacacionesStore = create((set, get) => {
       }
     },
 
+    ampliarDiasSolicitudVacaciones: async (solicitud, nuevasFechas, motivoAmpliacion, esAdmin = false) => {
+      try {
+        const { user, userProfile } = useAuthStore.getState();
+        
+        // Validaciones
+        if (!motivoAmpliacion?.trim()) {
+          throw new Error('Debe proporcionar un motivo para la ampliación');
+        }
+
+        if (solicitud.estado !== 'aprobada') {
+          throw new Error('Solo se pueden ampliar solicitudes aprobadas');
+        }
+
+        if (!esAdmin) {
+          throw new Error('Solo los administradores pueden ampliar solicitudes');
+        }
+
+        if (solicitud.esVenta || solicitud.esAjusteSaldo) {
+          throw new Error('Las Ventas o Ajustes de saldo no pueden ampliarse');
+        }
+
+        if (!Array.isArray(nuevasFechas) || nuevasFechas.length === 0) {
+          throw new Error('Debe seleccionar al menos un día para ampliar');
+        }
+
+        // Validar que las nuevas fechas no existen ya en fechasActuales
+        const fechasDuplicadas = nuevasFechas.filter(fecha => 
+          solicitud.fechasActuales.includes(fecha)
+        );
+        if (fechasDuplicadas.length > 0) {
+          throw new Error('Algunas fechas ya están incluidas en la solicitud');
+        }
+
+        // Calcular horas a descontar
+        let horasADescontar = 0;
+        nuevasFechas.forEach(fecha => {
+          const esFinde = esFinDeSemana(fecha);
+          const esFiesta = get().esFestivo(fecha);
+          if (!esFinde && !esFiesta) {
+            horasADescontar += 8;
+          }
+        });
+
+        const horasDisponiblesAntes = userProfile.vacaciones.disponibles;
+        
+        // Verificar que hay saldo suficiente
+        if (horasDisponiblesAntes < horasADescontar) {
+          throw new Error(`Saldo insuficiente. Disponibles: ${formatearTiempoVacasLargo(horasDisponiblesAntes)}, Necesarias: ${formatearTiempoVacasLargo(horasADescontar)}`);
+        }
+
+        const horasDisponiblesDespues = horasDisponiblesAntes - horasADescontar;
+
+        // Crear nuevas fechasActuales (ordenadas)
+        const nuevasFechasActuales = [...solicitud.fechasActuales, ...nuevasFechas].sort();
+        const empleadoActual = esAdmin ? solicitud.solicitante : user?.email;
+        // Crear registro de ampliación
+        const registroAmpliacion = {
+
+          fechaAmpliacion: formatYMD(new Date()),
+          fechasAmpliadas: [...nuevasFechas].sort(),
+          horasAmpliadas: horasADescontar,
+          horasDisponiblesAntesAmpliacion: horasDisponiblesAntes,
+          horasDisponiblesDespuesAmpliacion: horasDisponiblesDespues,
+          motivoAmpliacion: esAdmin?('Jefe: '+motivoAmpliacion.trim()):motivoAmpliacion.trim(),
+          procesadaPor: userProfile.nombre,
+          esAdmin,
+          createdAt: new Date()
+        };
+
+        // Preparar actualización
+        const solicitudRef = doc(db, 'VACACIONES', solicitud.id);
+        const empleadoRef = doc(db, 'USUARIOS', solicitud.solicitante);
+
+        //const horasActuales = (solicitud.horasActuales || solicitud.horasSolicitadas) + horasADescontar;
+
+        const datosActualizacion = {
+          fechasActuales: nuevasFechasActuales,
+          //horasActuales: horasActuales,
+          ampliaciones: arrayUnion(registroAmpliacion),
+          updatedAt: new Date()
+        };
+
+        // Ejecutar transacción
+        await runTransaction(db, async (transaction) => {
+          // Actualizar solicitud
+          transaction.update(solicitudRef, datosActualizacion);
+
+          // Descontar saldo del empleado
+          transaction.update(empleadoRef, {
+            'vacaciones.disponibles': horasDisponiblesDespues,
+            updatedAt: new Date()
+          });
+        });
+
+      // Notificaciones según quién canceló
+            try {
+              const { sendNotification, userProfile } = useAuthStore.getState();
+              const nombreSolicitante = formatearNombre(userProfile.nombre);
+              
+              if (esAdmin && solicitud.solicitante !== empleadoActual) {
+                // Admin cancela solicitud de un empleado → Notificar al empleado
+                await sendNotification({
+                  empleadoEmail: solicitud.solicitante,
+                  title: 'ℹ️ Ampliación de vacaciones',
+                  body: `➕ El administrador ha ampliado ${formatearTiempoVacasLargo(horasADescontar)} a tus vacaciones. \n\n💬 Motivo: ${motivoAmpliacion}`,
+                  url: '/vacaciones/solicitudes',
+                  type: 'vacaciones_ampliada'
+                });
+              } else if (!esAdmin) {
+                // Caso 2: Trabajador amplia su propia solicitud → Notificar a admins
+                await fetch('/.netlify/functions/notifyAdmins', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    solicitante: solicitud.solicitante,
+                    nombreSolicitante: nombreSolicitante,
+                    diasSolicitados: `${formatearTiempoVacasLargo(horasADescontar)}`,
+                    esVenta: false,
+                    accion: 'ampliacion_vacaciones',
+                    mensaje: `➕ ${nombreSolicitante} ha ampliado ${formatearTiempoVacasLargo(horasADescontar)} de sus vacaciones. \n\n💬 Motivo: ${motivoAmpliacion}`
+                  })
+                });
+              }
+            } catch (notifError) {
+              console.error('Error enviando notificación:', notifError);
+            }
+
+            console.log(`✅ Días ampliados correctamente: ${nuevasFechas.length} días`);
+            return { success: true, horasAmpliadas: horasADescontar };
+          } catch (error) {
+            console.error('❌ Error al ampliar días:', error);
+            throw error;
+          }
+    },
+
+
     cancelarDiasSolicitudVacaciones: async (solicitud, diasACancelar, motivoCancelacion, esAdmin = false) => {
       try {
         const { user, userProfile } = useAuthStore.getState();
@@ -1459,8 +1597,8 @@ export const useVacacionesStore = create((set, get) => {
         }
 
         // Para solicitudes de venta, usar función específica
-        if (solicitud.esVenta) {
-          throw new Error('Las ventas deben cancelarse con cancelarVentaVacaciones');
+        if (solicitud.esVenta || solicitud.esAjusteSaldo) {
+          throw new Error('Las ventas o ajustes de saldo no pueden cancelarse con esta función');
         }
 
         if (!Array.isArray(diasACancelar) || diasACancelar.length === 0) {
@@ -1600,150 +1738,11 @@ export const useVacacionesStore = create((set, get) => {
             };
 
           } catch (error) {
-            console.error('Error en cancelación parcial:', error);
+            console.error('Error en cancelación:', error);
             set({ error: error.message });
             throw error;
           }
         },
-
-
- /*  cancelarSolicitudParcial: async (solicitud, diasACancelar, motivoCancelacion, esAdmin = false) => {
-    try {
-      const { user, userProfile } = useAuthStore.getState();
-      
-      if (!motivoCancelacion || motivoCancelacion.trim() === '') {
-        throw new Error('Debes proporcionar un motivo para la cancelación parcial');
-      }
-
-      if (!Array.isArray(diasACancelar) || diasACancelar.length === 0) {
-        throw new Error('Debes seleccionar al menos un día para cancelar');
-      }
-
-      // ✅ VALIDACIÓN: Solo para solicitudes de días completos
-      const esHorasSueltas = solicitud.horasSolicitadas < 8 && solicitud.fechas.length === 1;
-
-      if (esHorasSueltas) {
-        throw new Error('No se pueden cancelar parcialmente solicitudes de horas sueltas');
-      }
-
-      const cancelacionesPrevias = solicitud.cancelacionesParciales || [];
-      const diasYaCancelados = get().obtenerDiasCancelados(cancelacionesPrevias);
-
-      // ✅ VALIDACIÓN: No cancelar días ya cancelados
-      const diasDuplicados = diasACancelar.filter(dia => diasYaCancelados.includes(dia));
-      if (diasDuplicados.length > 0) {
-        throw new Error(`Los siguientes días ya fueron cancelados: ${diasDuplicados.join(', ')}`);
-      }
-
-      // ✅ VALIDACIÓN: No cancelar todos los días (debe quedar al menos 1)
-      const diasTotalesDisponibles = solicitud.fechas.filter(f => !diasYaCancelados.includes(f));
-      if (diasACancelar.length >= diasTotalesDisponibles.length) {
-        throw new Error('No puedes cancelar todos los días restantes. Para eso usa cancelación completa');
-      }
-
-      // ✅ VALIDACIÓN: Solo admin puede cancelar días pasados
-      if (!esAdmin) {
-        const diasPasados = diasACancelar.filter(fecha => esFechaPasadaOHoy(fecha));
-        if (diasPasados.length > 0) {
-          throw new Error('No puedes cancelar días que ya han pasado');
-        }
-      }
-
-      const horasADevolver = diasACancelar.length * 8;
-      const empleadoActual = esAdmin ? solicitud.solicitante : user?.email;
-      const userDocRef = doc(db, 'USUARIOS', empleadoActual);
-
-      // Usar transacción para crear cancelación parcial y actualizar saldo
-      let cancelacionId;
-      let saldoAntes = 0;
-      let saldoDespues = 0;
-
-      await runTransaction(db, async (transaction) => {
-        // Obtener saldo actual del empleado ANTES de la cancelación
-        const userDoc = await transaction.get(userDocRef);
-        if (!userDoc.exists()) {
-          throw new Error('Empleado no encontrado');
-        }
-        saldoAntes = userDoc.data().vacaciones?.disponibles || 0;
-        saldoDespues = saldoAntes + horasADevolver;
-
-
-
-        const cancelacionData = {
-          id: doc(collection(db, 'temp')).id, // generar ID único client-side
-          fechasCanceladas: diasACancelar.sort(),
-          horasDevueltas: horasADevolver,
-          motivoCancelacion: motivoCancelacion.trim(),
-          fechaCancelacion: formatYMD(new Date()),
-          horasDisponiblesAntesCancelacion: saldoAntes,
-          horasDisponiblesDespuesCancelacion: saldoDespues,
-          procesadaPor: userProfile?.nombre,
-          esAdmin: esAdmin,
-          createdAt: new Date()
-        };
-        cancelacionId = cancelacionData.id;
-
-        // Actualizar la solicitud con arrayUnion
-        const solicitudRef = doc(db, 'VACACIONES', solicitud.id);
-        transaction.update(solicitudRef, {
-          cancelacionesParciales: arrayUnion(cancelacionData),
-          updatedAt: new Date()
-        });
-
-        //  ACTUALIZAR saldo del empleado
-        transaction.update(userDocRef, {
-          'vacaciones.disponibles': saldoDespues,
-          updatedAt: new Date()
-        });
-      });
-      // Notificaciones según quién canceló
-      try {
-        const { sendNotification, userProfile } = useAuthStore.getState();
-        const nombreSolicitante = formatearNombre(userProfile.nombre);
-        
-        if (esAdmin && solicitud.solicitante !== empleadoActual) {
-          // Caso 1: Admin cancela parcialmente solicitud de un empleado → Notificar al empleado
-          await sendNotification({
-            empleadoEmail: solicitud.solicitante,
-            title: '⚠️ Cancelación parcial de vacaciones',
-            body: `❌ El administrador ha cancelado ${formatearTiempoVacasLargo(horasADevolver)} de tus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`,
-            url: '/vacaciones/solicitudes',
-            type: 'vacaciones_cancelada_parcial'
-          });
-        } else if (!esAdmin) {
-          // Caso 2: Trabajador cancela parcialmente su propia solicitud → Notificar a admins
-          await fetch('/.netlify/functions/notifyAdmins', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              solicitante: solicitud.solicitante,
-              nombreSolicitante: nombreSolicitante,
-              diasSolicitados: `${formatearTiempoVacasLargo(horasADevolver)}`,
-              esVenta: false,
-              accion: 'cancelacion_parcial',
-              mensaje: `❌ ${nombreSolicitante} ha cancelado ${formatearTiempoVacasLargo(horasADevolver)} de sus vacaciones. \n\n💬 Motivo: ${motivoCancelacion}`
-            })
-          });
-        }
-      } catch (notifError) {
-        console.error('Error enviando notificación:', notifError);
-      }
-
-      return {
-        exito: true,
-        cancelacionId,
-        horasDevueltas: horasADevolver,
-        diasCancelados: diasACancelar.length,
-        saldoAntes,                                           
-        saldoDespues 
-      };
-
-    } catch (error) {
-      console.error('Error en cancelación parcial:', error);
-      set({ error: error.message });
-      throw error;
-    }
-  }, */
 
   // Obtener todos los empleados con sus saldos actuales
   obtenerEmpleadosConSaldos: async () => {
@@ -1870,7 +1869,7 @@ export const useVacacionesStore = create((set, get) => {
             : tipoAjuste === 'reducir' 
               ? `Se han reducido ${formatearTiempoVacasLargo(horas)} de tu saldo.\nSaldo actual: ${formatearTiempoVacasLargo(nuevoSaldo.disponibles)}\n${razonAjuste.trim()}`
                : `Se ha ajustado tu saldo a ${formatearTiempoVacasLargo(horas)}`,
-          url: '/vacaciones',
+          url: '/vacaciones/solicitudes',
           type: 'ajuste_saldo'
         });
       } catch (notifError) {
@@ -1965,7 +1964,8 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
 
       const solicitudAjuste = {
         solicitante: email,
-        fechas: [], 
+        fechas: [],
+        fechasActuales: [],
         horasSolicitadas: Math.abs(horas),
         horasDisponiblesAntes: saldoActual.disponibles,
         horasDisponiblesDespues: nuevoSaldo.disponibles,
@@ -1999,6 +1999,43 @@ ajustarSaldosMasivo: async (empleadosSeleccionados, tipoAjuste, horas, razonAjus
 
     // Paso 4: Cometer el batch (atómico: todo o nada)
     await batch.commit();
+
+    // Paso 5: Enviar notificaciones a todos los empleados (en paralelo)
+    try {
+      const { sendNotification } = useAuthStore.getState();
+      const emoji = tipoAjuste === 'añadir' ? '📈' : tipoAjuste === 'reducir' ? '📉' : '🔄';
+      
+      const notificacionesPromises = resultados.map(({ empleado, saldoNuevo }) => {
+        let body;
+        
+        if (tipoAjuste === 'añadir') {
+          body = `Se han añadido ${formatearTiempoVacasLargo(horas)} a tu saldo.\nSaldo actual: ${formatearTiempoVacasLargo(saldoNuevo.disponibles)}\n${razonAjuste.trim()}`;
+        } else if (tipoAjuste === 'reducir') {
+          body = `Se han reducido ${formatearTiempoVacasLargo(horas)} de tu saldo.\nSaldo actual: ${formatearTiempoVacasLargo(saldoNuevo.disponibles)}\n${razonAjuste.trim()}`;
+        } else {
+          body = `Se ha ajustado tu saldo a ${formatearTiempoVacasLargo(horas)}.\n${razonAjuste.trim()}`;
+        }
+        
+        return sendNotification({
+          empleadoEmail: empleado,
+          title: `${emoji} Ajuste de saldo de vacaciones`,
+          body: body,
+          url: '/vacaciones/solicitudes',
+          type: 'ajuste_saldo'
+        }).catch(error => {
+          console.error(`Error enviando notificación a ${empleado}:`, error);
+          // No lanzar error para que no afecte al resto
+          return null;
+        });
+      });
+
+      await Promise.all(notificacionesPromises);
+      console.log(`Notificaciones enviadas a ${resultados.length} empleados`);
+      
+    } catch (notifError) {
+      console.error('Error enviando notificaciones masivas:', notifError);
+      // Las notificaciones son secundarias, no afectan el resultado principal
+    }
 
     return {
       procesados: resultados.length,
@@ -2303,6 +2340,28 @@ mapSolicitudToEventos: (solicitud) => {
     });
   }
 
+  // Ampliaciones (restan)
+  if (Array.isArray(solicitud.ampliaciones)) {
+    solicitud.ampliaciones.forEach(ampliacion => {
+      eventos.push({
+        tipo: 'ampliacion',
+        fecha: ampliacion.fechaAmpliacion,
+        timestamp: ampliacion.createdAt,
+        deltaHoras: (ampliacion.horasDisponiblesDespuesAmpliacion ?? 0) - (ampliacion.horasDisponiblesAntesAmpliacion ?? 0), // suele ser negativo
+        solicitudId: solicitud.id,
+        solicitante: solicitud.solicitante,
+        horasAmpliadas: ampliacion.horasAmpliadas,
+        saldoAntes: ampliacion.horasDisponiblesAntesAmpliacion,
+        saldoDespues: ampliacion.horasDisponiblesDespuesAmpliacion,
+        concepto: 'Ampliacion de días',
+        procesadaPor: ampliacion.procesadaPor,
+        fechasAmpliadas: ampliacion.fechasAmpliadas || [],
+        motivo: ampliacion.motivoAmpliacion,
+        ordenDia: rank.ampliacion,
+      });
+    });
+  }
+
   // Denegada (0)
   if (solicitud.estado === 'denegada' && solicitud.fechaAprobacionDenegacion) {
     eventos.push({
@@ -2460,6 +2519,13 @@ calcularDiasLaborables: (año, todosLosFestivos) => {
       set({ error: error.message });
       throw error;
     }
+  },
+
+  obtenerDiasAmpliados: (ampliaciones) => {
+    if (!Array.isArray(ampliaciones)) return [];
+    return ampliaciones.reduce((acc, ampliacion) => {
+      return [...acc, ...(ampliacion.fechasAmpliadas || [])];
+    }, []);
   },
 
 
