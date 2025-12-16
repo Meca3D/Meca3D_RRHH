@@ -64,13 +64,12 @@ const HistorialSolicitudes = () => {
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
   const [procesandoCancelacion, setProcesandoCancelacion] = useState(false);
   const [estadisticaActivaFiltro, setEstadisticaActivaFiltro] = useState('');
-  const [fechasExpandida, setFechasExpandida] = useState(null);
   const [cancelacionesExpanded, setCancelacionesExpanded] = useState({});
 
   // Estados de filtros
   const [filtros, setFiltros] = useState({
     estado: 'todos',
-    empleado: '',
+    empleado: 'todos',
     año: new Date().getFullYear(),
     busqueda: ''
   });
@@ -88,6 +87,8 @@ const HistorialSolicitudes = () => {
         try {
         const filtrosSinBusqueda = { ...filtros };
         delete filtrosSinBusqueda.busqueda; // Quitar búsqueda de filtros de store
+        if (filtrosSinBusqueda.empleado === "todos") delete filtrosSinBusqueda.empleado;
+
         
         const historial = await loadHistorialSolicitudes(filtrosSinBusqueda);
 
@@ -133,8 +134,16 @@ const HistorialSolicitudes = () => {
 
   // Empleados disponibles para filtro
   const empleadosDisponibles = useMemo(() => {
-    return [...new Set(solicitudes.map(s => s.solicitante))].sort();
-  }, [solicitudes]);
+    const emails = [...new Set(solicitudes.map((s) => s.solicitante))];
+
+    return emails
+      .map((email) => ({
+        email,
+        nombre: datosUsuarios?.[email]?.nombre ? datosUsuarios[email].nombre : email,
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }));
+  }, [solicitudes, datosUsuarios]);
+
 
   // ✅ Estadísticas TOTALES (fijas, no cambian con filtros)
   const estadisticasTotales = useMemo(() => {
@@ -1186,10 +1195,10 @@ const HistorialSolicitudes = () => {
                       label="Empleado"
                       onChange={(e) => handleFiltroChange('empleado', e.target.value)}
                     >
-                      <MenuItem value="">Todos los empleados</MenuItem>
-                      {empleadosDisponibles.map(empleado => (
-                        <MenuItem key={empleado} value={empleado}>
-                          {datosUsuarios[empleado]?.nombre || empleado}
+                      <MenuItem value="todos">Todos los empleados</MenuItem>
+                      {empleadosDisponibles.map(({email,nombre}) => (
+                        <MenuItem key={email} value={email}>
+                          {nombre}
                         </MenuItem>
                       ))}
                     </Select>
