@@ -74,9 +74,8 @@ const titles = {
       'default': '🔔 Nueva notificación de RRHH'
 };
 
-
     const notificationTitle = titles[accion] || titles.solicitud;
-    let notificationBody = mensaje;
+    const notificationBody = mensaje || body;
     let targetUrl = null;
     const a = accion || '';
     if (!targetUrl) {
@@ -92,26 +91,12 @@ const titles = {
     for (const doc of usuariosSnapshot.docs) {
       const adminEmail = doc.id;
       const fcmTokens = doc.data()?.fcmTokens || [];
+      const tokens = fcmTokens.map(t => t.token);
       
-      if (fcmTokens.length === 0) {
+      if (tokens.length === 0) {
         console.log(`Admin ${adminEmail} sin tokens`);
         continue;
       }
-
-      // Filtrar tokens válidos
-      const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
-      const validTokens = fcmTokens.filter(t => {
-        const tokenTimestamp = t.timestamp?.toMillis ? t.timestamp.toMillis() : t.timestamp;
-        const tokenAge = Date.now() - tokenTimestamp;
-        return tokenAge < SIXTY_DAYS_MS;
-      });
-
-      if (validTokens.length === 0) {
-        console.log(`Admin ${adminEmail} con tokens expirados`);
-        continue;
-      }
-
-      const tokens = validTokens.map(t => t.token);
       
       const message = {
         data: {
@@ -124,10 +109,33 @@ const titles = {
         tokens
       };
 
-      notificaciones.push(
+     notificaciones.push(
         admin.messaging().sendEachForMulticast(message)
-          .then(response => {
+          .then(async response => {
             console.log(`✅ ${adminEmail}: ${response.successCount}/${tokens.length} enviados`);
+
+            const invalidTokens = [];
+
+            response.responses.forEach((r, idx) => {
+              if (!r.success) {
+                console.log(`❌ ${adminEmail} token[${idx}]`, r.error?.code, r.error?.message);
+              }
+              if (!r.success && ['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(r.error?.code)) {
+                invalidTokens.push(tokens[idx]);
+              }
+            });
+
+            // 🔥 LIMPIEZA AQUÍ
+            if (invalidTokens.length > 0) {
+              const cleaned = fcmTokens.filter(t => !invalidTokens.includes(t.token));
+              await admin.firestore()
+                .collection('USUARIOS')
+                .doc(adminEmail)
+                .update({ fcmTokens: cleaned });
+
+              console.log(`🧹 ${adminEmail}: ${invalidTokens.length} token(s) eliminados`);
+            }
+
             return { email: adminEmail, success: response.successCount };
           })
           .catch(error => {
