@@ -107,10 +107,77 @@ const requestPermission = async () => {
 
 
 
-useEffect(() => {
-  if (!messaging) return;
+    useEffect(() => {
+    if (!messaging) return;
 
-  const unsubscribe = onMessage(messaging, async (payload) => {
+      let unsubscribe = null;
+
+      const syncTokenIfGranted = async () => {
+        try {
+          if (Notification.permission !== 'granted') return;
+          if (!userProfile?.email) return;
+
+          const token = await getToken(messaging, { vapidKey });
+          if (!token) return;
+
+          // Info dispositivo/navegador (mismo enfoque que ya usas)
+          const isRealMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+          const isMobileUA = /Mobile|Android|iPhone|iPod/.test(navigator.userAgent);
+          const isTabletUA = /iPad|Tablet/.test(navigator.userAgent);
+
+          let deviceType = 'Desktop';
+          if (isTabletUA) deviceType = 'Tablet';
+          else if (isRealMobile && isMobileUA) deviceType = 'Mobile';
+
+          let browserName = 'Other';
+          if (navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg')) browserName = 'Chrome';
+          else if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) browserName = 'Safari';
+          else if (navigator.userAgent.includes('Firefox')) browserName = 'Firefox';
+          else if (navigator.userAgent.includes('Edg')) browserName = 'Edge';
+
+          const deviceInfo = {
+            token,
+            device: deviceType,
+            browser: browserName,
+            timestamp: new Date(),
+            userAgent: navigator.userAgent,
+          };
+
+          const userRef = doc(db, 'USUARIOS', userProfile.email);
+          const userDoc = await getDoc(userRef);
+          const existingTokens = userDoc.data()?.fcmTokens || [];
+
+          const tokenIndex = existingTokens.findIndex(t => t.token === token);
+
+          if (tokenIndex === -1) {
+            await updateDoc(userRef, { fcmTokens: arrayUnion(deviceInfo) });
+          } else {
+            const updatedTokens = [...existingTokens];
+            updatedTokens[tokenIndex] = { ...updatedTokens[tokenIndex], timestamp: new Date() };
+            await updateDoc(userRef, { fcmTokens: updatedTokens });
+          }
+
+          await updateNotificationPreference('granted');
+
+          // opcional: limpiar duplicados en otros usuarios
+          try {
+            await fetch('/.netlify/functions/cleanDuplicateTokens', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token, currentUserEmail: userProfile.email }),
+            });
+          } catch (e) {
+            console.warn('No se pudo limpiar tokens duplicados:', e);
+          }
+        } catch (e) {
+          console.warn('No se pudo sincronizar token FCM:', e);
+        }
+      };
+
+      // 1) Sync token si ya había permisos
+      syncTokenIfGranted();
+      
+  unsubscribe = onMessage(messaging, async (payload) => {
     console.log('Mensaje recibido (foreground):', payload);
 
     if ('serviceWorker' in navigator && Notification.permission === 'granted' && payload.data) {
@@ -132,10 +199,11 @@ useEffect(() => {
         console.error('Error mostrando notificación:', error);
       }
     }
-  });
+  })
 
-  return () => unsubscribe();
-}, []);
+  return () => {if (unsubscribe) unsubscribe();}
+  
+}, [userProfile?.email]);
 
 
 

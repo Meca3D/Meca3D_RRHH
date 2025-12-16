@@ -146,19 +146,9 @@ export const handler = async (event) => {
     const cleaned = fcmTokens.filter(t => !invalidTokens.includes(t.token));
     await admin.firestore().collection('USUARIOS').doc(empleadoEmail).update({ fcmTokens: cleaned });
   }
-}
-
+  } 
       
-      console.log(`Eliminando ${failedTokens.length} token(s) inválido(s)`);
-      
-      const updatedTokens = fcmTokens.filter(t => !failedTokens.includes(t.token));
-      await admin.firestore()
-        .collection('USUARIOS')
-        .doc(empleadoEmail)
-        .update({ fcmTokens: updatedTokens });
-    }
-    
-    console.log('=== FIN sendNotification ===');
+      console.log('=== FIN sendNotification ===');
     
     return {
       statusCode: 200,
@@ -175,7 +165,7 @@ export const handler = async (event) => {
         }))
       })
     };
-
+  
   } catch (error) {
     console.error('❌ ERROR CRÍTICO:', error);
     console.error('Stack:', error.stack);
@@ -188,4 +178,4 @@ export const handler = async (event) => {
       })
     };
   }
-};
+}
