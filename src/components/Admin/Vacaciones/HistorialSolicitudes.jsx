@@ -257,7 +257,7 @@ const HistorialSolicitudes = () => {
     const añoActual = new Date().getFullYear();
     
     // Añadir año actual y anteriores
-    for (let i = añoActual; i >= añoActual - 5; i--) {
+    for (let i = añoActual+1; i >= añoActual - 5; i--) {
       años.add(i);
     }
     

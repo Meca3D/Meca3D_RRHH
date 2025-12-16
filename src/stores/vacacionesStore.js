@@ -1349,7 +1349,7 @@ export const useVacacionesStore = create((set, get) => {
         // Query base para todas las solicitudes
         let solicitudesQuery = query(
           collection(db, 'VACACIONES'),
-          orderBy('fechaSolicitud', 'desc')
+          orderBy("updatedAt", "desc")
         );
         
         // Aplicar filtros si se especifican
@@ -1357,7 +1357,7 @@ export const useVacacionesStore = create((set, get) => {
           solicitudesQuery = query(
             collection(db, 'VACACIONES'),
             where('estado', '==', filtros.estado),
-            orderBy('fechaSolicitud', 'desc')
+            orderBy('updatedAt', 'desc')
           );
         }
         
