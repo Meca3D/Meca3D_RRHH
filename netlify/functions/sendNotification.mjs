@@ -94,34 +94,8 @@ export const handler = async (event) => {
       };
     }
 
-    // Filtrar tokens válidos (< 60 días)
-    const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    const validTokens = fcmTokens.filter(t => {
-      const tokenTimestamp = t.timestamp?.toMillis ? t.timestamp.toMillis() : t.timestamp;
-      const tokenAge = now - tokenTimestamp;
-      const isValid = tokenAge < SIXTY_DAYS_MS;
-      console.log(`  Token ${t.device}/${t.browser}: ${isValid ? 'VÁLIDO' : 'EXPIRADO'} (${Math.floor(tokenAge / (24 * 60 * 60 * 1000))} días)`);
-      return isValid;
-    });
-
-    console.log(`Tokens válidos: ${validTokens.length} de ${fcmTokens.length}`);
-
-    if (validTokens.length === 0) {
-      console.warn('Todos los tokens expirados');
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ 
-          message: 'Todos los tokens han expirado',
-          successCount: 0 
-        })
-      };
-    }
-
     // Preparar mensaje
-    const tokens = validTokens.map(t => t.token);
-
+    const tokens = fcmTokens.map(t => t.token)
     const message = {
 
       data: {
@@ -149,7 +123,7 @@ export const handler = async (event) => {
 
     // Analizar respuestas individuales
     response.responses.forEach((resp, idx) => {
-      const tokenInfo = validTokens[idx];
+      const tokenInfo = fcmTokens[idx];
       if (resp.success) {
         console.log(`  ✅ ${tokenInfo.device}/${tokenInfo.browser}: Enviado`);
       } else {
@@ -159,12 +133,21 @@ export const handler = async (event) => {
 
     // Limpiar tokens inválidos si hay fallos
     if (response.failureCount > 0) {
-      const failedTokens = [];
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          failedTokens.push(tokens[idx]);
-        }
-      });
+  const invalidTokens = [];
+
+  response.responses.forEach((resp, idx) => {
+    const code = resp.error?.code;
+    if (!resp.success && (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token')) {
+      invalidTokens.push(tokens[idx]);
+    }
+  });
+
+  if (invalidTokens.length > 0) {
+    const cleaned = fcmTokens.filter(t => !invalidTokens.includes(t.token));
+    await admin.firestore().collection('USUARIOS').doc(empleadoEmail).update({ fcmTokens: cleaned });
+  }
+}
+
       
       console.log(`Eliminando ${failedTokens.length} token(s) inválido(s)`);
       
@@ -186,7 +169,7 @@ export const handler = async (event) => {
         failureCount: response.failureCount,
         message: `Notificación enviada a ${response.successCount} de ${tokens.length} dispositivo(s)`,
         details: response.responses.map((resp, idx) => ({
-          device: `${validTokens[idx].device}/${validTokens[idx].browser}`,
+          device: `${fcmTokens[idx].device}/${fcmTokens[idx].browser}`,
           success: resp.success,
           error: resp.error?.message
         }))
