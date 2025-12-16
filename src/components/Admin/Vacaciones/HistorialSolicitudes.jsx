@@ -105,8 +105,8 @@ const HistorialSolicitudes = () => {
                 const nombre = (userData.nombre || s.solicitante).toLowerCase();
                 const comentarios = (s.comentariosSolicitante || '').toLowerCase();
                 const comentariosAdmin = (s.comentariosAdmin || '').toLowerCase();
-                const motivoCancelacion = (s.cancelaciones[s.cancelaciones.length-1].motivoCancelacion || '').toLowerCase();
-                
+                const motivoCancelacion =  (s.cancelaciones?.[s.cancelaciones.length - 1]?.motivoCancelacion ?? "")
+    .toLowerCase();
                 return nombre.includes(termino) || 
                     s.solicitante.toLowerCase().includes(termino) ||
                     comentarios.includes(termino) || 
