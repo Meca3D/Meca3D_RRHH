@@ -70,6 +70,7 @@ import AñadirAusencia from './components/Ausencias/AñadirDiasAusencia';
 
 import LoadingScreen from './components/Layout/LoadingScreen';
 import { useAuthStore } from './stores/authStore';
+import PenalizacionBajasDiasLaborables from './components/Admin/Ausencias/PenalizacionBajasDiasLaborables';
 
 
 // Componente de protección de rutas
@@ -165,6 +166,8 @@ const AppRoutes = () => {
         <Route path="admin/ausencias/historial" element={<AusenciasRoute><HistorialAusencias /></AusenciasRoute>} />
         <Route path="admin/ausencias/crear" element={<AusenciasRoute><CrearAusenciaAdmin /></AusenciasRoute>} />
         <Route path="admin/ausencias/penalizaciones" element={<AusenciasRoute><PenalizacionBajas /></AusenciasRoute>} />
+        <Route path="admin/ausencias/penalizacionesLaborables" element={<AusenciasRoute><PenalizacionBajasDiasLaborables /></AusenciasRoute>} />
+        
 
         {/* Rutas de Utilidades */}
         <Route path="admin/utilidades" element={<AusenciasRoute><GestionUtilidades /></AusenciasRoute>} />

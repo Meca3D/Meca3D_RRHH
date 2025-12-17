@@ -1221,14 +1221,6 @@ const HistorialSolicitudes = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', height: '40px' }}>
-                    <Typography variant="body2">
-                      {solicitudes.length} solicitud{solicitudes.length !== 1 ? 'es' : ''} encontrada{solicitudes.length !== 1 ? 's' : ''}
-                    </Typography>
-                  </Box>
-                </Grid>
               </Grid>
             </Collapse>
           </CardContent>

@@ -59,6 +59,16 @@ const GestionAusencias = () => {
       bgColor: 'rojo.fondo',
       route: '/admin/ausencias/penalizaciones'
     },
+    {
+      id: 'penalizacionDiasLaborables',
+      title: 'Penalizaciones por Bajas (Días Laborables)',
+      subtitle: 'por Bajas',
+      description: 'Penalizaciones asociadas a bajas',
+      icon: ThumbDownOutlinedIcon,
+      color: 'rojo.main',
+      bgColor: 'rojo.fondo',
+      route: '/admin/ausencias/penalizacionesLaborables'
+    },
   ];
 
   

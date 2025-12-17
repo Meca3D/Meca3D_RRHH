@@ -22,10 +22,10 @@ import { useEmpleadosStore } from '../../../stores/empleadosStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 
-const PenalizacionBajas = () => {
+const PenalizacionBajasDiasLaborables = () => {
   const navigate = useNavigate();
   const { ausencias, loadAusencias, guardarPenalizacion, loadPenalizacionesYear} = useAusenciasStore();
-  const { ajustarSaldoIndividual, obtenerCalculoExcesoJornada } = useVacacionesStore();
+  const { ajustarSaldoIndividual, obtenerCalculoExcesoJornada,loadFestivos,esFinDeSemana,esFestivo } = useVacacionesStore();
   const { empleados, fetchEmpleados } = useEmpleadosStore();
   const { showSuccess, showError } = useUIStore();
 
@@ -46,10 +46,12 @@ const PenalizacionBajas = () => {
     const cargarDatos = async () => {
       setLoading(true);
       try {
+        const unsubFestivos = loadFestivos();
         const unsubAusencias = loadAusencias();
         const unsubEmpleados = fetchEmpleados();
 
         return () => {
+          if (typeof unsubFestivos === 'function') unsubFestivos();
           if (typeof unsubAusencias === 'function') unsubAusencias();
           if (typeof unsubEmpleados === 'function') unsubEmpleados();
         };
@@ -126,17 +128,19 @@ const PenalizacionBajas = () => {
         .reduce((total, ausencia) => {
           const diasEnAnio = ausencia.fechasActuales.filter(fecha => {
             const year = new Date(fecha).getFullYear();
-            return year === añoSeleccionado;
+            const festivo= esFestivo((fecha));
+            const finDeSemana= esFinDeSemana((fecha));
+            return (year === añoSeleccionado && !festivo && !finDeSemana);
           }).length;
           return total + diasEnAnio;
         }, 0);
 
       // 2. Calcular porcentaje de penalización
       let porcentaje = 0;
-      if (diasBajaTotales <= 7) porcentaje = 0;
-      else if (diasBajaTotales <= 14) porcentaje = 0.25;
-      else if (diasBajaTotales <= 21) porcentaje = 0.5;
-      else if (diasBajaTotales <= 28) porcentaje = 0.75;
+      if (diasBajaTotales <= 5) porcentaje = 0;
+      else if (diasBajaTotales <= 10) porcentaje = 0.25;
+      else if (diasBajaTotales <= 15) porcentaje = 0.5;
+      else if (diasBajaTotales <= 20) porcentaje = 0.75;
       else porcentaje = 1.0;
 
       // 3. Calcular penalización en horas (redondear hacia abajo)
@@ -160,7 +164,7 @@ const PenalizacionBajas = () => {
         vacacionesDisponibles: empleado.vacaciones?.disponibles || 0
       };
     })
-    .filter(e => e.diasBajaTotales > 7) // Solo mostrar con más de 7 días
+    .filter(e => e.diasBajaTotales > 5) // Solo mostrar con más de 5 días
     .sort((a, b) => b.diasBajaTotales - a.diasBajaTotales); // Ordenar por días de baja (mayor a menor)
 
     setEmpleadosConBajas(resultados);
@@ -190,7 +194,7 @@ const PenalizacionBajas = () => {
         email,
         'reducir',
         diferencia,
-        `Penalización por ${diasBajaTotales} días Naturales de baja en ${añoSeleccionado} (${porcentaje * 100}% del exceso jornada anual)`,
+        `Penalización por ${diasBajaTotales} días Laborables de baja en ${añoSeleccionado} (${porcentaje * 100}% del exceso jornada anual)`,
       );
 
       // 2. Guardar registro en PENALIZACIONES
@@ -323,36 +327,36 @@ const PenalizacionBajas = () => {
               Criterios de Penalización
             </Typography>
             <Typography variant="subtitle1" textAlign='center' fontWeight={600} mb={2} color="">
-              Dias Naturales
+              Dias Laborables
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #4caf50', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">≤ 7 días de baja</Typography>
+                  <Typography variant="body1" color="">≤ 5 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="success.main">0%</Typography>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #ff9800', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">8-14 días de baja</Typography>
+                  <Typography variant="body1" color="">6-10 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="warning.main">25%</Typography>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #ff5722', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">15-21 días de baja</Typography>
+                  <Typography variant="body1" color="">11-15 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="error.light">50%</Typography>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #f44336', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">22-28 días de baja</Typography>
+                  <Typography variant="body1" color="">16-20 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="error.main">75%</Typography>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Paper elevation={5} sx={{ py: 1, px:2, bgcolor: 'white', borderLeft: '4px solid #d32f2f', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <Typography variant="body1" color="">&gt; 28 días de baja</Typography>
+                  <Typography variant="body1" color="">&gt; 20 días de baja</Typography>
                   <Typography variant="h6" fontWeight={700} color="error.dark">100%</Typography>
                 </Paper>
               </Grid>
@@ -373,7 +377,7 @@ const PenalizacionBajas = () => {
         </Alert>
         ) : empleadosConBajas.length === 0 ? (
         <Alert severity="success" icon={<CheckIcon />}>
-            No hay empleados con más de 7 días naturales de baja en {añoSeleccionado}
+            No hay empleados con más de 5 días laborables de baja en {añoSeleccionado}
         </Alert>
         ) : (
         <>
@@ -440,15 +444,15 @@ const PenalizacionBajas = () => {
                         mb: 0,
                         p: 1.5,
                         bgcolor: 
-                            empleado.diasBajaTotales > 28 ? 'error.lighter' :
-                            empleado.diasBajaTotales > 21 ? 'warning.lighter' :
-                            empleado.diasBajaTotales > 14 ? 'info.lighter' : 'success.lighter',
+                            empleado.diasBajaTotales > 20 ? 'error.lighter' :
+                            empleado.diasBajaTotales > 15 ? 'warning.lighter' :
+                            empleado.diasBajaTotales > 10 ? 'info.lighter' : 'success.lighter',
                         borderRadius: 2
                         }}
                     >
                         <Box display='flex' flexDirection='column' alignItems='center'>
                         <Typography variant="body1" color="">
-                            Días Naturales de baja
+                            Días Laborables de baja
                         </Typography>
                         <Divider sx={{ mb: 0.5, width: '100%', bgcolor:'black' }} />
                         <Typography variant="h4" fontWeight={700} color="error.dark">
@@ -684,4 +688,4 @@ const PenalizacionBajas = () => {
   );
 };
 
-export default PenalizacionBajas;
+export default PenalizacionBajasDiasLaborables;
