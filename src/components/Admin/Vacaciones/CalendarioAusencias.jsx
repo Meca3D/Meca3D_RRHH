@@ -35,6 +35,7 @@ import {
   formatYMD, obtenerDiasCalendario, navegarMes, formatearMesAno, 
   esFinDeSemana, formatearFechaLarga, formatearFechaCorta 
 } from '../../../utils/dateUtils';
+import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
 
 const CalendarioAusencias = () => {
   const navigate = useNavigate();
@@ -608,13 +609,18 @@ const CalendarioAusencias = () => {
                                 <Box sx={{ mr: 1, color: getColorTipo(a.tipo) }}>
                                   {getIconoTipo(a.tipo)}
                                 </Box>
+                                <Box display='flex'justifyContent='space-between' width='100%'alignItems='center'>
                                 <Box>
                                   <Typography fontSize='1.1rem' fontWeight={600}>
                                     {a.nombre}
                                   </Typography>
-                                  <Typography variant="caption" display="block">
+                                  <Typography fontSize='0.85rem' display="block">
                                     {a.puesto} • {capitalizeFirstLetter(a.tipo)}
                                   </Typography>
+                                </Box>
+                                {a.horas < 8 && (
+                                   <Chip label={`${formatearTiempoVacasLargo(a.horas)}`} size="small" color="primary" />
+                                )}
                                 </Box>
                              </Box>
                           ))}
@@ -647,6 +653,15 @@ const CalendarioAusencias = () => {
                     fecha.setDate(fecha.getDate() + i);
                     const fStr = formatYMD(fecha);
                     const ausentes = getAusentesVisibles(fStr);
+                    const ordenTipo = { vacaciones: 0, baja: 1, permiso: 2 };
+
+                    ausentes.sort((a, b) => {
+                      const ta = ordenTipo[a.tipo] ?? 99;
+                      const tb = ordenTipo[b.tipo] ?? 99;
+                      if (ta !== tb) return ta - tb;
+
+                      return (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" });
+                    });
                     
                     if (ausentes.length === 0) return null;
 
@@ -669,7 +684,12 @@ const CalendarioAusencias = () => {
                              <Box sx={{ color: getColorTipo(a.tipo), mr: 0.5, display: 'flex' }}>
                                {getIconoTipo(a.tipo)}
                              </Box>
-                             <Typography fontSize='1.1rem'>• {a.nombre}</Typography>
+                             <Typography fontSize='1.15rem'>• {a.nombre}</Typography>
+                             {a.horas < 8 && (
+                              <Box display='flex' justifyContent='flex-end' flexGrow={1}>
+                                <Chip label={`${formatearTiempoVacasLargo(a.horas)}`} size="small" color="primary" />
+                                </Box>
+                             )}
                           </Box>
                         ))}
                       </Box>
