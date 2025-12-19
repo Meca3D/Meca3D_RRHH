@@ -3,8 +3,7 @@ import { create } from 'zustand';
 import { arrayUnion, collection, onSnapshot, doc, updateDoc, writeBatch, query, where, orderBy, getDoc, getDocs, setDoc, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuthStore } from './authStore';
-import { formatYMD, esFinDeSemana, esFechaPasadaOHoy, esFechaPasada} from '../utils/dateUtils';
-import { formatearNombre } from '../components/Helpers';
+import { formatYMD, esFinDeSemana, esFechaPasadaOHoy} from '../utils/dateUtils';
 import { formatearTiempoVacasLargo } from '../utils/vacacionesUtils';
 
 export const useVacacionesStore = create((set, get) => {
@@ -271,7 +270,7 @@ export const useVacacionesStore = create((set, get) => {
           // Transacción completada, enviar notificaciones
       try {
         const { sendNotification, userProfile } = useAuthStore.getState();
-        const nombreSolicitante = formatearNombre(userProfile?.nombre || solicitudData.solicitante);
+        const nombreSolicitante = (userProfile?.nombre || solicitudData.solicitante);
         if (res.aplicar) {
           // ✅ Auto-aprobada: Notificar al solicitante
           await sendNotification({
@@ -848,7 +847,7 @@ export const useVacacionesStore = create((set, get) => {
         // Notificaciones según quién canceló
             try {
               const { sendNotification, userProfile } = useAuthStore.getState();
-              const nombreSolicitante = formatearNombre(userProfile.nombre);
+              const nombreSolicitante = (userProfile.nombre);
               
               if (esAdmin && solicitud.solicitante !== empleadoActual) {
                 // Admin cancela solicitud de un empleado → Notificar al empleado
@@ -1544,7 +1543,7 @@ export const useVacacionesStore = create((set, get) => {
       // Notificaciones según quién canceló
             try {
               const { sendNotification, userProfile } = useAuthStore.getState();
-              const nombreSolicitante = formatearNombre(userProfile.nombre);
+              const nombreSolicitante = (userProfile.nombre);
               
               if (esAdmin && solicitud.solicitante !== empleadoActual) {
                 // Admin cancela solicitud de un empleado → Notificar al empleado
@@ -1698,7 +1697,7 @@ export const useVacacionesStore = create((set, get) => {
       // Notificaciones según quién canceló
             try {
               const { sendNotification, userProfile } = useAuthStore.getState();
-              const nombreSolicitante = formatearNombre(userProfile.nombre);
+              const nombreSolicitante = (userProfile.nombre);
               
               if (esAdmin && solicitud.solicitante !== empleadoActual) {
                 // Admin cancela solicitud de un empleado → Notificar al empleado

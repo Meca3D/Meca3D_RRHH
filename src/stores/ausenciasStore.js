@@ -340,9 +340,8 @@ export const useAusenciasStore = create((set, get) => {
             });
           } else {
             // Pendiente → notificar a admins
-            const { formatearNombre } = await import('../components/Helpers');
             const { userProfile } = useAuthStore.getState();
-            const nombreSolicitante = formatearNombre(userProfile?.nombre || ausenciaData.solicitante);
+            const nombreSolicitante = (userProfile?.nombre || ausenciaData.solicitante);
             
             await fetch('/.netlify/functions/notifyAdmins', {
               method: 'POST',
@@ -525,7 +524,6 @@ export const useAusenciasStore = create((set, get) => {
         // Notificar según quién editó
         try {
           const { sendNotification, userProfile } = useAuthStore.getState();
-          const { formatearNombre } = await import('../components/Helpers');
           
           if (esAdmin) {
             // Admin editó → notificar al empleado
@@ -538,7 +536,7 @@ export const useAusenciasStore = create((set, get) => {
             });
           } else {
             // Empleado añadió días → notificar a admins
-            const nombreSolicitante = formatearNombre(userProfile?.nombre || ausenciaOriginal.solicitante);
+            const nombreSolicitante = (userProfile?.nombre || ausenciaOriginal.solicitante);
             
             await fetch('/.netlify/functions/notifyAdmins', {
               method: 'POST',
@@ -603,8 +601,7 @@ export const useAusenciasStore = create((set, get) => {
         // Notificaciones
         try {
           const { sendNotification, userProfile } = useAuthStore.getState();
-          const { formatearNombre } = await import('../components/Helpers');
-          const nombreSolicitante = formatearNombre(userProfile?.nombre || ausencia.solicitante);
+          const nombreSolicitante = (userProfile?.nombre || ausencia.solicitante);
           
           if (esAdmin && ausencia.solicitante !== userProfile?.email) {
             // Admin canceló → notificar al empleado
@@ -658,8 +655,7 @@ export const useAusenciasStore = create((set, get) => {
         if (!esAdmin) {
         try {
           const { userProfile } = useAuthStore.getState();
-          const { formatearNombre } = await import('../components/Helpers');
-          const nombreSolicitante = formatearNombre(userProfile?.nombre || ausencia.solicitante);
+          const nombreSolicitante = (userProfile?.nombre || ausencia.solicitante);
           
           await fetch('/.netlify/functions/notifyAdmins', {
             method: 'POST',
