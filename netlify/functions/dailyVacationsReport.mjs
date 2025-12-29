@@ -18,6 +18,35 @@ export default async (req, context) => {
     const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
     console.log('Fecha:', fechaHoy);
 
+    // ---------------------------------------------------------
+    // ✅ VERIFICAR SI HOY ES FESTIVO
+    // ---------------------------------------------------------
+    const añoActual = hoy.getFullYear();
+    const festivosDoc = await admin.firestore()
+      .collection('DIAS_FESTIVOS')
+      .doc(añoActual.toString())
+      .get();
+
+    if (festivosDoc.exists) {
+      const festivos = festivosDoc.data()?.festivos || [];
+      const esFestivo = festivos.some(festivo => festivo.fecha === fechaHoy);
+      
+      if (esFestivo) {
+        const nombreFestivo = festivos.find(f => f.fecha === fechaHoy)?.nombre || 'Festivo';
+        console.log(`🎉 Hoy es festivo (${nombreFestivo}). No se enviarán notificaciones.`);
+        return new Response(
+          JSON.stringify({ 
+            message: 'Hoy es festivo, no se envían notificaciones', 
+            festivo: nombreFestivo,
+            fecha: fechaHoy 
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    console.log('✅ Hoy es día laborable. Procesando ausencias...');
+
     // Mapa para almacenar ausentes
     const ausentesMap = new Map();
 
@@ -144,7 +173,6 @@ export default async (req, context) => {
     }
 
     const notificaciones = [];
-    const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 
     for (const ownerDoc of ownersSnapshot.docs) {
       const ownerEmail = ownerDoc.id;
@@ -159,12 +187,9 @@ export default async (req, context) => {
 
       if (fcmTokens.length === 0) continue;
 
-      const validTokens = fcmTokens.filter(t => {
-        const tokenTimestamp = t.timestamp?.toMillis ? t.timestamp.toMillis() : t.timestamp;
-        return (Date.now() - tokenTimestamp) < SIXTY_DAYS_MS;
-      }).map(t => t.token);
+      const tokens = fcmTokens.map(t => t.token).filter(Boolean);
 
-      if (validTokens.length === 0) continue;
+      if (tokens.length === 0) continue;
 
       const message = {
         data: {
@@ -174,12 +199,42 @@ export default async (req, context) => {
           type: 'reporte_ausencias',
           timestamp: new Date().toISOString()
         },
-        tokens: validTokens
+        tokens: tokens
       };
 
       notificaciones.push(
         admin.messaging().sendEachForMulticast(message)
-          .then(res => ({ email: ownerEmail, success: res.successCount }))
+          .then(async res => {
+        console.log(`✅ Notificado a ${ownerEmail}: ${res.successCount}/${tokens.length} tokens exitosos`);       
+        // Limpiar tokens que fallaron
+        if (res.failureCount > 0) {
+          console.log(`⚠️ ${res.failureCount} tokens fallidos para ${ownerEmail}`);
+          // implementar limpieza de tokens inválidos si quieres
+            const invalidTokens = [];
+            res.responses.forEach((r, idx) => {
+              if (!r.success) {
+                console.log(`❌ ${ownerEmail} token[${idx}]`, r.error?.code, r.error?.message);
+              }
+              if (!r.success && ['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(r.error?.code)) {
+                invalidTokens.push(tokens[idx]);
+              }
+            });
+
+            // 🔥 LIMPIEZA AQUÍ
+            if (invalidTokens.length > 0) {
+              const cleaned = fcmTokens.filter(t => !invalidTokens.includes(t.token));
+              await admin.firestore()
+                .collection('USUARIOS')
+                .doc(ownerEmail)
+                .update({ fcmTokens: cleaned });
+
+              console.log(`🧹 ${ownerEmail}: ${invalidTokens.length} token(s) eliminados`);
+            }
+
+
+        }
+        return { email: ownerEmail, success: res.successCount, failed: res.failureCount };
+      })
           .catch(err => ({ email: ownerEmail, error: err.message }))
       );
     }
