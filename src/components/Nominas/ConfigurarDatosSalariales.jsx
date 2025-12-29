@@ -3,13 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
-  IconButton, TextField, Button, Alert, Grid, FormControlLabel,
+  IconButton, TextField, Button, Alert, Grid, FormControlLabel, Chip, 
   Switch, FormControl, InputLabel, Select, MenuItem, Divider, CircularProgress
 } from '@mui/material';
 import {
   ArrowBackIosNew as ArrowBackIosNewIcon,
   SettingsOutlined as SettingsIcon,
   Save as SaveIcon,
+  Add as AddIcon,
+  CalendarToday as CalendarIcon,
   AutoMode as AutoIcon,
   PictureInPictureAlt
 } from '@mui/icons-material';
@@ -21,14 +23,15 @@ import { formatDate } from '../../utils/nominaUtils';
 const ConfigurarDatosSalariales = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useAuthStore();
-  const { 
-    configuracionNomina, 
+  const {  
     nivelesSalariales,
     loadingConfiguracion, 
-    loadConfiguracionUsuario,
-    loadNivelesSalariales, 
-    updateConfiguracionNomina,
+    loadNivelesSalarialesAno, 
     calcularAñosServicio,
+    getSalarioPorAño,
+    getAñosDisponiblesSalario, 
+    existeConfiguracionSalarialAño,  
+    guardarConfiguracionSalarialAño  
   } = useNominaStore();
   const { showSuccess, showError } = useUIStore();
 
@@ -51,60 +54,78 @@ const ConfigurarDatosSalariales = () => {
   });
 
   const [saving, setSaving] = useState(false);
+  const [añoSeleccionado, setAñoSeleccionado] = useState(new Date().getFullYear());
+  const [añosDisponibles, setAñosDisponibles] = useState([new Date().getFullYear()]);
+  const [modoCreacion, setModoCreacion] = useState(false);
 
-  // ✅ Inicializar listeners reactivos
+
   useEffect(() => {
-    if (user?.email) {
-      const unsubscribeConfig = loadConfiguracionUsuario(user.email);
-      const unsubscribeNiveles = loadNivelesSalariales();
-      
+    if (añoSeleccionado) {
+      const unsubscribeNiveles = loadNivelesSalarialesAno(añoSeleccionado);
       return () => {
-        if (unsubscribeConfig) unsubscribeConfig();
         if (unsubscribeNiveles) unsubscribeNiveles();
       };
     }
-  }, [user?.email]);
+  }, [añoSeleccionado]);
 
-  // ✅ Cargar valores predeterminados cuando cambia el perfil
+  // ✅ Cargar años disponibles
   useEffect(() => {
-    if (userProfile && nivelesSalariales?.niveles) {
+    if (userProfile) {
+      const años = getAñosDisponiblesSalario(userProfile);
+      setAñosDisponibles(años);
+    }
+  }, [userProfile]);
+
+    useEffect(() => {
+      if (!userProfile) return;
+      // ✅ VERIFICAR que los niveles cargados sean del año seleccionado
+      if (nivelesSalariales?.año !== añoSeleccionado) {
+        return; // Salir y esperar a que se carguen los correctos
+      }
+      const existe = existeConfiguracionSalarialAño(userProfile, añoSeleccionado);
+      setModoCreacion(!existe);
+      // Valores predeterminados
       const nivelUsuario = userProfile.nivel;
-      
-      // ✅ Sueldo base predeterminado del nivel
       let sueldoBasePredeterminado = 0;
       let valorTrienioPredeterminado = 0;
-      
-      if (nivelUsuario && nivelesSalariales.niveles[nivelUsuario]) {
+
+      if (nivelUsuario && nivelesSalariales?.niveles?.[nivelUsuario]) {
         sueldoBasePredeterminado = nivelesSalariales.niveles[nivelUsuario].sueldoBase;
         valorTrienioPredeterminado = nivelesSalariales.niveles[nivelUsuario].valorTrienio;
       }
-
-
-      setFormData(prev => ({
-        ...prev,
-        nivelSalarial: nivelUsuario || '',
-        sueldoBase: prev.sueldoBase || sueldoBasePredeterminado,
-        valorTrienio: prev.valorTrienio || valorTrienioPredeterminado 
-      }));
-    }
-  }, [userProfile, nivelesSalariales, calcularAñosServicio]);
-
-  // ✅ Cargar configuración guardada
-  useEffect(() => {
-    if (configuracionNomina) {
-      setFormData(prev => ({
-        ...prev,
-        nivelSalarial: configuracionNomina.nivelSalarial || prev.nivelSalarial,
-        sueldoBase: configuracionNomina.sueldoBase || prev.sueldoBase,
-        tieneTrienios: configuracionNomina.tieneTrienios || false,
-        valorTrienio: configuracionNomina.valorTrienio || prev.valorTrienio,
-        tieneOtrosComplementos: configuracionNomina.tieneOtrosComplementos || false,
-        otroComplemento1: configuracionNomina.otroComplemento1 || { concepto: '', importe: 0 },
-        otroComplemento2: configuracionNomina.otroComplemento2 || { concepto: '', importe: 0 },
-        pagaExtra: configuracionNomina.pagaExtra || 0
-      }));
-    }
-  }, [configuracionNomina]);
+      if (existe) {
+        const configAño = getSalarioPorAño(userProfile, añoSeleccionado);
+        setFormData({
+          nivelSalarial: configAño.nivelSalarial || nivelUsuario || '',
+          sueldoBase: configAño.sueldoBase || sueldoBasePredeterminado || 0,
+          tieneTrienios: configAño.tieneTrienios || false,
+          valorTrienio: configAño.valorTrienio || valorTrienioPredeterminado ||0,
+          tieneOtrosComplementos: configAño.tieneOtrosComplementos || false,
+          otroComplemento1: configAño.otroComplemento1 || { concepto: '', importe: 0 },
+          otroComplemento2: configAño.otroComplemento2 || { concepto: '', importe: 0 },
+          pagaExtra: configAño.pagaExtra || 0,
+          normal: configAño.normal || 0,
+          nocturna: configAño.nocturna || 0,
+          festiva: configAño.festiva || 0,
+          festivaNocturna: configAño.festivaNocturna || 0
+        });
+      } else {
+        setFormData({
+          nivelSalarial: nivelUsuario || '',
+          sueldoBase: sueldoBasePredeterminado,
+          tieneTrienios: false,
+          valorTrienio: valorTrienioPredeterminado,
+          tieneOtrosComplementos: false,
+          otroComplemento1: { concepto: '', importe: 0 },
+          otroComplemento2: { concepto: '', importe: 0 },
+          pagaExtra: 0,
+          normal: 0,
+          nocturna: 0,
+          festiva: 0,
+          festivaNocturna: 0
+        });
+      }
+    }, [añoSeleccionado, userProfile, nivelesSalariales]);
 
   const handleSwitchChange = (field) => (e) => {
     setFormData(prev => ({
@@ -145,69 +166,76 @@ const ConfigurarDatosSalariales = () => {
   };
 
   const handleSave = async () => {
-    // Validaciones
-    if (!formData.sueldoBase || parseFloat(formData.sueldoBase) <= 0) {
-      showError('El sueldo base es obligatorio y debe ser mayor a 0');
-      return;
-    }
-
-    if (formData.tieneTrienios && (!formData.valorTrienio)) {
-      showError('Si tienes trienios, debes especificar su valor');
-      return;
-    }
-
-    if (formData.tieneOtrosComplementos) {
-      const comp1 = formData.otroComplemento1;
-      const comp2 = formData.otroComplemento2;
-      
-      if ((!comp1.concepto && comp1.importe) || (comp1.concepto && !comp1.importe)) {
-        showError('El complemento 1 debe tener concepto e importe');
+      // Validaciones 
+      if (!formData.sueldoBase || parseFloat(formData.sueldoBase) <= 0) {
+        showError('El sueldo base es obligatorio y debe ser mayor a 0');
         return;
       }
-      
-      if ((!comp2.concepto && comp2.importe) || (comp2.concepto && !comp2.importe)) {
-        showError('El complemento 2 debe tener concepto e importe');
+
+      if (formData.tieneTrienios && (!formData.valorTrienio)) {
+        showError('Si tienes trienios, debes especificar su valor');
         return;
       }
-    }
 
-    setSaving(true);
-    try {
-      const configuracionActualizada = {
-        // ✅ Nivel y sueldo únicos
-        nivelSalarial: formData.nivelSalarial,
-        sueldoBase: parseFloat(formData.sueldoBase),
-        
-        // ✅ Trienios únicos
-        tieneTrienios: formData.tieneTrienios,
-        valorTrienio: formData.tieneTrienios ? parseFloat(formData.valorTrienio) || 0 : 0,
-        
-        // Otros complementos
-        tieneOtrosComplementos: formData.tieneOtrosComplementos,
-        otroComplemento1: formData.tieneOtrosComplementos ? {
-          concepto: formData.otroComplemento1.concepto,
-          importe: parseFloat(formData.otroComplemento1.importe) || 0
-        } : { concepto: '', importe: 0 },
-        otroComplemento2: formData.tieneOtrosComplementos ? {
-          concepto: formData.otroComplemento2.concepto,
-          importe: parseFloat(formData.otroComplemento2.importe) || 0
-        } : { concepto: '', importe: 0 },
-        
-        // Paga extra
-        pagaExtra: parseFloat(formData.pagaExtra) || 0
-      };
+      if (formData.tieneOtrosComplementos) {
+        const comp1 = formData.otroComplemento1;
+        const comp2 = formData.otroComplemento2;
+        if ((!comp1.concepto && comp1.importe) || (comp1.concepto && !comp1.importe)) {
+          showError('El complemento 1 debe tener concepto e importe');
+          return;
+        }
+        if ((!comp2.concepto && comp2.importe) || (comp2.concepto && !comp2.importe)) {
+          showError('El complemento 2 debe tener concepto e importe');
+          return;
+        }
+      }
 
-      await updateConfiguracionNomina(user.email, configuracionActualizada);
-      showSuccess('Configuración guardada correctamente');     
-      setTimeout(() => {
-        navigate('/nominas')
-    }, 2000);
-    } catch (error) {
-      showError(`Error al guardar la configuración: ${error}`);
-    } finally {
-      setSaving(false);
-    }
-}
+      setSaving(true);
+      try {
+        // ✅ OBTENER configuración existente para hacer merge
+        const configuracionExistente = getSalarioPorAño(userProfile, añoSeleccionado) || {};
+        const configuracionActualizada = {
+          nivelSalarial: formData.nivelSalarial,
+          sueldoBase: parseFloat(formData.sueldoBase),
+          tieneTrienios: formData.tieneTrienios,
+          valorTrienio: formData.tieneTrienios ? parseFloat(formData.valorTrienio) || 0 : 0,
+          tieneOtrosComplementos: formData.tieneOtrosComplementos,
+          otroComplemento1: formData.tieneOtrosComplementos ? {
+            concepto: formData.otroComplemento1.concepto,
+            importe: parseFloat(formData.otroComplemento1.importe) || 0
+          } : { concepto: '', importe: 0 },
+          otroComplemento2: formData.tieneOtrosComplementos ? {
+            concepto: formData.otroComplemento2.concepto,
+            importe: parseFloat(formData.otroComplemento2.importe) || 0
+          } : { concepto: '', importe: 0 },
+          pagaExtra: parseFloat(formData.pagaExtra) || 0,
+        };
+        // ✅ MERGE: Combinar datos existentes + nuevos datos
+        const datosCompletos = {
+          ...configuracionExistente, // Mantener tarifas de horas extra
+          ...configuracionActualizada, // Sobrescribir/añadir datos de nómina
+          updatedAt: new Date()
+        };
+        // ✅ Guardar en la nueva estructura
+        await guardarConfiguracionSalarialAño(user.email, añoSeleccionado, datosCompletos);
+
+        const mensaje = modoCreacion 
+          ? `Configuración de ${añoSeleccionado} creada correctamente`
+          : `Configuración de ${añoSeleccionado} actualizada correctamente`;
+        
+        showSuccess(mensaje);
+
+        setTimeout(() => {
+          navigate('/nominas');
+        }, 2000);
+
+      } catch (error) {
+        showError(`Error al guardar la configuración: ${error}`);
+      } finally {
+        setSaving(false);
+      }
+    };
+
 
   const nivelOptions = nivelesSalariales?.niveles ? Object.keys(nivelesSalariales.niveles) : [];
 
@@ -257,7 +285,7 @@ const ConfigurarDatosSalariales = () => {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Año {new Date().getFullYear()}
+              Año {añoSeleccionado}
             </Typography>
           </Box>
 
@@ -284,6 +312,68 @@ const ConfigurarDatosSalariales = () => {
               </Box>
             ) : (
               <Grid container spacing={4}>
+                {/* Selector de año */}
+                <Grid size={{ xs: 12 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <CalendarIcon sx={{ color: 'purpura.main', fontSize: 30 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: 'purpura.main' }}>
+                          Seleccionar Año
+                        </Typography>
+                        
+                        {modoCreacion && (
+                          <Chip 
+                            label="Nuevo año" 
+                            size="small" 
+                            color="success"
+                            icon={<AddIcon />}
+                          />
+                        )}
+                      </Box>
+
+                      <FormControl fullWidth>
+                        <InputLabel>Año de configuración</InputLabel>
+                        <Select
+                          value={añoSeleccionado}
+                          onChange={(e) => setAñoSeleccionado(e.target.value)}
+                          label="Año de configuración"
+                          sx={{
+                            bgcolor: 'white',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'purpura.main'
+                            }
+                          }}
+                        >
+                          {añosDisponibles.map((año) => (
+                            <MenuItem key={año} value={año}>
+                              {año}
+                              {año === new Date().getFullYear() && (
+                                <Chip label="Actual" size="small" sx={{ ml: 1 }} color="primary" />
+                              )}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      {modoCreacion && (
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                          No existe configuración para {añoSeleccionado}. Se creará al guardar.
+                        </Alert>
+                      )}
+                </Grid>
+                {/* ✅ Alert si no hay niveles salariales para el año */}
+                {(!nivelesSalariales?.niveles || Object.keys(nivelesSalariales.niveles).length === 0) && (
+                  <Grid size={{ xs: 12 }}>
+                    <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        No hay niveles salariales configurados para el año {añoSeleccionado}
+                      </Typography>
+                      <Typography variant="caption">
+                        Contacta con el administrador para que configure los niveles salariales de este año
+                      </Typography>
+                    </Alert>
+                  </Grid>
+                )}
+
                 {/* ✅ SECCIÓN: Sueldo Base */}
                 <Grid size={{ xs: 12 }}>
                   <Typography sx={{mb:2}} variant="h6" color="purpura.main" fontWeight="600" gutterBottom>

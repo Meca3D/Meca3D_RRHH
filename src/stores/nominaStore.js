@@ -1,6 +1,6 @@
 // stores/nominaStore.js
 import { create } from 'zustand';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, query, where, getDoc, getDocs, setDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { convertirHorasMinutosADecimal } from '../utils/nominaUtils'
 import { useAuthStore } from './authStore';
@@ -8,7 +8,6 @@ import { useAuthStore } from './authStore';
 export const useNominaStore = create((set, get) => {
   let unsubscribeNiveles = null;
   let unsubscribeHorasExtra = null;
-  let unsubscribeConfiguracion = null;
   let unsubscribeNominas = null
 
   return {
@@ -19,9 +18,7 @@ export const useNominaStore = create((set, get) => {
     error: null,
     initialized: false,
     currentYear: new Date().getFullYear(),
-    configuracionNomina: null,
     nominasGuardadas: [],
-    loadingConfiguracion: false,
 
     loadNivelesSalariales: (año = null) => {
       const state = get();
@@ -95,22 +92,42 @@ export const useNominaStore = create((set, get) => {
       }
 
       set({ loading: true });
-
       const docRef = doc(db, 'NIVELES_SALARIALES', año.toString());
-
+      
       unsubscribeNiveles = onSnapshot(
         docRef,
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            set({ nivelesSalariales: data.niveles || {}, loading: false });
+            // ✅ SOLUCIÓN: Guardar con la estructura completa
+            set({ 
+              nivelesSalariales: {
+                niveles: data.niveles || {},
+                año: parseInt(año)
+              }, 
+              loading: false 
+            });
           } else {
-            set({ nivelesSalariales: {}, loading: false });
+            // ✅ Si no existe, devolver estructura vacía
+            set({ 
+              nivelesSalariales: {
+                niveles: {},
+                año: parseInt(año)
+              }, 
+              loading: false 
+            });
           }
         },
         (error) => {
           console.error('Error cargando niveles salariales:', error);
-          set({ nivelesSalariales: {}, loading: false, error: error.message });
+          set({ 
+            nivelesSalariales: {
+              niveles: {},
+              año: parseInt(año)
+            }, 
+            loading: false, 
+            error: error.message 
+          });
         }
       );
 
@@ -121,6 +138,7 @@ export const useNominaStore = create((set, get) => {
         }
       };
     },
+
 
     // Obtener años disponibles con niveles salariales
     obtenerAñosConNiveles: async () => {
@@ -283,22 +301,6 @@ export const useNominaStore = create((set, get) => {
       };
     },
 
-    updateConfiguracionNomina: async (userEmail, configuracion) => {
-      try {
-        set({ loadingConfiguracion: true });
-        await updateDoc(doc(db, 'USUARIOS', userEmail), {
-          configuracionNomina: {
-            ...configuracion,
-            updatedAt: new Date().toISOString()
-          }
-        });
-        // onSnapshot se encarga del resto
-      } catch (error) {
-        set({ error: error.message, loadingConfiguracion: false });
-        throw error;
-      }
-    },
-
     // ✅ NUEVO: Cleanup all listeners
 cleanup: () => {
 
@@ -310,10 +312,6 @@ cleanup: () => {
         unsubscribeHorasExtra();
         unsubscribeHorasExtra = null;
       }
-      if (unsubscribeConfiguracion) {
-        unsubscribeConfiguracion();
-        unsubscribeConfiguracion = null;
-      }
       if (unsubscribeNominas) {
         unsubscribeNominas();
         unsubscribeNominas = null;
@@ -322,12 +320,10 @@ cleanup: () => {
       set({
         nivelesSalariales: {},
         horasExtra: [],
-        configuracionNomina: null,
         nominasGuardadas: [],
         loading: false,
         error: null,
         initialized: false,
-        loadingConfiguracion: false
       });
     },
 
@@ -394,51 +390,73 @@ cleanup: () => {
       const horasDecimales = convertirHorasMinutosADecimal(horas, minutos);
       return horasDecimales * (parseFloat(tarifa) || 0);
     },
-  loadConfiguracionUsuario: (userEmail) => {
-      const { isAuthenticated, user } = useAuthStore.getState();
-      if (!isAuthenticated || !user || user.email !== userEmail) {
-        if (unsubscribeConfiguracion) {
-          unsubscribeConfiguracion();
-          unsubscribeConfiguracion = null;
-        }
-        set({ configuracionNomina: null, loadingConfiguracion: false, error: "Sin permisos para acceder a configuración" });
-        return () => {};
+
+    // Obtener datos salariales de un año específico
+    getSalarioPorAño: (userProfile, año) => {
+      if (!userProfile?.salario?.[año]) {
+        return null;
       }
+      return userProfile.salario[año];
+    },
 
-      if (unsubscribeConfiguracion) {
-        return () => {};
+    // Obtener lista de años disponibles para salario
+    getAñosDisponiblesSalario: (userProfile) => {
+      const añoActual = new Date().getFullYear();
+      const años = new Set();
+      
+      // Añadir rango: 5 años atrás, actual, 1 adelante
+      for (let i = añoActual - 5; i <= añoActual + 1; i++) {
+        años.add(i);
       }
+      
+      // Añadir años que tengan configuración existente
+      if (userProfile?.salario) {
+        Object.keys(userProfile.salario)
+          .filter(key => !isNaN(key))
+          .forEach(año => años.add(Number(año)));
+      }
+      
+      // Convertir a array y ordenar descendente
+      return Array.from(años).sort((a, b) => b - a);
+    },
 
-      set({ loadingConfiguracion: true });
+    // Verificar si existe configuración salarial para un año
+    existeConfiguracionSalarialAño: (userProfile, año) => {
+      return userProfile?.salario?.[año] !== undefined;
+    },
 
-      unsubscribeConfiguracion = onSnapshot(
-        doc(db, 'USUARIOS', userEmail),
-        (docSnap) => {
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            set({ 
-              configuracionNomina: userData.configuracionNomina || null,
-              loadingConfiguracion: false
-            });
-          } else {
-            set({ 
-              configuracionNomina: null,
-              loadingConfiguracion: false
-            });
-          }
-        },
-        (error) => {
-          console.error('Error en listener configuración:', error);
-          set({ error: error.message, loadingConfiguracion: false });
+    // Guardar/actualizar configuración salarial de un año
+    guardarConfiguracionSalarialAño: async (userEmail, año, datos) => {
+      try {
+        await updateDoc(doc(db, 'USUARIOS', userEmail), {
+          [`salario.${año}`]: {
+            ...datos,
+            updatedAt: new Date()
+          },
+          updatedAt: new Date()
+        });
+      } catch (error) {
+        console.error('Error guardando configuración salarial año:', error);
+        throw error;
+      }
+    },
+
+    // Eliminar configuración salarial de un año
+    eliminarConfiguracionSalarialAño: async (userEmail, año) => {
+      try {
+        const añoActual = new Date().getFullYear();
+        if (año === añoActual) {
+          throw new Error('No se puede eliminar la configuración del año actual');
         }
-      );
-
-      return () => {
-        if (unsubscribeConfiguracion) {
-          unsubscribeConfiguracion();
-          unsubscribeConfiguracion = null;
-        }
-      };
+        
+        await updateDoc(doc(db, 'USUARIOS', userEmail), {
+          [`salario.${año}`]: deleteField(),
+          updatedAt: new Date()
+        });
+      } catch (error) {
+        console.error('Error eliminando configuración salarial año:', error);
+        throw error;
+      }
     },
 
 
@@ -487,7 +505,11 @@ const { isAuthenticated, user } = useAuthStore.getState();
       };
     },
 
-    calcularNominaCompleta: (configuracion, numeroTrienios, horasExtra = [], extra,deduccion) => {
+    calcularNominaCompleta: (configuracion, numeroTrienios, horasExtra = [], extra,deduccion, año = null) => {
+  // Si se pasa un año y userProfile, intentar obtener configuración de ese año
+  if (año && !configuracion) {
+    const { userProfile } = useAuthStore.getState();
+    configuracion = get().getSalarioPorAño(userProfile, año);
       if (!configuracion) {
         return {
           sueldoBase: 0,
@@ -502,7 +524,7 @@ const { isAuthenticated, user } = useAuthStore.getState();
           totalNomina: 0
         };
       }
-
+    }
       const totalHorasExtra = get().calcularTotalHorasExtra(horasExtra);
       const totalTrienios = (numeroTrienios || 0) * (configuracion.valorTrienio || 0);
 
@@ -683,6 +705,7 @@ getEstadisticasPeriodoNomina: (nominas) => {
         return { encontrada: false };
       }
     },
+    
 
         checkDuplicateNomina: async (userEmail, mes, año, tipoNomina, tipoPagaExtra = null) => {
       try {
@@ -719,6 +742,6 @@ getEstadisticasPeriodoNomina: (nominas) => {
     },
 
 
-
+  
   };
 });

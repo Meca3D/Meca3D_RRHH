@@ -110,7 +110,7 @@ const HorasExtras = () => {
             <Typography sx={{ml:-5}} variant="h4"  textAlign="center" fontWeight="bold" gutterBottom>
               Horas Extras
             </Typography>
-            {!userProfile.tarifasHorasExtra ? (
+            {!userProfile.salario?.[new Date().getFullYear()]?.normal ? (
                 <Chip
                   label="Falta Configuracion"
                   sx={{

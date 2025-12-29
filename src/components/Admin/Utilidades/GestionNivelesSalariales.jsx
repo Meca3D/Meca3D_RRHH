@@ -77,10 +77,12 @@ const GestionNivelesSalariales = () => {
 
   // Convertir niveles a array ordenado
   const nivelesArray = useMemo(() => {
-    return Object.entries(nivelesSalariales || {})
+    const niveles = nivelesSalariales?.niveles || {};
+    return Object.entries(niveles)
       .map(([num, datos]) => ({ numero: parseInt(num), ...datos }))
       .sort((a, b) => a.numero - b.numero);
   }, [nivelesSalariales]);
+
 
   // Generar opciones de años
   const añosParaSelector = () => {
@@ -443,7 +445,7 @@ const GestionNivelesSalariales = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{display:'flex', justifyContent:'space-between', p:2}}>
           <Button
             onClick={() => setDialogEditar(false)}
             variant="outlined"
@@ -500,7 +502,7 @@ const GestionNivelesSalariales = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions  sx={{display:'flex', justifyContent:'space-between', p:2}}>
           <Button
             onClick={() => setDialogCopiar(false)}
             variant="outlined"
@@ -574,7 +576,7 @@ const GestionNivelesSalariales = () => {
             </Alert>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{display:'flex', justifyContent:'space-between', p:2}}>
           <Button
             onClick={() => setDialogIncremento(false)}
             variant="outlined"

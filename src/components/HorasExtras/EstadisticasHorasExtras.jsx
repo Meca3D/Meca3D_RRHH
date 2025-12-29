@@ -185,12 +185,12 @@ const EstadisticasHorasExtras = () => {
       break;
     }
       case 'anoActual':
-        inicio = new Date(now.getFullYear(), 0, 1);
-        fin = new Date(now.getFullYear(), 11, 31);
+        inicio = new Date(now.getFullYear(), 0, 1, 10, 0, 0);
+        fin = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
         break;
       case 'anoAnterior':
-        inicio = new Date(now.getFullYear() - 1, 0, 1);
-        fin = new Date(now.getFullYear() - 1, 11, 31);
+        inicio = new Date(now.getFullYear() - 1, 0, 1, 10, 0, 0);
+        fin = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
         break;
       default:
         return { fechaInicio, fechaFin };
@@ -555,9 +555,9 @@ const EstadisticasHorasExtras = () => {
                           data={datosGraficos.evolucionMensual}
                           margin={{
                             top: 20,
-                            right: -10,
+                            right: -15,
                             bottom: -10,
-                            left: -10,
+                            left: -20,
                           }}
                         >
                           <CartesianGrid strokeDasharray="3 3" />

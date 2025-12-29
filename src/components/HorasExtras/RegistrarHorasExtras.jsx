@@ -1,5 +1,5 @@
 // components/HorasExtras/RegistrarHorasExtras.jsx - CORREGIDO
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Grid, Card, CardContent, TextField, Button,
@@ -9,7 +9,8 @@ import {
   AlarmAddOutlined as AddIcon,
   Save as SaveIcon,
   ArrowBackIosNew as ArrowBackIosNewIcon,
-  AccessTime as TimeIcon
+  AccessTime as TimeIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
 import { useHorasExtraStore } from '../../stores/horasExtraStore';
@@ -19,7 +20,7 @@ import { tiposHorasExtra } from '../../utils/nominaUtils';
 const RegistrarHorasExtras = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useAuthStore();
-  const { addHorasExtra, calcularImporteHorasExtra, loading } = useHorasExtraStore();
+  const { addHorasExtra, calcularImporteHorasExtra, getTarifasPorAño,loading } = useHorasExtraStore();
   const { showSuccess, showError } = useUIStore();
 
   const [formData, setFormData] = useState({
@@ -27,15 +28,40 @@ const RegistrarHorasExtras = () => {
     tipo: 'normal',
     horas: '',
     minutos: '',
-    tarifa: userProfile?.tarifasHorasExtra?.normal || 15
+    tarifa: 0
   });
 
   const [saving, setSaving] = useState(false);
+  const [sinConfiguracion, setSinConfiguracion] = useState(false);
+
+  useEffect(() => {
+    if (!formData.fecha || !userProfile) return;
+
+    const añoSeleccionado = new Date(formData.fecha).getFullYear();
+    const configAño = getTarifasPorAño(userProfile, añoSeleccionado);
+
+    if (configAño && configAño[formData.tipo] !== undefined) {
+      // ✅ Hay configuración para ese año
+      setSinConfiguracion(false);
+      setFormData(prev => ({
+        ...prev,
+        tarifa: configAño[formData.tipo]
+      }));
+    } else {
+      // ❌ No hay configuración para ese año
+      setSinConfiguracion(true);
+      setFormData(prev => ({
+        ...prev,
+        tarifa: 0
+      }));
+    }
+  }, [formData.fecha, formData.tipo, userProfile]);
+
 
   const importeCalculado = calcularImporteHorasExtra(
     Number(formData.horas), 
     Number(formData.minutos), 
-    Number(formData.tarifa)
+    Number(formData.tarifa)||0
   );
 
   const handleSubmit = async (e) => {
@@ -56,6 +82,11 @@ const RegistrarHorasExtras = () => {
       return;
     }
 
+      if (Number(formData.tarifa) <= 0) {
+      showError('La tarifa debe ser mayor a 0');
+      return;
+    }
+
     setSaving(true);
     try {
       const horasExtraData = {
@@ -64,7 +95,7 @@ const RegistrarHorasExtras = () => {
         tipo: formData.tipo,
         horas: parseInt(formData.horas) || 0,
         minutos: parseInt(formData.minutos) || 0,
-        tarifa: parseFloat(formData.tarifa),
+        tarifa: parseFloat(formData.tarifa)||0,
         importe: importeCalculado
       };
 
@@ -82,15 +113,25 @@ const RegistrarHorasExtras = () => {
     }
   };
 
-  const handleTipoChange = (tipo) => {
-    const tarifas = userProfile?.tarifasHorasExtra || {};
-    const tarifa = tarifas[tipo] || 15;
+ const handleTipoChange = (tipo) => {
+    const añoSeleccionado = new Date(formData.fecha).getFullYear();
+    const configAño = getTarifasPorAño(userProfile, añoSeleccionado);
     
-    setFormData({
-      ...formData,
-      tipo,
-      tarifa
-    });
+    if (configAño && configAño[tipo] !== undefined) {
+      setSinConfiguracion(false);
+      setFormData({
+        ...formData,
+        tipo,
+        tarifa: configAño[tipo]
+      });
+    } else {
+      setSinConfiguracion(true);
+      setFormData({
+        ...formData,
+        tipo,
+        tarifa: 0
+      });
+    }
   };
 
   const formatearTiempoPreview = (horas, minutos) => {
@@ -102,7 +143,7 @@ const RegistrarHorasExtras = () => {
     if (m === 0) return `${h}h`;
     return `${h}h ${m}min`;
   };
-
+  const añoFechaSeleccionada = new Date(formData.fecha).getFullYear();
   return (
     <>
       {/* ✅ AppBar como OrderList con gradiente naranja */}
@@ -180,6 +221,23 @@ const RegistrarHorasExtras = () => {
           <CardContent sx={{ p: 4 }}>
             <Box component="form" onSubmit={handleSubmit}>
               <Grid container spacing={3}>
+                {/* Alert de sin configuración */}
+                {sinConfiguracion && (
+                  <Grid size={{xs:12}}>
+                    <Alert 
+                      severity="warning" 
+                      icon={<WarningIcon />}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <Typography variant="body1" textAlign="center" sx={{ fontWeight: 600 }}>
+                        No hay configuración salarial para el año {añoFechaSeleccionada}
+                      </Typography>
+                      <Typography variant="subtitle2" textAlign="center" sx={{mt:1}}>
+                        Puedes introducir la tarifa manualmente o configurarla desde el menú de configuración
+                      </Typography>
+                    </Alert>
+                  </Grid>
+                )}
                 {/* Fecha */}
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
@@ -326,9 +384,13 @@ const RegistrarHorasExtras = () => {
                   <TextField
                     type="number"
                     label="Precio / Hora Extra (€)"
-                    value={formData.tarifa}
+                    value={formData.tarifa||''}
                     onWheel={(e) => e.target.blur()}
                     onChange={(e) => setFormData({ ...formData, tarifa: e.target.value })}
+                    helperText={sinConfiguracion 
+                      ? <Typography sx={{color:'rojo.main', fontSize:'0.75rem'}}>No hay configuración para este año</Typography>
+                      : <Typography sx={{fontSize:'0.75rem'}}>Tarifa automática según configuración</Typography>
+                    }
                     slotProps={{
                       htmlInput:{
                          min: 0, step: 0.01 
@@ -369,7 +431,7 @@ const RegistrarHorasExtras = () => {
                       Tiempo: {formatearTiempoPreview(formData.horas, formData.minutos)}
                     </Typography>
                     <Typography textAlign="center" variant="body1">
-                      Precio: {formData.tarifa}€/hora
+                      Precio: {formData.tarifa||0} €/hora
                     </Typography>
                   </Box>
                   <Box textAlign="right">
@@ -388,7 +450,7 @@ const RegistrarHorasExtras = () => {
                 type="submit" 
                 variant="contained"
                 startIcon={<SaveIcon />}
-                disabled={saving || loading}
+                disabled={saving || loading || (Number(formData.horas) === 0 && Number(formData.minutos) === 0)|| Number(formData.tarifa||0) <=0}
                 fullWidth
                 sx={{
                   py: 2,

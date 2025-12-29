@@ -38,6 +38,7 @@ const GestionarHorasExtras = () => {
     calcularTotalHorasDecimales,
     calcularTotalHorasExtra,
     calcularImporteHorasExtra,
+    getTarifasPorAño,
     loading 
   } = useHorasExtraStore();
   const { obtenerPeriodoHorasExtras } = useNominaStore();
@@ -53,6 +54,7 @@ const GestionarHorasExtras = () => {
   const [editFormData, setEditFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [menuState, setMenuState] = useState({ anchorEl: null, horaExtra: null });
+  const [sinConfiguracion, setSinConfiguracion] = useState(false);
 
 
   // ✅ Cargar datos cuando cambien los filtros
@@ -67,12 +69,6 @@ const GestionarHorasExtras = () => {
 
   // ✅ Establecer período por defecto (mes actual)
   useEffect(() => {
-    //const now = new Date();
-    //const firstDay = new Date(now.getFullYear(), now.getMonth(), -7).toISOString().split('T')[0];
-    //const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, -7).toISOString().split('T')[0];
-    
-    //setFechaInicio(firstDay);
-    //setFechaFin(lastDay);
 
      const setDefaultPeriod = async () => {
       const now = new Date();
@@ -101,6 +97,20 @@ const GestionarHorasExtras = () => {
 
     setDefaultPeriod();
   }, []);
+
+      // Detectar si hay configuración al abrir modal de edición
+    useEffect(() => {
+      if (editDialog.open && editFormData.fecha) {
+        const añoSeleccionado = new Date(editFormData.fecha).getFullYear();
+        const configAño = getTarifasPorAño(userProfile, añoSeleccionado);
+        
+        if (configAño && configAño[editFormData.tipo] !== undefined) {
+          setSinConfiguracion(false);
+        } else {
+          setSinConfiguracion(true);
+        }
+      }
+    }, [editDialog.open, editFormData.fecha, editFormData.tipo, userProfile]);
 
   const handleEdit = (horaExtra) => {
     setEditFormData({
@@ -175,17 +185,27 @@ const GestionarHorasExtras = () => {
     };
 
 
-  // ✅ Actualizar tarifa según tipo en modal de edición
-  const handleTipoChange = (tipo) => {
-    const tarifas = userProfile?.tarifasHorasExtra || {};
-    const tarifa = tarifas[tipo] || 15;
-    
-    setEditFormData({
-      ...editFormData,
-      tipo,
-      tarifa
-    });
-  };
+    // ✅ Actualizar tarifa según tipo en modal de edición
+    const handleTipoChange = (tipo) => {
+      const añoSeleccionado = new Date(editFormData.fecha).getFullYear();
+      const configAño = getTarifasPorAño(userProfile, añoSeleccionado);
+      
+      if (configAño && configAño[tipo] !== undefined) {
+        setSinConfiguracion(false);
+        setEditFormData({
+          ...editFormData,
+          tipo,
+          tarifa: configAño[tipo]
+        });
+      } else {
+        setSinConfiguracion(true);
+        setEditFormData({
+          ...editFormData,
+          tipo,
+          tarifa: 0
+        });
+      }
+    };
 
   const getTipoInfo = (tipo) => {
     return tiposHorasExtra.find(t => t.value === tipo) || { label: tipo, color: '#666' };
@@ -446,6 +466,20 @@ const GestionarHorasExtras = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* ✅ AÑADIR - Alert de sin configuración */}
+            {sinConfiguracion && (
+              <Alert 
+                severity="warning" 
+                sx={{ mb: 2, borderRadius: 2 }}
+              >
+                <Typography variant="body1" textAlign="center" sx={{ fontWeight: 600, mb: 1 }}>
+                  No hay configuración salarial para el año {new Date(editFormData.fecha).getFullYear()}
+                </Typography>
+                <Typography variant="subtitle2" textAlign="center">
+                  Puedes introducir la tarifa manualmente o configurarla desde el menú de configuración
+                </Typography>
+              </Alert>
+            )}
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 type="date"
@@ -506,7 +540,7 @@ const GestionarHorasExtras = () => {
               <TextField
                 type="number"
                 label="Precio (€/hora)"
-                value={editFormData.tarifa || 0}
+                value={editFormData.tarifa || ''}
                 onChange={(e) => setEditFormData({ ...editFormData, tarifa: parseFloat(e.target.value) || 0 })}
                 slotProps={{ 
                   htmlInput:{  
@@ -514,6 +548,10 @@ const GestionarHorasExtras = () => {
                  }
                 }}
                 fullWidth
+                helperText={sinConfiguracion 
+                  ? <Typography component="span"sx={{color:'rojo.main', fontSize:'0.75rem'}}>No hay configuración para este año</Typography>
+                  : <Typography component="span"sx={{fontSize:'0.75rem'}}>Tarifa automática según configuración</Typography>
+                }
               />
             </Grid>
           </Grid>
@@ -529,7 +567,7 @@ const GestionarHorasExtras = () => {
             variant="outlined"
             color='warning'
             
-            sx={{bgcolor:'rojo.fondo'}}
+            sx={{bgcolor:'rojo.fondo', px:2, py:1.5, textTransform:'none', fontSize:'1.1rem'}}
             onClick={() => setEditDialog({ open: false, horaExtra: null })}
             startIcon={<CancelIcon />}
           >
@@ -538,9 +576,13 @@ const GestionarHorasExtras = () => {
           <Button 
             variant="contained" 
             onClick={handleSaveEdit}
-            disabled={saving}
+            disabled={saving || (Number(editFormData.horas) === 0 && Number(editFormData.minutos) === 0)|| Number(editFormData.tarifa||0) <=0}
             startIcon={<SaveIcon />}
             sx={{
+              px:2,
+              py:1.5,
+              textTransform:'none',
+              fontSize:'1.1rem',
               background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
               '&:hover': {
                 background: 'linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%)',
@@ -554,6 +596,11 @@ const GestionarHorasExtras = () => {
 
       {/* Modal de confirmación de eliminación */}
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, horaExtra: null })}>
+        <DialogTitle  sx={{textAlign:"center", bgcolor:"rojo.main", color:'white', mb:2}}>
+          <Typography  variant="span" fontWeight="bold" fontSize='1.3rem'>
+            Confirmar Eliminación
+          </Typography>
+        </DialogTitle>
         <DialogContent>
           <Box  textAlign="center">
           <Typography variant='body1'>
@@ -577,12 +624,17 @@ const GestionarHorasExtras = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{display:'flex', justifyContent:'space-between'}}>
+        <DialogActions sx={{display:'flex', justifyContent:'space-between', px:2, pb:2}}>
           
-          <Button variant='outlined' sx={{bgcolor:'azul.fondo'}} onClick={() => setDeleteDialog({ open: false, horaExtra: null })}>
-            Cancelar
+          <Button variant='outlined' sx={{bgcolor:'azul.fondo', px:3, py:1.5, textTransform:'none', fontSize:'1.1rem'}} onClick={() => setDeleteDialog({ open: false, horaExtra: null })}>
+            Volver
           </Button>
-          <Button onClick={handleDelete} color="error" variant="contained">
+          <Button 
+            onClick={handleDelete} 
+            color="error" 
+            variant="contained" 
+            startIcon={<DeleteIcon />}
+            sx={{px:3, py:1.5, textTransform:'none', fontSize:'1.1rem'}}>
             Eliminar
           </Button>
         </DialogActions>

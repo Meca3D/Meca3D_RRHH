@@ -623,9 +623,9 @@ const handleDeleteClick = (nomina, e) => {
         aria-describedby="alert-dialog-description"
 
       >
-        <DialogTitle color='rojo.main' textAlign='center' id="alert-dialog-title"><strong>{"Confirmar Borrado"}</strong></DialogTitle>
+        <DialogTitle bgcolor='rojo.main' color='white' textAlign='center' id="alert-dialog-title"><strong>{"Confirmar Borrado"}</strong></DialogTitle>
         <DialogContent>
-          <Typography textAlign='center' id="alert-dialog-description">
+          <Typography textAlign='center' id="alert-dialog-description" sx={{mt:2}}>
             ¿Estás seguro de que quieres  <Box component="span" sx={{ color: 'rojo.main', fontWeight: 'bold' }}>eliminar</Box> la nómina de <strong>{nominaToDelete?.mes} {nominaToDelete?.año}</strong>?
           </Typography>
         </DialogContent>

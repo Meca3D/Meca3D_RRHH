@@ -185,8 +185,16 @@ const CalendarioAusencias = () => {
       
       if (filtroEmpleado !== 'Todos' && a.email !== filtroEmpleado) return false;
       if (filtroPuesto !== 'Todos' && a.puesto !== filtroPuesto) return false;
-      return true;
-    });
+      return true;                 
+    }).sort((a, b) => {
+        const ordenTipo = { vacaciones: 0, baja: 1, permiso: 2 };
+        const ta = ordenTipo[a.tipo] ?? 99;
+        const tb = ordenTipo[b.tipo] ?? 99;
+        if (ta !== tb) return ta - tb;
+
+        return (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" });
+      });
+    
   };
 
   const getColorDia = (fecha, fechaStr) => {

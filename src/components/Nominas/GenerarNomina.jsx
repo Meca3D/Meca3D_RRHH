@@ -41,11 +41,9 @@ const GenerarNomina = () => {
   const { id: nominaId } = useParams()
   const { user, userProfile } = useAuthStore();
   const {
-    loadConfiguracionUsuario,
-    configuracionNomina,
+    getSalarioPorAño,
     calcularNominaCompleta,
     guardarNomina,
-    loadingConfiguracion,
     actualizarNomina,
     getNominaById,
     calcularAñosServicio,
@@ -89,21 +87,13 @@ const GenerarNomina = () => {
   const [nominaCalculada, setNominaCalculada] = useState(null);
   const [isEditing, setIsEditing] = useState(false); 
   const [horasExtraPeriodo,setHorasExtraPeriodo]= useState([])
+  const configuracionAñoNomina = getSalarioPorAño(userProfile, añoNomina);
 
   useEffect(() => {
-    if (user?.email) {
-      const unsubscribe = loadConfiguracionUsuario(user.email);
-      return () => {
-        if (unsubscribe) unsubscribe();
-      };
+    if (configuracionAñoNomina?.pagaExtra) {
+      setImporte(configuracionAñoNomina.pagaExtra);
     }
-  }, [user?.email, loadConfiguracionUsuario]);
-
-  useEffect(() => {
-    if (configuracionNomina?.pagaExtra) {
-      setImporte(configuracionNomina.pagaExtra);
-    }
-  }, [configuracionNomina]);
+  }, [configuracionAñoNomina]);
 
    useEffect(() => {
        const setDefaultPeriod = async () => {
@@ -135,7 +125,7 @@ const GenerarNomina = () => {
     }, []);
 
   useEffect(() => {
-       if (nominaId && user?.email && !loadingConfiguracion && configuracionNomina) {
+       if (nominaId && user?.email && configuracionAñoNomina) {
       setIsEditing(true);
       const loadNominaData = async () => {
         const nomina = await getNominaById(nominaId);
@@ -143,7 +133,11 @@ const GenerarNomina = () => {
           setSelectedDate(dayjs().month(obtenerNumeroMes(nomina.mes)-1).year(nomina.año));
           setFechaInicio(nomina.periodoHorasExtra?.fechaInicio);
           setFechaFin(nomina.periodoHorasExtra?.fechaFin);
-          setNumeroTrienios(Math.floor(nomina.trienios/configuracionNomina.valorTrienio));
+        // Obtener configuración del año de la nómina que se está editando
+          const configAñoEdicion = getSalarioPorAño(userProfile, nomina.año);
+          if (configAñoEdicion?.valorTrienio) {
+            setNumeroTrienios(Math.floor(nomina.trienios / configAñoEdicion.valorTrienio));
+          }
           setTipoNomina(nomina.tipo);
           setAñoNomina(nomina.año)
           setMesNomina(nomina.mes)
@@ -186,7 +180,7 @@ const GenerarNomina = () => {
       setExtraCantidad(0);
       setTipoNomina('mensual');
   }
-  }, [nominaId, user?.email, getNominaById, navigate,loadingConfiguracion,loadConfiguracionUsuario]);
+  }, [nominaId, user?.email, getNominaById, navigate]);
 
     useEffect(() => {
       if (!isEditing) {
@@ -207,7 +201,7 @@ const GenerarNomina = () => {
     }, [horasExtra]);
 
     useEffect(() => {
-      if (configuracionNomina?.tieneTrienios && userProfile?.fechaIngreso) {
+      if (configuracionAñoNomina?.tieneTrienios && userProfile?.fechaIngreso) {
         try {
           const fechaNomina = dayjs(selectedDate).startOf('month').format('YYYY-MM-DD');
           const añosServicio = calcularAñosServicio(userProfile?.fechaIngreso, fechaNomina);
@@ -218,17 +212,18 @@ const GenerarNomina = () => {
           setNumeroTrienios(0);
         }
       }
-}, [configuracionNomina, user?.fechaIngreso, selectedDate]);
+}, [configuracionAñoNomina, user?.fechaIngreso, selectedDate]);
 
   useEffect(() => {
-    if (configuracionNomina && fechaInicio && fechaFin && !loadingHorasExtra) {
+    if (configuracionAñoNomina && fechaInicio && fechaFin && !loadingHorasExtra) {
       
       const calculo = calcularNominaCompleta(
-        configuracionNomina,
+        configuracionAñoNomina,
         numeroTrienios,
         horasExtraPeriodo,
         tieneExtra? Number(extraCantidad):0, 
-        tieneDeduccion?Number(deduccionCantidad):0
+        tieneDeduccion?Number(deduccionCantidad):0,
+        añoNomina
       );
 
       setNominaCalculada({
@@ -237,13 +232,13 @@ const GenerarNomina = () => {
         mes: capitalizeFirstLetter(mesNomina),
         tipo: "mensual",
         periodoHorasExtra: { fechaInicio, fechaFin },
-        sueldoBase: calculo.sueldoBase,
-        trienios: calculo.totalTrienios,
+        sueldoBase: calculo?.sueldoBase,
+        trienios: calculo?.totalTrienios,
         horasExtra: {
-          total: calculo.totalHorasExtra,
+          total: calculo?.totalHorasExtra,
           desglose: horasExtraPeriodo
         },
-        otrosComplementos: calculo.otrosComplementos,
+        otrosComplementos: calculo?.otrosComplementos,
         deduccion: {
           concepto: tieneDeduccion ? deduccionConcepto : 'sin deducción',
           cantidad: tieneDeduccion ? Number(deduccionCantidad) : 0,
@@ -254,13 +249,13 @@ const GenerarNomina = () => {
           cantidad: tieneExtra ? Number(extraCantidad) : 0,
         },
           
-        total: calculo.totalNomina
+        total: calculo?.totalNomina
      
       });
     } else {
       setNominaCalculada(null);
     }
-  }, [configuracionNomina, fechaInicio, fechaFin, horasExtraPeriodo, loadingHorasExtra, tieneDeduccion, deduccionCantidad, tieneExtra, extraCantidad, tipoNomina, selectedDate, calcularNominaCompleta, calcularTotalHorasExtra, getEstadisticasPeriodo, numeroTrienios]);
+  }, [configuracionAñoNomina, añoNomina, mesNomina, fechaInicio, fechaFin, horasExtraPeriodo, loadingHorasExtra, tieneDeduccion, deduccionConcepto, deduccionCantidad, tieneExtra, extraConcepto, extraCantidad, tipoNomina, selectedDate, calcularNominaCompleta, calcularTotalHorasExtra, getEstadisticasPeriodo, numeroTrienios]);
 
   // Guardar paga extra
   const handleGuardar = async () => {
@@ -269,15 +264,12 @@ const GenerarNomina = () => {
       return;
     }
     setSaving(true);
-
-    
-
     const nominaToSave = {
         empleadoEmail: user.email,
         año: Number(añoNomina),
         mes: tipoPaga === 'verano' ? 'P.E. Verano' : 'P.E. Navidad',
         tipo: "paga extra",
-        importePagaExtra: Number(configuracionNomina.pagaExtra),
+        importePagaExtra: Number(configuracionAñoNomina.pagaExtra),
         sueldoBase: 0,
         trienios: 0,
         otrosComplementos: [],
@@ -285,8 +277,7 @@ const GenerarNomina = () => {
         deduccion: {
           concepto: deduccionConcepto,
           cantidad:  Number(deduccionCantidad),
-        },
-  
+        }, 
         extra: {
           concepto: 'sin complemento extra',
           cantidad: 0,
@@ -412,20 +403,25 @@ const GenerarNomina = () => {
       return tiposHorasExtra.find(t => t.value === tipo) || { label: tipo, color: '#666' };
     };
 
-  if (loadingConfiguracion) {
+  if (!userProfile) {
     return (
       <Container maxWidth="md" sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 64px)' }}>
         <CircularProgress sx={{ mb: 2 }} />
-        <Typography variant="h6" color="text.secondary">Cargando configuración de nómina...</Typography>
+        <Typography variant="h6" color="text.secondary">Cargando Perfil...</Typography>
       </Container>
     );
   }
 
-  if (!configuracionNomina) {
+  if (!configuracionAñoNomina) {
     return (
       <Container maxWidth="md" sx={{ mt: 8 }}>
         <Alert severity="warning">
-          No se encontró configuración de nómina para tu usuario. Por favor, configura tus datos de nómina.
+          <Typography variant="body1" textAlign="center" sx={{ fontWeight: 600, mb: 1 }}>
+          No hay configuración salarial para el año {añoNomina}
+          </Typography>
+          <Typography variant="body2" textAlign='center' sx={{ mb: 2 }}>
+            Para generar nóminas del año {añoNomina}, primero debes configurar tus datos salariales.
+          </Typography>
         </Alert>
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
           <Button variant="contained" onClick={() => navigate('/nominas/configurar')} startIcon={<ReceiptIcon />}>
@@ -697,7 +693,7 @@ const GenerarNomina = () => {
                         <Divider sx={{ bgcolor:'black', mt:4 }} />
 
                         {/* Trienios Dinámicos */}
-                        {configuracionNomina?.tieneTrienios && (
+                        {configuracionAñoNomina?.tieneTrienios && (
                             <Box sx={{display:'flex', flexDirection:'column',  mt:2}}>
                               <Typography textAlign="center" variant="h5" color={isEditing?"azul.main":"naranja.main"} fontWeight="bold">
                                 Trienios
@@ -759,7 +755,7 @@ const GenerarNomina = () => {
                                     textAlign: 'center',
                                     color: 'black',
                                 }}>
-                                {formatCurrency(configuracionNomina?.valorTrienio || 0)}
+                                {formatCurrency(configuracionAñoNomina?.valorTrienio || 0)}
                             </Typography>
                             <Typography 
                                 variant="caption" 
@@ -1136,12 +1132,18 @@ const GenerarNomina = () => {
             </Typography>
             )}
 
-            {loadingConfiguracion ? (
-              <Box textAlign="center" py={3} sx={{mt:1}}>
-                <CircularProgress />
-                <Typography sx={{ mt: 2 }}>Calculando nómina...</Typography>
-              </Box>
-            ) : nominaCalculada ? (
+            {!configuracionAñoNomina ? (
+            <Box textAlign="center" py={3} sx={{mt:1}}>
+              <Alert severity="warning">
+                <Typography>No hay configuración salarial para {añoNomina}</Typography>
+              </Alert>
+            </Box>
+          ) : loadingHorasExtra ? (
+            <Box textAlign="center" py={3} sx={{mt:1}}>
+              <CircularProgress />
+              <Typography sx={{ mt: 2 }}>Cargando horas extra...</Typography>
+            </Box>
+          ) : nominaCalculada ? (
               <Box  py={3} sx={{mt:-1 }}>              
                     <Box display="flex" justifyContent="space-between" p={1}>
                     <Typography><strong>Sueldo base:</strong></Typography> <Typography>{formatCurrency(nominaCalculada.sueldoBase)}</Typography>
@@ -1152,7 +1154,7 @@ const GenerarNomina = () => {
                     <Box display="flex" justifyContent="space-between" p={1}>
                       <Box display="flex" flexDirection="column">
                         <Typography><strong>Trienios:</strong></Typography>
-                        <Typography variant='body2' textAlign='center'>{numeroTrienios} x {configuracionNomina.valorTrienio}€</Typography>
+                        <Typography variant='body2' textAlign='center'>{numeroTrienios} x {configuracionAñoNomina.valorTrienio}€</Typography>
                       </Box>
                       <Box display="flex" flexDirection="column" justifyContent={'center'}>
                         <Typography>{formatCurrency(nominaCalculada.trienios)}</Typography>

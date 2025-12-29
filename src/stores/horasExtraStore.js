@@ -1,6 +1,6 @@
 // stores/horasExtraStore.js
 import { create } from 'zustand';
-import { where, query, orderBy, collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import { where, query, orderBy, collection, deleteField, onSnapshot, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { convertirHorasMinutosADecimal } from '../utils/nominaUtils';
 
@@ -238,6 +238,76 @@ export const useHorasExtraStore = create((set, get) => {
         promedioDiario: horasPeriodo.length > 0 ? totalHoras / horasPeriodo.length : 0
       };
     },
+
+    // Obtener tarifas de un año específico
+    getTarifasPorAño: (userProfile, año) => {
+      if (!userProfile?.salario?.[año]) {
+        return null;
+      }
+      return userProfile.salario[año];
+    },
+
+    // Obtener lista de años disponibles
+    getAñosDisponibles: (userProfile) => {
+      const añoActual = new Date().getFullYear();
+      const años = new Set();
+      
+      // Añadir rango: 5 años atrás, actual, 1 adelante
+      for (let i = añoActual - 5; i <= añoActual + 1; i++) {
+        años.add(i);
+      }
+      
+      // Añadir años que tengan configuración existente (por si hay más antiguos)
+      if (userProfile?.salario) {
+        Object.keys(userProfile.salario)
+          .filter(key => !isNaN(key))
+          .forEach(año => años.add(Number(año)));
+      }
+      
+      // Convertir a array y ordenar descendente
+      return Array.from(años).sort((a, b) => b - a);
+    },
+
+
+    // Verificar si existe configuración para un año
+    existeConfiguracionAño: (userProfile, año) => {
+      return userProfile?.salario?.[año] !== undefined;
+    },
+
+    // Guardar/actualizar configuración de un año
+    guardarConfiguracionAño: async (userEmail, año, datos) => {
+      try {
+        await updateDoc(doc(db, 'USUARIOS', userEmail), {
+          [`salario.${año}`]: {
+            ...datos,
+            updatedAt: new Date()
+          },
+          updatedAt: new Date()
+        });
+      } catch (error) {
+        console.error('Error guardando configuración año:', error);
+        throw error;
+      }
+    },
+
+    // Eliminar configuración de un año
+    eliminarConfiguracionAño: async (userEmail, año) => {
+      try {
+        const añoActual = new Date().getFullYear();
+        if (año === añoActual) {
+          throw new Error('No se puede eliminar la configuración del año actual');
+        }
+        
+        await updateDoc(doc(db, 'USUARIOS', userEmail), {
+          [`salario.${año}`]: deleteField(),
+          updatedAt: new Date()
+        });
+      } catch (error) {
+        console.error('Error eliminando configuración año:', error);
+        throw error;
+      }
+    },
+
 
     clearHorasExtra: () => {
       if (unsubscribeHorasExtra) {

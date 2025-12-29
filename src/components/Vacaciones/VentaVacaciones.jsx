@@ -33,7 +33,7 @@ const VentaVacaciones = () => {
     horasLibresRef.current = horasLibresReal;
   }
   const horasDisponiblesParaVender = saving ? horasLibresRef.current : horasLibresReal;
-  const tarifaHoraExtra = userProfile?.tarifasHorasExtra?.normal || null;
+  const tarifaHoraExtra = userProfile?.salario?.[new Date().getFullYear()]?.normal || null;
 
   useEffect(() => {
     if (!configVacaciones) {

@@ -118,7 +118,7 @@ const Nominas = () => {
             <Box display="flex" gap={1} flexWrap="nowrap">
               {userSalaryInfo.salarioCompletoEstimado ? (
                 <>
-                {!userProfile.fechaIngreso && configuracionNomina.tieneTrienios ? (
+                {!userProfile.fechaIngreso && userProfile.salario?.[new Date().getFullYear()]?.tieneTrienios ? (
                   <Chip
                     label="Falta fecha de ingreso"
                     sx={{

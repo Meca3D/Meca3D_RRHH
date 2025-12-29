@@ -1,7 +1,7 @@
 // stores/authStore.js - AUTO-INICIALIZACIÓN
 import { create } from 'zustand';
 import { onAuthStateChanged,updatePassword,EmailAuthProvider,reauthenticateWithCredential,updateProfile,signOut } from 'firebase/auth';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { useNominaStore } from './nominaStore';
 import { useHorasExtraStore } from './horasExtraStore';
@@ -270,8 +270,6 @@ export const useAuthStore = create((set, get) => ({
       });
     },
 
-
-
 logout: async () => {
 
     await signOut(auth);
@@ -338,8 +336,7 @@ const loadUserProfileFunction = (userEmail, set) => {
               disponibles: userData.vacaciones.disponibles || 0,
               pendientes: userData.vacaciones.pendientes ||0
             },
-            configuracionNomina: userData.configuracionNomina,
-            tarifasHorasExtra: userData.tarifasHorasExtra,
+            salario:userData.salario || {},
             notificacionesAusencias: userData.notificacionesAusencias || false,
             visible: userData.visible !== false
           },

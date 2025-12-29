@@ -31,7 +31,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { loading, userSalaryInfo  } = useGlobalData();
   const { loadConfigVacaciones, configVacaciones } = useVacacionesStore();
-  const { user, userProfile, toggleVisibility, getRol } = useAuthStore();
+  const { user, userProfile, toggleVisibility, getRol, migrarTodosLosUsuarios } = useAuthStore();
 
   useEffect(() => {
     if (!configVacaciones){
@@ -56,32 +56,35 @@ const Dashboard = () => {
   const isVisible = userProfile?.visible !== false;
 
   const mask = (val) => (isVisible ? val : '--');
+  const añoActual = new Date().getFullYear();
+  const tieneConfiguracionSalarial = !!(userProfile?.salario?.[añoActual].sueldoBase);
+  const tieneConfiguracionHorasExtras = !!(userProfile?.salario?.[añoActual].normal);
 
   // Estadísticas principales con colores MD3
   const stats = [
     {
       title: 'Nómina',
-      value:mask( userSalaryInfo?.salarioCompletoEstimado 
+      value:mask( userSalaryInfo?.isConfigured && userSalaryInfo?.salarioCompletoEstimado 
         ? formatCurrency(userSalaryInfo.salarioCompletoEstimado)
         : '0€'),
-      subtitle: userSalaryInfo?.salarioCompletoEstimado 
+      subtitle: tieneConfiguracionSalarial
         ? `${userSalaryInfo.mesNomina}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
-      action: userSalaryInfo?.salarioCompletoEstimado 
+      action: tieneConfiguracionSalarial 
         ? () => navigate('/nominas')
         : () => navigate('/nominas/configurar')
     },
     {
       title: 'Horas Extras',
       value: mask(formatCurrency(userSalaryInfo.totalImporteHorasMesActual)),
-      subtitle:  (userProfile?.tarifasHorasExtra)
+      subtitle:  (tieneConfiguracionHorasExtras)
         ? `${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: EuroIcon,
       color: 'verde.main',
       bgColor: 'verde.fondo',
-      action:   (userProfile?.tarifasHorasExtra)
+      action:   (tieneConfiguracionHorasExtras)
         ? () => navigate('/horas-extras')
         : () => navigate('/horas-extras/configurar')
     },
@@ -97,12 +100,12 @@ const Dashboard = () => {
     {
       title: 'Horas Extras',
       value: userSalaryInfo?.totalTiempoMesActual,
-      subtitle: (userProfile?.tarifasHorasExtra)
+      subtitle: (tieneConfiguracionHorasExtras)
         ? `${userSalaryInfo.mesNomina || 'este mes'}`:<Typography variant="span" color="error">Configura tus datos</Typography>,
       icon: AccessTimeIcon,
       color: 'naranja.main', 
       bgColor: 'naranja.fondo',
-      action:   (userProfile?.tarifasHorasExtra)
+      action:   (tieneConfiguracionHorasExtras)
         ? () => navigate('/horas-extras')
         : () => navigate('/horas-extras/configurar')
     }

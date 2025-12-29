@@ -3,30 +3,40 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Grid, Card, CardContent, AppBar, Toolbar,
-  IconButton, TextField, Button, Alert, CircularProgress, Chip, Paper
+  IconButton, TextField, Button, Alert, CircularProgress, Chip, Paper, FormControl, InputLabel, Select, MenuItem
 } from '@mui/material';
 import {
   ArrowBackIosNew as ArrowBackIosNewIcon,
+  CalendarToday as CalendarIcon,
   SettingsOutlined as SettingsIcon,
   Save as SaveIcon,
+  Add as AddIcon,
   Refresh as RefreshIcon,
   Euro as EuroIcon,
   History as HistoryIcon
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useHorasExtraStore } from '../../stores/horasExtraStore';
 import { 
   tiposHorasExtra, 
   formatCurrency 
 } from '../../utils/nominaUtils';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
 import {formatearNombre} from '../../components/Helpers';
 
 const ConfiguracionHorasExtras = () => {
   const navigate = useNavigate();
   const { user, userProfile, setUserProfile } = useAuthStore();
   const { showSuccess, showError } = useUIStore();
+   const { 
+    getTarifasPorAño, 
+    guardarConfiguracionAño,
+    getAñosDisponibles,
+    existeConfiguracionAño
+  } = useHorasExtraStore();
+  const [añoSeleccionado, setAñoSeleccionado] = useState(new Date().getFullYear());
+  const [añosDisponibles, setAñosDisponibles] = useState([new Date().getFullYear()]);
+  const [modoCreacion, setModoCreacion] = useState(false);
 
   // Estados para el formulario
   const [tarifas, setTarifas] = useState({
@@ -39,31 +49,48 @@ const ConfiguracionHorasExtras = () => {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // ✅ Cargar tarifas actuales del usuario
+  // Cargar años disponibles
   useEffect(() => {
-    if (userProfile?.tarifasHorasExtra) {
-      const tarifasActuales = {
-        normal: userProfile.tarifasHorasExtra.normal || 0,
-        nocturna: userProfile.tarifasHorasExtra.nocturna || 0,
-        festiva: userProfile.tarifasHorasExtra.festiva || 0,
-        festivaNocturna: userProfile.tarifasHorasExtra.festivaNocturna || 0
-      };
-      setTarifas(tarifasActuales);
-      setTarifasOriginales(tarifasActuales);
+    if (userProfile) {
+      const años = getAñosDisponibles(userProfile);
+      setAñosDisponibles(años);
+    }
+  }, [userProfile]);
+
+  // Cargar tarifas cuando cambia el año
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const existe = existeConfiguracionAño(userProfile, añoSeleccionado);
+    setModoCreacion(!existe);
+
+    if (existe) {
+      const tarifasAño = getTarifasPorAño(userProfile, añoSeleccionado);
+      setTarifas({
+        normal: tarifasAño.normal || 0,
+        nocturna: tarifasAño.nocturna || 0,
+        festiva: tarifasAño.festiva || 0,
+        festivaNocturna: tarifasAño.festivaNocturna || 0
+      });
+      setTarifasOriginales({
+        normal: tarifasAño.normal || 0,
+        nocturna: tarifasAño.nocturna || 0,
+        festiva: tarifasAño.festiva || 0,
+        festivaNocturna: tarifasAño.festivaNocturna || 0
+      });
     } else {
-      // Si no tiene tarifas personalizadas, usar las base del sistema
-      const tarifasBase = {
+      const tarifasVacias = {
         normal: 0,
         nocturna: 0,
         festiva: 0,
         festivaNocturna: 0
       };
-      setTarifas(tarifasBase);
-      setTarifasOriginales(tarifasBase);
+      setTarifas(tarifasVacias);
+      setTarifasOriginales(tarifasVacias);
     }
-  }, [userProfile?.tarifasHorasExtra]);
+  }, [añoSeleccionado, userProfile]);
 
-  // ✅ Detectar cambios
+  // Detectar cambios
   useEffect(() => {
     const hayDiferencias = Object.keys(tarifas).some(
       key => parseFloat(tarifas[key]) !== parseFloat(tarifasOriginales[key])
@@ -80,7 +107,6 @@ const ConfiguracionHorasExtras = () => {
   };
 
   const handleSave = async () => {
-    // Validaciones
     const algunaTarifaCero = Object.values(tarifas).some(tarifa => tarifa <= 0);
     if (algunaTarifaCero) {
       showError('Todas las tarifas deben ser mayores a 0');
@@ -89,25 +115,33 @@ const ConfiguracionHorasExtras = () => {
 
     setSaving(true);
     try {
-      // Actualizar en Firestore
-      await updateDoc(doc(db, 'USUARIOS', user.email), {
-        tarifasHorasExtra: tarifas,
+      // OBTENER configuración existente del año
+      const configuracionExistente = getTarifasPorAño(userProfile, añoSeleccionado) || {};
+      
+      // Combinar datos existentes + nuevas tarifas
+      const datosCompletos = {
+        ...configuracionExistente, // Mantener datos de nómina (sueldoBase, etc.)
+        ...tarifas,                // Sobrescribir solo las tarifas
         updatedAt: new Date()
-      });
-
-      // Actualizar estado local
-      setUserProfile({
-        ...userProfile,
-        tarifasHorasExtra: tarifas
-      });
+      };
+      //  Llamada al store
+      await guardarConfiguracionAño(user.email, añoSeleccionado, datosCompletos);
 
       setTarifasOriginales(tarifas);
-      showSuccess('Tarifas actualizadas correctamente');
+      setModoCreacion(false);
+      
+      const mensaje = modoCreacion 
+        ? `Configuración de ${añoSeleccionado} creada correctamente`
+        : `Configuración de ${añoSeleccionado} actualizada correctamente`;
+      
+      showSuccess(mensaje);
+      
       setTimeout(() => {
-        navigate('/horas-extras')
-    }, 2000);
+        navigate('/horas-extras');
+      }, 2000);
+
     } catch (error) {
-      showError('Error al guardar tarifas: ' + error.message);
+      showError('Error al guardar configuración: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -117,9 +151,14 @@ const ConfiguracionHorasExtras = () => {
     setTarifas(tarifasOriginales);
   };
 
+  const handleAñoChange = (event) => {
+    setAñoSeleccionado(event.target.value);
+  };
+
   const getTipoInfo = (tipo) => {
     return tiposHorasExtra.find(t => t.value === tipo) || { label: tipo, color: '#666' };
   };
+
 
   return (
     <>
@@ -188,6 +227,68 @@ const ConfiguracionHorasExtras = () => {
 
       {/* Contenido principal */}
       <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      <Grid container spacing={3}>
+        
+        {/* ✅ CARD: Selector de año */}
+        <Grid size={{ xs: 12 }}>
+          <Card 
+            elevation={3}
+            sx={{
+              borderRadius: 3,
+
+              border: '1px solid rgba(123, 31, 162, 0.2)'
+            }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <CalendarIcon sx={{ color: 'purpura.main', fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'purpura.main' }}>
+                  Seleccionar Año
+                </Typography>
+                
+                {modoCreacion ? (
+                  <Chip 
+                    label="+ Nuevo año" 
+                    size="small" 
+                    color="success"
+                  />
+                )
+                : (<Box></Box>)}
+              </Box>
+
+              <FormControl fullWidth>
+                <InputLabel>Año de configuración</InputLabel>
+                <Select
+                  value={añoSeleccionado}
+                  onChange={handleAñoChange}
+                  label="Año de configuración"
+                  sx={{
+                    bgcolor: 'white',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'purpura.main'
+                    }
+                  }}
+                >
+                  {añosDisponibles.map((año) => (
+                    <MenuItem key={año} value={año}>
+                      {año}
+                      {año === new Date().getFullYear() && (
+                        <Chip label="Actual" size="small" sx={{ ml: 2 }} color="primary" />
+                      )}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {modoCreacion && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  No existe configuración para {añoSeleccionado}. Se creará al guardar.
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
         {/* Formulario de tarifas */}
         <Card elevation={0} sx={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.08)' }}>
           <CardContent sx={{ p: 4 }}>
@@ -343,11 +444,17 @@ const ConfiguracionHorasExtras = () => {
                   transition: 'all 0.3s ease'
                 }}
               >
-                {saving ? 'Guardando...' : 'Guardar Configuración'}
+                {saving 
+                      ? 'Guardando...' 
+                      : modoCreacion 
+                        ? `Crear Configuración ${añoSeleccionado}` 
+                        : 'Actualizar Configuración'
+                    }
               </Button>
             </Box>
           </CardContent>
         </Card>
+        </Grid>
       </Container>
     </>
   );
