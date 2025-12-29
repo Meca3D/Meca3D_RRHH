@@ -71,17 +71,33 @@ const CalendarioAusencias = () => {
     const cargarDatos = async () => {
       setLoading(true);
       try {
-        const año = mesActual.getFullYear();
+        // Obtener todos los días visibles en el calendario
+        const dias = obtenerDiasCalendario(mesActual);
         
+        // Extraer años únicos de los días visibles
+        const añosNecesarios = new Set(dias.map(d => d.getFullYear()));
+        
+        // Cargar configuración, empleados y festivos de todos los años necesarios
         await Promise.all([
           loadConfigVacaciones(),
-          loadFestivos(año),
-          fetchEmpleados()
+          fetchEmpleados(),
+          ...Array.from(añosNecesarios).map(año => loadFestivos(año))
         ]);
-        
-        const data = await getAusenciasCombinadas(año);
-        setAusenciasCombinadas(data.todas || []);
 
+        // Cargar ausencias de todos los años que aparecen en el calendario
+        let todasLasAusencias = [];
+        for (const añoVisto of añosNecesarios) {
+          const data = await getAusenciasCombinadas(añoVisto);
+          todasLasAusencias = [...todasLasAusencias, ...(data.todas || [])];
+        }
+        
+        // Eliminar duplicados por ID (por si acaso)
+        const ausenciasUnicas = todasLasAusencias.filter((ausencia, index, self) =>
+          index === self.findIndex((a) => a.id === ausencia.id)
+        );
+        
+        setAusenciasCombinadas(ausenciasUnicas);
+        
       } catch (error) {
         showError(`Error cargando calendario: ${error.message}`);
       } finally {
@@ -90,7 +106,7 @@ const CalendarioAusencias = () => {
     };
 
     cargarDatos();
-  }, [mesActual.getFullYear(), loadConfigVacaciones, loadFestivos, fetchEmpleados, getAusenciasCombinadas]);
+  }, [mesActual, loadConfigVacaciones, loadFestivos, fetchEmpleados, getAusenciasCombinadas]);
 
   // --- 2. PROCESAMIENTO DE DATOS (USEMEMO) ---
 
