@@ -323,7 +323,6 @@ const loadUserProfileFunction = (userEmail, set) => {
           userProfile: {
             fcmTokens: userData.fcmTokens || null,
             notificationPreference: userData.notificationPreference || 'not-set', // 'granted', 'denied', 'not-set'
-
             email: userEmail.toLowerCase(),
             nombre: userData.nombre,
             rol: userData.rol,

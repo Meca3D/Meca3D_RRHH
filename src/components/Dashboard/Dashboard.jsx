@@ -57,8 +57,8 @@ const Dashboard = () => {
 
   const mask = (val) => (isVisible ? val : '--');
   const añoActual = new Date().getFullYear();
-  const tieneConfiguracionSalarial = !!(userProfile?.salario?.[añoActual].sueldoBase);
-  const tieneConfiguracionHorasExtras = !!(userProfile?.salario?.[añoActual].normal);
+  const tieneConfiguracionSalarial = !!(userProfile?.salario?.[añoActual]?.sueldoBase);
+  const tieneConfiguracionHorasExtras = !!(userProfile?.salario?.[añoActual]?.normal);
 
   // Estadísticas principales con colores MD3
   const stats = [
