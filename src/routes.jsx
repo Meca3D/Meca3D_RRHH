@@ -37,6 +37,7 @@ import CalendarioAusencias from './components/Admin/Vacaciones/CalendarioAusenci
 import HistorialSolicitudes from './components/Admin/Vacaciones/HistorialSolicitudes';
 import EstadisticasVacasAdmin from './components/Admin/Vacaciones/EstadisticasVacasAdmin';
 import SaldosVacaciones from './components/Admin/Vacaciones/SaldosVacaciones';
+import CrearVacacionesAdmin from './components/Admin/Vacaciones/CrearVacacionesAdmin';
 import ConfiguracionVacacionesAdmin from './components/Admin/Configuracion/ConfiguracionVacacionesAdmin';
 import GestionUtilidades from './components/Admin/Utilidades/GestionUtilidades';
 import GestionConfiguracion from './components/Admin/Configuracion/GestionConfiguracion';
@@ -154,6 +155,7 @@ const AppRoutes = () => {
         {/* Rutas de Gestión de Vacaciones */}
         <Route path="admin/vacaciones" element={<AusenciasRoute><GestionVacaciones /></AusenciasRoute>} />
         <Route path="admin/vacaciones/pendientes" element={<AusenciasRoute><SolicitudesPendientes /></AusenciasRoute>} />
+        <Route path="admin/vacaciones/crear-solicitud" element={<AusenciasRoute><CrearVacacionesAdmin /></AusenciasRoute>} />
         <Route path="admin/vacaciones/calendario" element={<AusenciasRoute><CalendarioAusencias /></AusenciasRoute>} />
         <Route path="admin/vacaciones/historial" element={<AusenciasRoute><HistorialSolicitudes /></AusenciasRoute>} />
         <Route path="admin/vacaciones/saldos" element={<AusenciasRoute><GestionarSaldos /></AusenciasRoute>} />

@@ -1291,7 +1291,7 @@ const HistorialAusencias = () => {
             <>
              <Box bgcolor="azul.fondo" sx={{ my: 2,p:2, borderRadius:2 }}>
                 <Typography variant="body1" textAlign='center' mb={1}>
-                  <strong>{formatearNombre(datosUsuarios[ausenciaSeleccionada.solicitante]?.nombre || ausenciaSeleccionada.solicitante)}</strong>
+                  <strong>{(datosUsuarios[ausenciaSeleccionada.solicitante]?.nombre || ausenciaSeleccionada.solicitante)}</strong>
                 </Typography>
                 <Box sx={{display:'flex', justifyContent:'space-between'}}>
                 <Typography variant="body1" display="block">

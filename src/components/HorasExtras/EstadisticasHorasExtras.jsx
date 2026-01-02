@@ -93,7 +93,7 @@ const CustomPieChartLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, perce
 
 const EstadisticasHorasExtras = () => {
   const navigate = useNavigate();
-  const { user, userProfile } = useAuthStore();
+  const { user } = useAuthStore();
   const { 
     horasExtra, 
     fetchHorasExtra, 

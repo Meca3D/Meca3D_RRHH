@@ -31,7 +31,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { loading, userSalaryInfo  } = useGlobalData();
   const { loadConfigVacaciones, configVacaciones } = useVacacionesStore();
-  const { user, userProfile, toggleVisibility, getRol, migrarTodosLosUsuarios } = useAuthStore();
+  const { user, userProfile, toggleVisibility, getRol } = useAuthStore();
 
   useEffect(() => {
     if (!configVacaciones){

@@ -1,7 +1,7 @@
 // stores/authStore.js - AUTO-INICIALIZACIÓN
 import { create } from 'zustand';
 import { onAuthStateChanged,updatePassword,EmailAuthProvider,reauthenticateWithCredential,updateProfile,signOut } from 'firebase/auth';
-import { doc, getDoc, getDocs, collection, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { useNominaStore } from './nominaStore';
 import { useHorasExtraStore } from './horasExtraStore';

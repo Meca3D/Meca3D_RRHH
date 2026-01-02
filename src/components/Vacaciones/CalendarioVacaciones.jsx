@@ -15,7 +15,8 @@ const CalendarioVacaciones = ({
   tipoSolicitud,
   esFechaSeleccionable,
   horasLibres,
-  fechasYaPedidasSet = new Set() 
+  fechasYaPedidasSet = new Set(),
+  esAdmin = false
 }) => {
   const [mesActual, setMesActual] = useState(new Date());
   const { esFestivo } = useVacacionesStore();
@@ -26,7 +27,8 @@ const CalendarioVacaciones = ({
 const alternarDia = (dia) => {
   const fechaStr = formatYMD(dia);
   if (fechasYaPedidasSet.has(fechaStr)) return;
-  if (!esFechaSeleccionable(fechaStr)) return;
+  if (!esAdmin &&!esFechaSeleccionable(fechaStr)) return;
+  if (esAdmin && (esFestivo(fechaStr) ||esFinDeSemana(dia))) return;
 
   if (tipoSolicitud === 'horas') {
     onFechasChange([fechaStr]);
@@ -48,9 +50,9 @@ const alternarDia = (dia) => {
     const yaPedido = fechasYaPedidasSet.has(fechaStr); 
     const seleccionado = fechasSeleccionadas.includes(fechaStr);
     const fueraMes = dia.getMonth() !== mesActual.getMonth();
-    const seleccionable = esFechaSeleccionable(fechaStr);
     const esFestivoDia = esFestivo(fechaStr);
     const esFinSemana = esFinDeSemana(dia);
+    const seleccionable = esAdmin? (!esFestivoDia && !esFinSemana) : esFechaSeleccionable(fechaStr);
     const horasTotalesSiSelecciona = tipoSolicitud === 'dias' 
       ? (fechasSeleccionadas.length + 1) * 8 
       : 0;

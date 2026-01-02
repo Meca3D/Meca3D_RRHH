@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Box, Card, CardContent, AppBar, Toolbar,
-  IconButton, Button, TextField, FormControl, FormLabel,
+  IconButton, Button, TextField, FormControl, FormLabel, Divider,
   RadioGroup, Radio, FormControlLabel, Alert, CircularProgress,
   Collapse, MenuItem, Select, InputLabel,
   Grid
@@ -329,11 +329,12 @@ const CrearAusencia = () => {
                       {mostrarListaFechas ? <ExpandLess sx={{fontSize:'1.5rem', color:tipo==="baja" ?'#d32f2f' :'#9C27B0'}}/> : <ExpandMore sx={{fontSize:'1.5rem', color:tipo==="baja" ?'#d32f2f' :'#9C27B0'}} />}
                     </Box>
                     <Collapse in={mostrarListaFechas}>
+                      <Divider sx={{ my: 1, bgcolor: tipo==="baja" ?'#d32f2f' :'#9C27B0' }} />
                       <Grid container mt={1}>
                         {ordenarFechas(fechasSeleccionadas).map(f => (
                           <Grid key={f} size={{xs:6}}>
                           <Typography  fontSize='1.1rem' textAlign={'center'}>
-                            • {formatearFechaCorta(f)}
+                            {formatearFechaCorta(f)}
                           </Typography>
                           </Grid>
                         ))}

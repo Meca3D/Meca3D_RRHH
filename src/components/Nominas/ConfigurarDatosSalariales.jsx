@@ -741,7 +741,12 @@ const ConfigurarDatosSalariales = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    {saving ? 'Guardando...' : 'Guardar Configuración'}
+                    {saving 
+                      ? 'Guardando...' 
+                      : modoCreacion 
+                        ? `Crear Configuración ${añoSeleccionado}` 
+                        : 'Actualizar Configuración'
+                      }
                   </Button>
                 </Grid>
               </Grid>

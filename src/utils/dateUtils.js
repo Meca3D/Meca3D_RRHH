@@ -1,8 +1,7 @@
 // utils/dateUtils.js
 import { 
   format, isWeekend, isAfter, isBefore, isSameDay, addDays,
-  startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek,
-  addMonths, subMonths, getDay, parseISO
+  startOfMonth, startOfWeek, addMonths, subMonths, parseISO
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 

@@ -183,9 +183,45 @@ const CalendarioAusencias = () => {
         conflictos[fechaStr] = problemasDia;
       }
     });
-
+    
     return conflictos;
   }, [ausenciasPorDia, configVacaciones, mesActual]);
+  
+  // Nuevo: Cálculo de conflictos para todo el año
+  const conflictosDelAño = useMemo(() => {
+    const añoRef = mesActual.getFullYear();
+    const umbrales = configVacaciones.cobertura.umbrales;
+    const conflictos = {}; 
+
+    Object.entries(ausenciasPorDia).forEach(([fechaStr, ausentes]) => {
+      const fechaObj = new Date(fechaStr);
+      if (fechaObj.getFullYear() !== añoRef) return;
+
+      const conteoPorPuesto = ausentes.reduce((acc, curr) => {
+        const puesto = curr.puesto;
+        acc[puesto] = (acc[puesto] || 0) + 1;
+        return acc;
+      }, {});
+
+      const problemasDia = [];
+      Object.entries(conteoPorPuesto).forEach(([puesto, total]) => {
+        if (umbrales[puesto] && total >= umbrales[puesto]) {
+          problemasDia.push({
+            puesto,
+            total,
+            umbral: umbrales[puesto],
+            severidad: total >= umbrales[puesto] * 1.5 ? 'alta' : 'media'
+          });
+        }
+      });
+
+      if (problemasDia.length > 0) {
+        conflictos[fechaStr] = problemasDia;
+      }
+    });
+
+    return conflictos;
+  }, [mesActual, ausenciasPorDia, configVacaciones]);
 
   // --- 3. HELPERS VISUALES ---
 
@@ -551,7 +587,6 @@ const CalendarioAusencias = () => {
                   <>
                     <Grid container sx={{ mb: 1 }}>
                       {DIAS_SEMANA.map(dia => (
-                        // CORRECCIÓN 2: Grid V2 size prop
                         <Grid size={{ xs: 12/7 }} key={dia}>
                           <Typography variant="caption" fontWeight={600} sx={{ display: 'block', textAlign: 'center', p: 1 }}>
                             {dia}
@@ -734,49 +769,69 @@ const CalendarioAusencias = () => {
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" sx={{p:0.5, px:1, borderRadius:2, mb:2, bgcolor:'verde.fondo'}} >
-                   <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', px:1 }}>
-                      <GroupsIcon color="primary" sx={{mr:2}} /> Resumen
+                   <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap:1 }}>
+                      <GroupsIcon color="primary" sx={{mr:2}} /> Resumen 
+                   </Typography>
+                   <Typography variant="h5" sx={{ textAlign:'center', px:1 }}>
+                      {vistaActual === 'mensual' ? capitalizeFirstLetter(formatearMesAno(mesActual)) : mesActual.getFullYear()}
                    </Typography>
                 </Box>
                 
                 {(() => {
-                   let diasCount = 0;
-                   const personas = new Set();
-                   const conflictosCount = Object.keys(conflictosDelMes).length;
-                   
-                   const añoV = mesActual.getFullYear();
-                   const mesV = mesActual.getMonth();
-                   
-                   const fechasRelevantes = Object.keys(ausenciasPorDia).filter(fStr => {
-                      const d = new Date(fStr);
-                      if (vistaActual === 'mensual') return d.getMonth() === mesV && d.getFullYear() === añoV;
-                      return d.getFullYear() === añoV;
-                   });
+                    let jornadasPerdidas = 0;
+                    const personas = new Set();
+                    const conflictosCount = vistaActual==="mensual" ? Object.keys(conflictosDelMes).length : Object.keys(conflictosDelAño).length;
+                    const HORAS_POR_JORNADA = 8; 
 
-                   fechasRelevantes.forEach(fStr => {
-                      const list = getAusentesVisibles(fStr);
-                      if (list.length > 0) {
-                        diasCount += list.length; 
-                        list.forEach(a => personas.add(a.email));
-                      }
-                   });
+                    const añoV = mesActual.getFullYear();
+                    const mesV = mesActual.getMonth();
 
-                   return (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography>Empleados ausentes:</Typography>
-                            <Chip label={personas.size} size="small" />
-                         </Box>
-                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography>Días de ausencia:</Typography>
-                            <Chip label={diasCount} size="small" color="primary" />
-                         </Box>
-                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography>Días conflictivos:</Typography>
-                            <Chip label={conflictosCount} size="small" color={conflictosCount > 0 ? 'error' : 'success'} />
-                         </Box>
-                      </Box>
-                   );
+                    const fechasRelevantes = Object.keys(ausenciasPorDia).filter(fStr => {
+                        const d = new Date(fStr);
+                        if (vistaActual === 'mensual') return d.getMonth() === mesV && d.getFullYear() === añoV;
+                        return d.getFullYear() === añoV;
+                    });
+
+                    fechasRelevantes.forEach(fStr => {
+                        const list = getAusentesVisibles(fStr);
+                        if (list.length > 0) {
+                            jornadasPerdidas += list.length; 
+                            list.forEach(a => personas.add(a.email));
+                        }
+                    });
+
+                    return (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="body1" color="">Personal afectado:</Typography>
+                                <Chip label={`${personas.size}`} size="small" variant="outlined" sx={{fontSize:'1.15rem', fontWeight:'bold',px:0.5}} />
+                      
+                            </Box>
+                            
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="body1" color="">Turnos individuales perdidos:</Typography>
+                                <Chip label={`${jornadasPerdidas}`} size="small" variant="outlined" sx={{fontSize:'1.1rem', px:0.5}} />
+                            </Box>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="body1" color="">Impacto en horas:</Typography>
+                                <Chip label={`${jornadasPerdidas * HORAS_POR_JORNADA}h`} size="small" color="primary" sx={{fontSize:'1.1rem', px:0.5}} />
+                            </Box>
+
+                            <Divider sx={{ my: 0.5, bgcolor:'black' }} />
+
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="body1" fontWeight="500">Días críticos (conflictos):</Typography>
+                                <Chip 
+                                    label={conflictosCount} 
+                                    size="small" 
+                                    color={conflictosCount > 0 ? 'error' : 'success'} 
+                                    variant={conflictosCount > 0 ? 'contained' : 'outlined'}
+                                    sx={{fontSize:'1.1rem', px:0.5}}
+                                />
+                            </Box>
+                        </Box>
+                    );
                 })()}
               </CardContent>
             </Card>

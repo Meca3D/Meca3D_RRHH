@@ -26,7 +26,7 @@ import {formatearNombre} from '../../components/Helpers';
 
 const ConfiguracionHorasExtras = () => {
   const navigate = useNavigate();
-  const { user, userProfile, setUserProfile } = useAuthStore();
+  const { user, userProfile } = useAuthStore();
   const { showSuccess, showError } = useUIStore();
    const { 
     getTarifasPorAño, 

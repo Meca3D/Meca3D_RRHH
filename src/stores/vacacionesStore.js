@@ -197,18 +197,21 @@ export const useVacacionesStore = create((set, get) => {
     },
 
     // Crear nueva solicitud
- crearSolicitudVacaciones: async (solicitudData) => {
+ crearSolicitudVacaciones: async (solicitudData,esAdmin=false) => {
   try {
-    const { user } = useAuthStore.getState(); // Only for metadata if needed; don't use userProfile for saldo
-
-    // Evaluar auto-aprobación ANTES de crear (usa datos locales para evaluación)
+    let res={}
+    if (esAdmin)  {
+      res.aplicar=true}
+    else {
+    // Para empleados, evaluar auto-aprobación ANTES de crear (usa datos locales para evaluación)
     const solicitudTemp = { // Objeto temporal para evaluación
       ...solicitudData,
       id: 'temp', // ID placeholder
       estado: 'pendiente',
       fechaSolicitud: formatYMD(new Date()),
     };
-    const res = await get().evaluarAutoAprobacion(solicitudTemp);
+    res = await get().evaluarAutoAprobacion(solicitudTemp);
+    }
 
     const nuevaSolicitud = {
       ...solicitudData,
@@ -217,10 +220,14 @@ export const useVacacionesStore = create((set, get) => {
       cancelaciones: [],
       ampliaciones: [], 
       estado: res.aplicar ? 'aprobada' : 'pendiente',
-      comentariosAdmin: res.aplicar ? (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') : '',
+      comentariosAdmin: res.aplicar 
+                          ? esAdmin
+                            ? solicitudData.comentariosAdmin
+                            : (get().configVacaciones?.autoAprobar?.mensaje || 'Aprobado automáticamente por política activa.') 
+                            : '',
       fechaAprobacionDenegacion: res.aplicar ? formatYMD(new Date()) : '',
       timestampAprobacionDenegacion: res.aplicar ? new Date() : '', 
-
+      esAdmin: esAdmin,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -277,8 +284,8 @@ export const useVacacionesStore = create((set, get) => {
             empleadoEmail: solicitudData.solicitante,
             title: '✅ Solicitud de vacaciones aprobada',
             body: solicitudData.esVenta 
-              ? `Tu venta de ${formatearTiempoVacasLargo(solicitudData.horasSolicitadas)} ha sido aprobada automáticamente`
-              : `Tu solicitud de ${formatearTiempoVacasLargo(solicitudData.horasSolicitadas)} ha sido aprobada automáticamente`,
+              ? `Tu venta de ${formatearTiempoVacasLargo(solicitudData.horasSolicitadas)} ha sido aprobada`
+              : `Tu solicitud de ${formatearTiempoVacasLargo(solicitudData.horasSolicitadas)} ha sido aprobada`,
             url: '/vacaciones/solicitudes',
             type: 'vacaciones_aprobada'
           });
@@ -1241,7 +1248,7 @@ export const useVacacionesStore = create((set, get) => {
         },
 
         evaluarAutoAprobacion: async (solicitud) => {
-          const {loadConfigVacaciones, configVacaciones, detectarConflictos } = get();
+          const {loadConfigVacaciones, configVacaciones } = get();
           if (!configVacaciones) {
               const unsubscribe = loadConfigVacaciones();
               return () => unsubscribe()}
@@ -1371,12 +1378,12 @@ export const useVacacionesStore = create((set, get) => {
           solicitudes = solicitudes.filter(s => s.solicitante === filtros.empleado);
         }
         
-        if (filtros.año) {
+        if (filtros.año && filtros.año !== 'todos') {
           solicitudes = solicitudes.filter(s => {
-            const añoSolicitud = new Date(s.fechaSolicitud).getFullYear();
-            const añoPrimeraFecha = s.fechasActuales && s.fechasActuales.length > 0 ? 
-              new Date(s.fechasActuales[0]).getFullYear() : añoSolicitud;
-            return añoSolicitud === filtros.año || añoPrimeraFecha === filtros.año;
+            // Filtrar por año de última modificación (updatedAt)
+            const fechaModificacion = s.updatedAt?.toDate?.() || s.updatedAt || new Date(s.fechaSolicitud);
+            const añoModificacion = new Date(fechaModificacion).getFullYear();
+            return añoModificacion === filtros.año;
           });
         }
 
@@ -1623,7 +1630,7 @@ export const useVacacionesStore = create((set, get) => {
 
         // Verificar si es cancelación total: no quedan días futuros por disfrutar
         const diasFuturosRestantes = nuevasFechasActuales.filter(fecha => !esFechaPasadaOHoy(fecha));
-        const esCancelacionTotal = diasFuturosRestantes.length === 0;
+        const esCancelacionTotal = !esAdmin && diasFuturosRestantes.length === 0;
 
 
         // Calcular horas a devolver
@@ -2355,7 +2362,7 @@ mapSolicitudToEventos: (solicitud) => {
         concepto: 'Ampliacion de días',
         procesadaPor: ampliacion.procesadaPor,
         fechasAmpliadas: ampliacion.fechasAmpliadas || [],
-        motivo: ampliacion.motivoAmpliacion,
+        motivoAmpliacion: ampliacion.motivoAmpliacion,
         ordenDia: rank.ampliacion,
       });
     });
@@ -2527,6 +2534,198 @@ calcularDiasLaborables: (año, todosLosFestivos) => {
     }, []);
   },
 
+  // Añadir días a una solicitud de vacaciones existente (SOLO ADMIN)
+  añadirDiasVacaciones: async (solicitudId, nuevasFechas, motivoAmpliacion, solicitudOriginal, esAdmin) => {
+    try {
+      const { userProfile } = useAuthStore.getState();
+
+      // Validar que es admin
+      if (!esAdmin) {
+        throw new Error('Solo los administradores pueden ampliar vacaciones');
+      }
+
+      // Validar que haya nuevas fechas
+      if (!nuevasFechas || nuevasFechas.length === 0) {
+        throw new Error('Debes añadir al menos una fecha nueva');
+      }
+
+      // Validar que no sea una venta
+      if (solicitudOriginal.esVenta||solicitudOriginal.esAjusteSaldo) {
+        throw new Error('No se pueden ampliar Ajustes de Saldo ni solicitudes de venta de vacaciones');
+      }
+
+      // Combinar fechasActuales con las nuevas (sin duplicados, ordenadas)
+      const fechasActualizadas = [...new Set([...solicitudOriginal.fechasActuales, ...nuevasFechas])].sort();
+      
+      // Calcular horas ampliadas
+      const horasAmpliadas = nuevasFechas.length * 8;
+
+      const solicitudRef = doc(db, 'VACACIONES', solicitudId);
+      const userDocRef = doc(db, 'USUARIOS', solicitudOriginal.solicitante);
+
+      // Transacción atómica para actualizar solicitud y saldo
+      await runTransaction(db, async (transaction) => {
+        // Leer saldo actual del empleado
+        const userDoc = await transaction.get(userDocRef);
+        if (!userDoc.exists()) {
+          throw new Error('Usuario no encontrado');
+        }
+
+        const currentVacaciones = userDoc.data().vacaciones || { disponibles: 0, pendientes: 0 };
+
+        // Validar que tenga saldo suficiente
+        if (currentVacaciones.disponibles < horasAmpliadas) {
+          throw new Error(`El empleado no tiene suficiente saldo. Disponible: ${formatearTiempoVacasLargo(currentVacaciones.disponibles)}, necesario: ${formatearTiempoVacasLargo(horasAmpliadas)}`);
+        }
+
+        // Crear registro de ampliación
+        const nuevaAmpliacion = {
+          createdAt: new Date(),
+          fechaAmpliacion: formatYMD(new Date()),
+          fechasAmpliadas: nuevasFechas,
+          horasAmpliadas: horasAmpliadas,
+          motivoAmpliacion: motivoAmpliacion || '',
+          procesadaPor: userProfile?.nombre || 'admin',
+          horasDisponiblesAntesAmpliacion: currentVacaciones.disponibles,
+          horasDisponiblesDespuesAmpliacion: currentVacaciones.disponibles - horasAmpliadas
+        };
+
+        // Actualizar solicitud
+        transaction.update(solicitudRef, {
+          fechasActuales: fechasActualizadas,
+          ampliaciones: arrayUnion(nuevaAmpliacion),
+          updatedAt: new Date()
+        });
+
+        // Descontar horas del saldo disponible
+        transaction.update(userDocRef, {
+          'vacaciones.disponibles': currentVacaciones.disponibles - horasAmpliadas,
+          updatedAt: new Date()
+        });
+      });
+
+      // Notificar al empleado
+      try {
+        const { sendNotification } = useAuthStore.getState();
+        await sendNotification({
+          empleadoEmail: solicitudOriginal.solicitante,
+          title: '📝 Vacaciones ampliadas por administración',
+          body: `Se añadieron ${formatearTiempoVacasLargo(horasAmpliadas)} a tu solicitud de vacaciones`,
+          url: '/vacaciones/solicitudes',
+          type: 'vacaciones_ampliadas_admin'
+        });
+      } catch (notifError) {
+        console.error('Error enviando notificación:', notifError);
+      }
+
+      return true;
+    } catch (error) {
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  // Calcular estado real de cada fecha considerando ampliaciones y cancelaciones
+  calcularEstadoRealFechasVacaciones: (solicitud) => {
+    if (!solicitud.fechas) return { activas: [], canceladas: [], ampliadas: [] };
+
+    // Crear un registro temporal con todas las fechas originales
+    const registroFechas = {};
+    solicitud.fechas.forEach(fecha => {
+      registroFechas[fecha] = {
+        estado: 'original',
+        ultimaAccion: solicitud.fechaSolicitud || '1970-01-01',
+        accionTipo: 'solicitud'
+      };
+    });
+
+    // Crear un array con TODAS las acciones (ampliaciones y cancelaciones) ordenadas cronológicamente
+    const todasLasAcciones = [];
+
+    // Añadir ampliaciones
+    if (solicitud.ampliaciones && solicitud.ampliaciones.length > 0) {
+      solicitud.ampliaciones.forEach(ampliacion => {
+        todasLasAcciones.push({
+          tipo: 'ampliacion',
+          fecha: ampliacion.fechaAmpliacion,
+          fechasAfectadas: ampliacion.fechasAmpliadas
+        });
+      });
+    }
+
+    // Añadir cancelaciones
+    if (solicitud.cancelaciones && solicitud.cancelaciones.length > 0) {
+      solicitud.cancelaciones.forEach(cancelacion => {
+        todasLasAcciones.push({
+          tipo: 'cancelacion',
+          fecha: cancelacion.fechaCancelacion,
+          fechasAfectadas: cancelacion.fechasCanceladas
+        });
+      });
+    }
+
+    // Ordenar TODAS las acciones cronológicamente
+    todasLasAcciones.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+    // Procesar las acciones en orden cronológico
+    todasLasAcciones.forEach(accion => {
+      accion.fechasAfectadas.forEach(fecha => {
+        if (accion.tipo === 'ampliacion') {
+          // AÑADIR fecha
+          if (!registroFechas[fecha]) {
+            // Fecha completamente nueva
+            registroFechas[fecha] = {
+              estado: 'ampliada',
+              ultimaAccion: accion.fecha,
+              accionTipo: 'ampliacion'
+            };
+          } else if (registroFechas[fecha].estado === 'cancelada') {
+            // Reactivar fecha previamente cancelada
+            registroFechas[fecha] = {
+              estado: 'reactivada',
+              ultimaAccion: accion.fecha,
+              accionTipo: 'ampliacion'
+            };
+          }
+          // Si ya existe y no está cancelada, no hacer nada (ya está activa)
+        } else if (accion.tipo === 'cancelacion') {
+          // CANCELAR fecha
+          if (registroFechas[fecha]) {
+            // Marcar como cancelada (sobrescribe cualquier estado anterior)
+            registroFechas[fecha] = {
+              estado: 'cancelada',
+              ultimaAccion: accion.fecha,
+              accionTipo: 'cancelacion'
+            };
+          } else {
+            // Fecha que no conocíamos (por si acaso)
+            registroFechas[fecha] = {
+              estado: 'cancelada',
+              ultimaAccion: accion.fecha,
+              accionTipo: 'cancelacion'
+            };
+          }
+        }
+      });
+    });
+
+    // Clasificar fechas según su estado final
+    const activas = [];
+    const canceladas = [];
+    const ampliadas = [];
+
+    Object.entries(registroFechas).forEach(([fecha, info]) => {
+      if (info.estado === 'cancelada') {
+        canceladas.push(fecha);
+      } else if (info.estado === 'ampliada') {
+        ampliadas.push(fecha);
+      } else if (info.estado === 'reactivada' || info.estado === 'original') {
+        activas.push(fecha);
+      }
+    });
+
+    return { activas, canceladas, ampliadas };
+  },
 
 
 

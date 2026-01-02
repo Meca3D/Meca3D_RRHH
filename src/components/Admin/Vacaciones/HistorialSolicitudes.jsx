@@ -9,7 +9,6 @@ import {
   DialogContent, DialogActions, ListItem, ListItemIcon, ListItemText
 } from '@mui/material';
 import {
-  Euro,
   ArrowBackIosNew,
   MoreVert,
   History,
@@ -18,24 +17,24 @@ import {
   GetApp,
   ExpandMore,
   ExpandLess,
-  Person,
-  CalendarToday,
-  AccessTime,
   CheckCircleOutline,
   CancelOutlined,
   PendingActions,
   ErrorOutline,
-  AccountCircleOutlined,
-  LocalPoliceOutlined,
   Clear,
   Cancel
 } from '@mui/icons-material';
+
+import { AddCircleOutline as AddIcon } from '@mui/icons-material';
 import { useVacacionesStore } from '../../../stores/vacacionesStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { useEmpleadosStore } from '../../../stores/empleadosStore';
 import SelectorDiasCancelacion from './SelectorDiasCancelacion';
-import { formatearFechaCorta,formatearFechaLarga, ordenarFechas } from '../../../utils/dateUtils';
+import CalendarioAmpliarVacaciones from './CalendarioAmpliarVacaciones';
+import { formatearFechaCorta,formatearFechaLarga, ordenarFechas, esFechaPasadaOHoy } from '../../../utils/dateUtils';
 import { formatearNombre, capitalizeFirstLetter } from '../../Helpers';
-import { formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
+import { formatearTiempoVacas, formatearTiempoVacasLargo } from '../../../utils/vacacionesUtils';
+
 
 
 const HistorialSolicitudes = () => {
@@ -48,8 +47,11 @@ const HistorialSolicitudes = () => {
     obtenerDiasDisfrutados,
     cancelarDiasSolicitudVacaciones,
     cancelarVentaVacaciones,
-    puedeCancelarDias  
+    puedeCancelarDias,
+    añadirDiasVacaciones,
+    obtenerDiasAmpliados,
   } = useVacacionesStore();
+  const { fetchEmpleadoPorEmail } = useEmpleadosStore();
   const { showSuccess, showError } = useUIStore();
 
   // Estados principales
@@ -58,27 +60,41 @@ const HistorialSolicitudes = () => {
   const [datosUsuarios, setDatosUsuarios] = useState({});
   const [loading, setLoading] = useState(false);
   const [exportando, setExportando] = useState(false);
+
+  // Estados de cancelación
   const [dialogoCancelacion, setDialogoCancelacion] = useState(false);
   const [solicitudACancelar, setSolicitudACancelar] = useState(null);
   const [diasACancelar, setDiasACancelar] = useState([]);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
   const [procesandoCancelacion, setProcesandoCancelacion] = useState(false);
-  const [estadisticaActivaFiltro, setEstadisticaActivaFiltro] = useState('');
   const [cancelacionesExpanded, setCancelacionesExpanded] = useState({});
-
+  
+  // Estados de ampliación
+  const [dialogoAmpliacion, setDialogoAmpliacion] = useState(false);
+  const [solicitudAAmpliar, setSolicitudAAmpliar] = useState(null);
+  const [nuevasFechas, setNuevasFechas] = useState([]);
+  const [motivoAmpliacion, setMotivoAmpliacion] = useState('');
+  const [procesandoAmpliacion, setProcesandoAmpliacion] = useState(false);
+  const [ampliacionesExpanded, setAmpliacionesExpanded] = useState({});
+  const [saldoEmpleadoAAmpliar, setSaldoEmpleadoAAmpliar] = useState(0);
+  
+  
   // Estados de filtros
   const [filtros, setFiltros] = useState({
     estado: 'todos',
     empleado: 'todos',
-    año: new Date().getFullYear(),
+    año: 'todos',
     busqueda: ''
   });
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [estadisticaActivaFiltro, setEstadisticaActivaFiltro] = useState('');
 
   // Estados de paginación y expansión
   const [paginaActual, setPaginaActual] = useState(1);
   const [solicitudesExpanded, setSolicitudesExpanded] = useState({});
   const solicitudesPorPagina = 10;
+
+
 
   // Cargar historial inicial
     useEffect(() => {
@@ -239,6 +255,9 @@ const HistorialSolicitudes = () => {
     }));
   };
 
+
+
+
   const handleExportarCSV = async () => {
     setExportando(true);
     try {
@@ -361,21 +380,141 @@ const HistorialSolicitudes = () => {
     setDiasACancelar([]);
     setMotivoCancelacion('');
 
-    // Recargar historial
-    const historial = await loadHistorialSolicitudes(filtros);
-    setSolicitudes(historial);
-  } catch (error) {
-    showError(`Error en cancelación: ${error.message}`);
-  } finally {
-    setProcesandoCancelacion(false);
-  }
-};
+      // Recargar historial
+    const filtrosSinBusqueda = { ...filtros };
+    delete filtrosSinBusqueda.busqueda;
+    if (filtrosSinBusqueda.empleado === "todos") delete filtrosSinBusqueda.empleado;
+
+    const historial = await loadHistorialSolicitudes(filtrosSinBusqueda);
+    setSolicitudesOriginales(historial);
+
+    // Reaplicar filtro de búsqueda si existe
+    let historialFiltrado = historial;
+    if (filtros.busqueda) {
+      const termino = filtros.busqueda.toLowerCase();
+      historialFiltrado = historial.filter(s => {
+        const userData = datosUsuarios[s.solicitante] || {};
+        const nombre = (userData.nombre || s.solicitante).toLowerCase();
+        const comentarios = (s.comentariosSolicitante || '').toLowerCase();
+        const comentariosAdmin = (s.comentariosAdmin || '').toLowerCase();
+        const motivoCancelacion = (s.cancelaciones?.[s.cancelaciones.length - 1]?.motivoCancelacion ?? "").toLowerCase();
+        
+        return nombre.includes(termino) ||
+              s.solicitante.toLowerCase().includes(termino) ||
+              comentarios.includes(termino) ||
+              comentariosAdmin.includes(termino) ||
+              motivoCancelacion.includes(termino);
+      });
+    }
+
+    setSolicitudes(historialFiltrado);
+
+    } catch (error) {
+      showError(`Error en cancelación: ${error.message}`);
+    } finally {
+      setProcesandoCancelacion(false);
+    }
+  };
+
+  // Toggle para acordeón de ampliaciones
+  const toggleAmpliacionesExpanded = (solicitudId) => {
+    setAmpliacionesExpanded(prev => ({
+      ...prev,
+      [solicitudId]: !prev[solicitudId]
+    }));
+  };
+
+  // Abrir dialog ampliar días
+  const handleAbrirAmpliacion = async (solicitud) => {
+    setSolicitudAAmpliar(solicitud);
+    setNuevasFechas([]);
+    setMotivoAmpliacion('');
+    
+    // 🆕 Obtener saldo actual del empleado usando empleadosStore
+    try {
+      const empleado = await fetchEmpleadoPorEmail(solicitud.solicitante);
+      if (empleado && empleado.vacaciones) {
+        setSaldoEmpleadoAAmpliar((empleado.vacaciones.disponibles-empleado.vacaciones.pendientes) || 0);
+      } else {
+        setSaldoEmpleadoAAmpliar(0);
+      }
+    } catch (error) {
+      console.error('Error obteniendo saldo del empleado:', error);
+      setSaldoEmpleadoAAmpliar(0);
+    }
+    
+    setDialogoAmpliacion(true);
+  };
+
+  // Confirmar ampliación
+    const handleConfirmarAmpliacion = async () => {
+      if (nuevasFechas.length === 0) {
+        showError('Debes seleccionar al menos una fecha');
+        return;
+      }
+
+      if (motivoAmpliacion.trim() === '') {
+        showError('Debes escribir un motivo');
+        return;
+      }
+
+      setProcesandoAmpliacion(true);
+      try {
+        await añadirDiasVacaciones(
+          solicitudAAmpliar.id,
+          nuevasFechas,
+          motivoAmpliacion.trim(),
+          solicitudAAmpliar,
+          true // esAdmin
+        );
+        showSuccess(`${nuevasFechas.length} día(s) añadido(s) correctamente`);
+        setDialogoAmpliacion(false);
+        setSolicitudAAmpliar(null);
+        setNuevasFechas([]);
+        setMotivoAmpliacion('');
+        
+        // Recargar historial
+        const filtrosSinBusqueda = { ...filtros };
+        delete filtrosSinBusqueda.busqueda;
+        if (filtrosSinBusqueda.empleado === "todos") delete filtrosSinBusqueda.empleado;
+
+        const historial = await loadHistorialSolicitudes(filtrosSinBusqueda);
+        setSolicitudesOriginales(historial);
+
+        // Reaplicar filtro de búsqueda si existe
+        let historialFiltrado = historial;
+        if (filtros.busqueda) {
+          const termino = filtros.busqueda.toLowerCase();
+          historialFiltrado = historial.filter(s => {
+            const userData = datosUsuarios[s.solicitante] || {};
+            const nombre = (userData.nombre || s.solicitante).toLowerCase();
+            const comentarios = (s.comentariosSolicitante || '').toLowerCase();
+            const comentariosAdmin = (s.comentariosAdmin || '').toLowerCase();
+            const motivoCancelacion = (s.cancelaciones?.[s.cancelaciones.length - 1]?.motivoCancelacion ?? "").toLowerCase();
+            
+            return nombre.includes(termino) ||
+                  s.solicitante.toLowerCase().includes(termino) ||
+                  comentarios.includes(termino) ||
+                  comentariosAdmin.includes(termino) ||
+                  motivoCancelacion.includes(termino);
+          });
+        }
+
+        setSolicitudes(historialFiltrado);
+
+      } catch (error) {
+        showError('Error al ampliar vacaciones: ' + error.message);
+      } finally {
+        setProcesandoAmpliacion(false);
+      }
+    };
 
 
     const puedeGestionarSolicitud = (solicitud) => {
       // Usar la función del store para determinar si se puede cancelar
       const puedeCancelar = puedeCancelarDias(solicitud, true); // true = esAdmin
-      
+      // Puede ampliar si está aprobada o cancelada (pero no si es venta o ajuste)
+      const puedeAmpliar = (solicitud.estado === 'aprobada' || solicitud.estado === 'cancelado') && !solicitud.esVenta && !solicitud.esAjusteSaldo;
       const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
       const diasDisponibles = (solicitud.fechasActuales || []).filter(fecha => {
         const yaDisfrutado = diasDisfrutados.includes(fecha);
@@ -386,6 +525,7 @@ const HistorialSolicitudes = () => {
 
       return {
         puedeCancelar,
+        puedeAmpliar,
         diasDisponibles,
         esHorasSueltas
       };
@@ -393,11 +533,14 @@ const HistorialSolicitudes = () => {
 
 
     const SolicitudCard = ({ solicitud }) => {
-      const { puedeCancelar, diasDisponibles } = puedeGestionarSolicitud(solicitud);
+      const { puedeCancelar, puedeAmpliar } = puedeGestionarSolicitud(solicitud);
       const colorEstado = getColorEstado(solicitud.estado);
       const cancelaciones = solicitud.cancelaciones || [];
+      const ampliaciones = solicitud.ampliaciones || [];
       const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
       const diasCancelados = obtenerDiasCancelados(solicitud.cancelaciones);
+      const diasAmpliados = obtenerDiasAmpliados(solicitud.ampliaciones);
+      const tieneAmpliaciones = solicitud.ampliaciones && solicitud.ampliaciones.length > 0;
       const tieneCancelaciones = cancelaciones.length > 0;
       const userData = datosUsuarios[solicitud.solicitante] || {};
       const esExpandida = solicitudesExpanded[solicitud.id];
@@ -427,15 +570,21 @@ const HistorialSolicitudes = () => {
           >
             <Typography fontSize='1.5rem' fontWeight={600}>
               {formatearNombre(userData.nombre)}
-            </Typography>            
+              
+            </Typography>         
             <Chip
-              label={formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
+              label={solicitud.esAjusteSaldo 
+                ? formatearTiempoVacasLargo(solicitud.horasSolicitadas)
+                : solicitud.horasSolicitadas<8
+                  ? formatearTiempoVacasLargo(solicitud.horasSolicitadas)
+                  : formatearTiempoVacasLargo(solicitud.fechasActuales.length * 8)}
               sx={{fontSize:'1rem', fontWeight:'bold'}}
               variant="outlined"
             />
+            
              <Box sx={{flex:0}}>
               {/* Menú de 3 puntos (solo si hay acciones disponibles) */}
-              {(puedeCancelar) && (
+              {(puedeCancelar || puedeAmpliar) && (
                 <>
                 <IconButton
                   size="small"
@@ -476,13 +625,45 @@ const HistorialSolicitudes = () => {
                     }
                   }}
                 >
+
+              {puedeAmpliar && (
+                <Box>
+                <MenuItem onClick={() => { handleCerrarMenu(); handleAbrirAmpliacion(solicitud); }}>
+                  <ListItemIcon>
+                    <AddIcon fontSize="small" color="success" />
+                    </ListItemIcon>
+                  <ListItemText primary="Añadir días"
+                    slotProps={{
+                          primary:{
+                            fontSize:'1.2rem'
+                          }
+                        }}
+                      sx={{
+                        py:1
+                      }} 
+                    />
+                </MenuItem>
+                <Divider sx={{bgcolor:'black'}}/>
+                </Box>
+              )}
               {puedeCancelar && (
+                
                 <MenuItem onClick={() => handleAbrirCancelacion(solicitud)}>
                   <ListItemIcon>
                     <Cancel fontSize="small" sx={{ color: 'warning.main' }} />
                   </ListItemIcon>
-                  <ListItemText primary={solicitud.esVenta?"Cancelar Venta":"Cancelar días"} />
+                  <ListItemText primary={solicitud.esVenta?"Cancelar Venta":"Cancelar días"}
+                    slotProps={{
+                          primary:{
+                            fontSize:'1.2rem'
+                          }
+                        }}
+                      sx={{
+                        py:1
+                      }} 
+                    />
                 </MenuItem>
+                
               )}
             </Menu>
               </>
@@ -517,7 +698,15 @@ const HistorialSolicitudes = () => {
                     Denegada: {formatearFechaCorta(solicitud.fechaAprobacionDenegacion)}
                     </Typography>
                   )}
-
+                        
+                  {/* Historial de ampliaciones y cancelaciones */}
+                  {tieneAmpliaciones && (
+              
+                    <Typography variant="body1" fontWeight={600} sx={{color:"verde.main"}}>
+                      {ampliaciones.length} {ampliaciones.length > 1 ? 'Ampliaciones' : 'Ampliación'}
+                    </Typography>
+                      
+                    )}
                     {tieneCancelaciones && (
               
                     <Typography variant="body1" fontWeight={600} sx={{color:"naranja.main"}}>
@@ -555,7 +744,7 @@ const HistorialSolicitudes = () => {
                   >
                   {solicitud?.esAjusteSaldo 
                     ? <Grid size={{ xs: 12 }}>
-                    <Typography  sx={{ fontWeight: 600, fontSize:'1rem', mt:3}}>
+                    <Typography  sx={{ fontWeight: 600, fontSize:'1rem', mt:1}}>
                       Ajuste de saldo             
                       </Typography>
                       <Typography  sx={{ fontWeight: 600, fontSize:'1rem', color: 
@@ -618,7 +807,7 @@ const HistorialSolicitudes = () => {
                   {/*  Lista de fechas con estados visuales */}
                   {!solicitud?.esAjusteSaldo && !solicitud.esVenta && (
                     <>
-                  {(solicitud.fechas.length === 1) ? (
+                  {(solicitud.fechasActuales.length === 1) ? (
                     <Grid size={{ xs: 12 }}>
                     <Box  justifyContent='space-around' alignItems={'center'} 
                         sx={{
@@ -669,63 +858,73 @@ const HistorialSolicitudes = () => {
                         }}
                       >
                         <Typography fontSize={'1.15rem'}>
-                          Fechas solicitadas ({solicitud.fechas.length})
+                          Fechas solicitadas ({solicitud.fechasActuales.length})
                         </Typography>
                       </Box>
-                        <Grid container sx={{mt:0}} spacing={0.5}>
-                          {ordenarFechas(solicitud.fechas).map(fecha => {
-                            const estaCancelado = diasCancelados.includes(fecha);
-                            const estaDisfrutado = diasDisfrutados.includes(fecha);
+                        <Grid container sx={{mt:0.5}} spacing={0.5}>
+                           {(() => {
+                              const todasLasFechas = [...new Set([...solicitud.fechas, ...solicitud.fechasActuales])];
+                              return ordenarFechas(todasLasFechas).map(fecha => {
+                                const esPasada = esFechaPasadaOHoy(fecha);
+                                
+                                // Clasificación simple basada en presencia en cada array
+                                const estaEnOriginales = solicitud.fechas.includes(fecha);
+                                const estaEnActuales = solicitud.fechasActuales.includes(fecha);                        
+                                const esAgregada = !estaEnOriginales && estaEnActuales;
+                                const estaCancelada = estaEnOriginales && !estaEnActuales; 
+                            
                             // Determinar estilo y etiqueta según el estado REAL
                             let colorTexto = 'text.primary'
                             let etiqueta = '';
                             let decoracion = 'none';
                             let icono = '•';
-                            if (estaCancelado) {
-                              // Fecha cancelada
+                            
+                            if (estaCancelada) {
+                              // Fecha cancelada 
                               colorTexto = 'error.main';
                               decoracion = 'line-through';
                               etiqueta = '(Cancelado)';
                               icono = '❌';
-                            } 
-                            if (estaDisfrutado) {
-                              // Fecha disfrutada
-                              colorTexto = 'text.secondary';
-                              decoracion = 'none';
-                              etiqueta = '(Disfrutado)';
-                              icono = '✅';
-                            }
-                            return (
-                              <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
-                                <Box display="flex" justifyContent='center' alignItems="center" gap={0.5}>
-                                  <Typography variant="body1"color={colorTexto}>
-                                    {icono} 
-                                  </Typography>
-                                  
-                                  <Typography
-                                    variant="body1"
-                                    color={colorTexto}
-                                    sx={{ 
-                                      textDecoration: decoracion,
-                                      fontStyle: estaDisfrutado? 'italic': 'normal',
-                                      fontWeight: 500
-                                    }}
-                                  >
-                                    {formatearFechaCorta(fecha)}
-                                  </Typography>
-                                  {etiqueta && (
-                                    <Typography 
-                                      variant="caption" 
-                                      color={colorTexto}
-                                      sx={{ fontStyle: 'italic' }}
-                                    >
-                                      
-                                    </Typography>
-                                  )}
+                            } else if (esAgregada) {
+                              // Fecha añadida 
+                              colorTexto = 'success.main';
+                              etiqueta = '(Añadido)';
+                              icono = '➕';
+                            }   
+                              return (
+                                <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
+                                  <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+                                    <Box display='flex' gap={1}>
+                                      <Typography>
+                                        {icono}
+                                      </Typography>
+                                      <Typography
+                                        variant="body1"
+                                        color={colorTexto}
+                                        sx={{ 
+                                          textDecoration: decoracion,
+                                          opacity: esPasada ? 0.9 : 1,
+                                          fontStyle: esPasada? 'italic': 'normal',
+                                          fontWeight: 500
+                                        }}
+                                      >
+                                        {formatearFechaCorta(fecha)}
+                                      </Typography>
+                                    </Box>
+                                    {etiqueta && (
+                                      <Typography 
+                                        variant="body1" 
+                                        color={colorTexto}
+                                        sx={{ fontStyle: 'italic' }}
+                                      >
+                                        
+                                      </Typography>
+                                    )}
                                   </Box>
-                              </Grid>
-                            )
-                          })}
+                                </Grid>
+                              );
+                            });
+                          })()}
                         </Grid>
            
                     </Grid>
@@ -763,6 +962,172 @@ const HistorialSolicitudes = () => {
                           "{solicitud.comentariosAdmin}"
                         </Typography>
                       </Box>
+                    </Grid>
+                  )}
+
+                  {/* Historial de ampliaciones */}
+                  {solicitud.ampliaciones && solicitud.ampliaciones.length > 0 && (
+                    <Grid size={{ xs: 12 }}>
+                        <Divider sx={{ my: 2, bgcolor: 'black' }} />
+                      <Typography sx={{ mb: 1, fontWeight: 600, fontSize: '1.1rem' }}>
+                         ➕ Días ampliados: {obtenerDiasAmpliados(solicitud.ampliaciones).length} {obtenerDiasAmpliados(solicitud.ampliaciones).length === 1 ? 'día' : 'días'}
+                      </Typography>
+                      <Box
+                        onClick={() => toggleAmpliacionesExpanded(`ampliaciones-${solicitud.id}`)}
+                        sx={{
+                          mb: 1,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          p: 1,
+                          bgcolor: 'success.lighter',
+                          borderRadius: 3,
+                          border: '2px solid',
+                          borderColor: 'success.main',
+                          '&:hover': { bgcolor: 'success.light' }
+                        }}
+                      >
+                        <Typography variant="body1" color="success.dark"sx={{ fontWeight: 'bold' }}>
+                          {solicitud.ampliaciones.length} {solicitud.ampliaciones.length !== 1 ? ' Ampliaciones' : ' Ampliación'}
+                        </Typography>
+                        {ampliacionesExpanded[`ampliaciones-${solicitud.id}`] ? <ExpandLess /> : <ExpandMore />}
+                      </Box>
+
+                      <Collapse in={ampliacionesExpanded[`ampliaciones-${solicitud.id}`]}>
+                      <Box sx={{ mt: 1 }}>
+                        {solicitud.ampliaciones.map((ampliacion, index) => (
+                          <Card
+                            key={index}
+                            elevation={0}
+                            sx={{
+                              p: 2,
+                              mb: 2.5,
+                              bgcolor:  'verde.fondo',
+                              borderLeft: '4px solid',
+                              borderColor: 'success.main'
+                            }}
+                          >
+                            <Box display='flex' justifyContent='space-between'>
+                            <Typography variant="body2" fontWeight={700} sx={{ mb: 2, color: 'success.dark' }}>
+                              Ampliación #{index + 1}
+                            </Typography>
+                            </Box>
+                            {/* Fecha de ampliación */}
+                            <Box display="flex" justifyContent='space-between' alignItems="center"  mb={1.5}>
+                            <Typography variant="body1">
+                              Ampliado el:
+                              </Typography>
+                            <Typography variant="body1" fontWeight={600}>
+                              {formatearFechaCorta(ampliacion.fechaAmpliacion)}
+                            </Typography>
+                            </Box>
+
+                            {/* Días ampliados */}
+                            <Box mb={1.5}>
+                              {ampliacion.fechasAmpliadas?.length === 1? (
+                                <>
+                                <Typography  sx={{textAlign:'center', fontSize:'1rem'}}>
+                                  Día Añadido 
+                                </Typography>  
+                                <Box  sx={{
+                                      display: 'flex',
+                                      justifyContent:'center',
+                                      alignItems: 'center',
+                                      cursor: 'pointer',
+                                      p: 1,   
+                                      border:'1px solid',
+                                      bgcolor:'white',
+                                      borderColor: 'success.main',
+                                      borderRadius: 2,
+                                }}>
+                            <Typography fontSize={'1.05rem'} sx={{fontWeight: 600}} >
+                              {formatearFechaLarga(ampliacion.fechasAmpliadas[0])}
+                            </Typography>
+                            </Box>
+                            </>
+                            ) : (
+                            <>
+                              <Typography variant="body1" textAlign={'center'} display="block" mb={0.5}>
+                                Días Añadidos ({ampliacion.fechasAmpliadas.length})
+                              </Typography>                       
+                              < Grid container sx={{ display: 'flex' }}>
+                                {ampliacion.fechasAmpliadas.sort((a,b)=>a.localeCompare(b)).map(fecha => (
+                                  <Grid size={{xs:6,md:4}} key={fecha}>
+                                  <Box sx={{textAlign:'center'}}>
+                                  <Chip                             
+                                    label={formatearFechaCorta(fecha)}
+                                    size="small"
+                                    variant='outlined'
+                                    sx={{
+                                      p:0.75,
+                                      fontSize: '1rem',
+                                      mb: 0.5,
+                                      bgcolor: 'white',
+                                      color: 'success.main',
+                                      borderColor: 'success.main',
+                                      fontWeight: 600
+                                    }}
+                                  />
+                                  </Box>
+                                  </Grid>
+                                ))}
+                              </Grid>
+                              </>
+                            )}
+                            </Box>
+
+                            <Box sx={{ p:1, bgcolor: 'white', border:'1px solid', borderRadius:2, borderColor: 'success.main'}} >
+                              <Box display="flex" justifyContent='space-between' alignItems="center" mb={0}>
+                              <Typography variant="body1" display="block">
+                                Vacaciones añadidas:
+                              </Typography>
+                              <Typography variant="body1" display="block" fontWeight={600}>
+                                {formatearTiempoVacasLargo(ampliacion.horasAmpliadas)}
+                              </Typography>
+                               </Box>
+                                <Divider sx={{bgcolor:'black', mb:0.5}} />
+                                  <Box display="flex" justifyContent='space-between' alignItems="center"  mb={0.5}>
+                                  <Typography variant="body1" displaybody2="block" >
+                                    Saldo antes:
+                                  </Typography>
+                                  <Typography variant="body1" display="block" fontWeight={600} >
+                                    {formatearTiempoVacasLargo(ampliacion.horasDisponiblesAntesAmpliacion || 0)}
+                                  </Typography>
+                                </Box>
+                                <Box display="flex" justifyContent='space-between' alignItems="center" mb={0.5}>
+                                  <Typography variant="body1" display="block" >
+                                    Saldo después:
+                                  </Typography>
+                                  <Typography variant="body1" display="block" fontWeight={600}>
+                                    {formatearTiempoVacasLargo(ampliacion.horasDisponiblesDespuesAmpliacion || 0)}
+                                  </Typography>
+                                  </Box>
+                                  </Box>
+
+                                  {/* Motivo */}
+                                  <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: 'success.main' }}>
+                                  <Typography variant="body2" color="" fontWeight={600} display="block" mb={0.5}>
+                                    💬 Motivo:
+                                  </Typography>
+                                  <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
+                                    "{ampliacion.motivoAmpliacion}"
+                                  </Typography>
+                                </Box>
+
+                                {/* Quién amplió */}
+                                <Box display="flex" justifyContent='space-between' alignItems="center" mt={0.5}>
+                                  <Typography variant="body2" color="">
+                                    Ampliado por:
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight={600} color="">
+                                    {ampliacion.procesadaPor}
+                                  </Typography>
+                                </Box>
+                              </Card>
+                        ))}
+                        </Box>
+                      </Collapse>
                     </Grid>
                   )}
         
@@ -881,10 +1246,10 @@ const HistorialSolicitudes = () => {
                                 ) : (
                                 <>
                                   <Typography variant="body1" textAlign={'center'} display="block" mb={0.5}>
-                                    Días cancelados ({cancelacion.fechasCanceladas.length})
+                                    Días Cancelados ({cancelacion.fechasCanceladas.length})
                                   </Typography>                       
                                   < Grid container sx={{ display: 'flex' }}>
-                                    {cancelacion.fechasCanceladas.map(fecha => (
+                                    {cancelacion.fechasCanceladas.sort((a,b)=>a.localeCompare(b)).map(fecha => (
                                       <Grid size={{xs:6,md:4}} key={fecha}>
                                       <Box sx={{textAlign:'center'}}>
                                       <Chip                             
@@ -960,6 +1325,14 @@ const HistorialSolicitudes = () => {
                         </Collapse>
                       </Grid>
                   )}
+                  {solicitud.esAdmin && (
+                    <Grid size={{ xs: 12 }}>
+                      <Divider sx={{ mt: 2, bgcolor: 'black' }} />
+                      <Typography variant="body1" display="block" textAlign="center" fontWeight={600}>
+                          Creada por Administración
+                        </Typography>
+                    </Grid>
+                    )}
                   </Collapse>
                 </Grid>
                 </Grid>
@@ -1213,6 +1586,7 @@ const HistorialSolicitudes = () => {
                       label="Año"
                       onChange={(e) => handleFiltroChange('año', e.target.value)}
                     >
+                      <MenuItem value="todos">Todos los años</MenuItem>
                       {añosDisponibles.map(año => (
                         <MenuItem key={año} value={año}>
                           {año}
@@ -1260,14 +1634,14 @@ const HistorialSolicitudes = () => {
           {solicitudACancelar && (
             <>
               {/* Info del empleado */}
-              <Alert severity="info" sx={{ my: 2 }}>
+              <Box sx={{ px:2, py:1, my: 2, textAlign:'center', bgcolor: 'azul.fondo', borderRadius: 2, border: '1px solid', borderColor: 'info.main' }}>
                 <Typography variant="body1" sx={{ textAlign:'center', fontWeight: 600 }}>
                   {datosUsuarios[solicitudACancelar.solicitante]?.nombre || solicitudACancelar.solicitante}
                 </Typography>
-                <Typography variant="body2">
+                <Typography variant="body1">
                   Solicitud original: {formatearTiempoVacasLargo(solicitudACancelar.horasSolicitadas)}
                 </Typography>
-              </Alert>
+              </Box>
 
               {/* Información adicional */}
               {solicitudACancelar.esVenta ? (
@@ -1276,8 +1650,26 @@ const HistorialSolicitudes = () => {
                 </Alert>
               ) : (
                 <>
+                  <Box display='flex' justifyContent='space-between' alignItems='center'>
+                  <Box>
+                  {solicitudACancelar.ampliaciones?.length > 0 && (
+                    <Chip
+                      label={`${obtenerDiasAmpliados(solicitudACancelar.ampliaciones).length} día${obtenerDiasAmpliados(solicitudACancelar.ampliaciones).length === 1 ? '' : 's'} añadido${obtenerDiasAmpliados(solicitudACancelar.ampliaciones).length === 1 ? '' : 's'}`}
+                      size="small"
+                      color="primary"
+                      sx={{ mb: 2 }}
+                    />
+                  )}
+                  {solicitudACancelar.cancelaciones?.length > 0 && (
+                    <Chip
+                      label={`${obtenerDiasCancelados(solicitudACancelar.cancelaciones).length} día${obtenerDiasCancelados(solicitudACancelar.cancelaciones).length === 1 ? '' : 's'} ya cancelado${obtenerDiasCancelados(solicitudACancelar.cancelaciones).length === 1 ? '' : 's'}`}
+                      size="small"
+                      color="error"
+                      sx={{ mb: 2 }}
+                    />
+                  )}
+                  </Box>
                   {/* Días disfrutados/cancelados */}
-                  <Box display='flex' justifyContent='space-between'>
                   {obtenerDiasDisfrutados(solicitudACancelar).length > 0 && (
                     <Chip
                       label={(obtenerDiasDisfrutados(solicitudACancelar).length === 1 && solicitudACancelar.horasSolicitadas<8)
@@ -1289,14 +1681,6 @@ const HistorialSolicitudes = () => {
                     />
                   )}
                   
-                  {solicitudACancelar.cancelaciones?.length > 0 && (
-                    <Chip
-                      label={`${obtenerDiasCancelados(solicitudACancelar.cancelaciones).length} día${obtenerDiasCancelados(solicitudACancelar.cancelaciones).length === 1 ? '' : 's'} ya cancelado${obtenerDiasCancelados(solicitudACancelar.cancelaciones).length === 1 ? '' : 's'}`}
-                      size="small"
-                      color="error"
-                      sx={{ mb: 2 }}
-                    />
-                  )}
                   </Box>
                   {/* Selector de días */}
                   <Box sx={{ mb: 3 }}>
@@ -1328,13 +1712,14 @@ const HistorialSolicitudes = () => {
           )}
         </DialogContent>
 
-        <DialogActions sx={{display:'flex', justifyContent:'space-between'}}>
+        <DialogActions sx={{p:2, display:'flex', justifyContent:'space-between'}}>
           <Button 
             onClick={() => setDialogoCancelacion(false)} 
             disabled={procesandoCancelacion}
             variant='outlined'
             sx={{
-              fontSize:'1.1rem',
+              textTransform:'none',
+              fontSize:'1.25rem',
               px:2,
               py:1
             }}
@@ -1348,18 +1733,102 @@ const HistorialSolicitudes = () => {
             disabled={procesandoCancelacion || !motivoCancelacion.trim()||(!solicitudACancelar?.esVenta && diasACancelar.length===0)}
             startIcon={procesandoCancelacion && <CircularProgress size={20} />}
             sx={{
-              fontSize:'1.1rem',
+              textTransform:'none',
+              fontSize:'1.25rem',
               px:2,
               py:1
             }}
           >
             {procesandoCancelacion 
               ? 'Procesando...' 
-              : solicitudACancelar?.esVenta ? 'Cancelar Venta':'Cancelar Días'}
+              : solicitudACancelar?.esVenta ? 'Cancelar Venta':`Cancelar ${diasACancelar.length} ${diasACancelar.length === 1 ? 'día' : 'días'}`}
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* Dialog Ampliar Días */}
+      <Dialog
+        open={dialogoAmpliacion}
+        onClose={() => !procesandoAmpliacion && setDialogoAmpliacion(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle bgcolor='verde.main' color='white' textAlign='center'>Ampliar vacaciones</DialogTitle>
+        <DialogContent sx={{p:2, mt:2}}>
+          
+          {solicitudAAmpliar && (
+            <>
+            <Box bgcolor="azul.fondo" sx={{ my: 1, px:2, py:1, borderRadius:3 }}>
+              <Typography variant="h6" textAlign='center' fontWeight='bold' sx={{ mb: 1 }}>
+                {(datosUsuarios[solicitudAAmpliar.solicitante]?.nombre || solicitudAAmpliar.solicitante)}
+              </Typography>
+
+              <Box display='flex' justifyContent='space-between' alignItems='center' >
+              <Typography variant="body1" sx={{ }}>
+                <strong>Días solicitados:</strong> 
+                </Typography>
+              <Typography variant="body1" sx={{ }}>
+                {formatearTiempoVacasLargo(solicitudAAmpliar.fechasActuales.length*8)}
+              </Typography>
+              </Box>
+              <Box display='flex' justifyContent='space-between' alignItems='center' >
+              <Typography variant="body1">
+              <strong>Vacaciones disponibles:</strong> 
+              </Typography>
+              <Typography variant="body1">
+              {formatearTiempoVacas(saldoEmpleadoAAmpliar)}
+              </Typography>
+              </Box>
+              </Box>
+
+              <Divider sx={{ my: 2, bgcolor:'black' }} />
+
+              <Typography variant="body1" textAlign='center' sx={{ mt:1, fontWeight: 'bold' }}>
+                Selecciona las fechas a añadir
+              </Typography>
+
+              <CalendarioAmpliarVacaciones
+                fechasSeleccionadas={nuevasFechas}
+                onFechasChange={setNuevasFechas}
+                esAdmin={true}
+                fechasOriginales={solicitudAAmpliar.fechasActuales}
+                horasDisponibles={saldoEmpleadoAAmpliar} 
+              />
+
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Motivo de la ampliación *"
+                value={motivoAmpliacion}
+                onChange={(e) => setMotivoAmpliacion(e.target.value)}
+                placeholder="Obligatorio. Ej: Extensión solicitada por el empleado"
+                sx={{ mt: 3 }}
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{display:'flex', justifyContent:'space-between', p:2}}>
+          <Button
+            onClick={() => setDialogoAmpliacion(false)}
+            disabled={procesandoAmpliacion}
+            variant="outlined"
+            color="error"
+            sx={{py:1, textTransform:'none', fontSize:'1.25rem'}}
+          >
+            Volver
+          </Button>
+          <Button
+            onClick={handleConfirmarAmpliacion}
+            disabled={procesandoAmpliacion || nuevasFechas.length === 0 || !motivoAmpliacion.trim()}
+            variant="contained"
+            sx={{py:1, textTransform:'none', fontSize:'1.25rem'}}
+            startIcon={procesandoAmpliacion ? <CircularProgress size={20} /> : <AddIcon />}
+          >
+            {procesandoAmpliacion ? 'Añadiendo...' : `Añadir ${nuevasFechas.length} ${nuevasFechas.length === 1 ? 'día' : 'días'}`}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       </Container>
     </>

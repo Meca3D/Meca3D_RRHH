@@ -412,6 +412,7 @@ useEffect(() => {
       const chipColor = (e.deltaHoras > 0 ? 'success' : e.deltaHoras < 0 ? 'error' : 'default');
       const getColor = (e) => ( e.tipo === 'denegada' ? 'rojo.main' 
                               : e.tipo ==='aprobacion' ? 'verde.main'
+                              : e.tipo ==='ampliacion' ? 'verde.main'
                               : e.tipo ==='cancelacion_parcial' ? 'naranja.main'
                               : e.tipo ==='cancelacion_total' ? 'dorado.main'
                               : e.tipo ==='ajuste' && e.tipoAjuste==="añadir" ? 'verde.main'
@@ -420,6 +421,7 @@ useEffect(() => {
                               : 'default')
       const getFondo = (e) => (e.tipo === 'denegada' ? 'grey.100' 
                               : e.tipo ==='aprobacion' ? 'verde.fondo'
+                              : e.tipo ==='ampliacion' ? 'verde.fondo'
                               : e.tipo ==='cancelacion_parcial' ? 'naranja.fondo'
                               : e.tipo ==='cancelacion_total' ? 'dorado.fondo'
                               : e.tipo ==='ajuste' && e.tipoAjuste==="añadir" ? 'verde.fondo'
@@ -562,6 +564,81 @@ useEffect(() => {
                   )}
                 </>
               )}
+
+              {(e.tipo === 'ampliacion') && (
+                <>
+                {Array.isArray(e.fechasAmpliadas) && e.fechasAmpliadas.length > 0 && (
+                    <Box>
+                        <Typography fontWeight={600} variant="body1" sx={{textAlign:'center'}}>
+                        {e.fechasAmpliadas.length === 1 ? 'Día Añadido':'Días Añadidos'} 
+                        </Typography>               
+                      {e.fechasAmpliadas.length === 1 ? (
+                          <Grid size={{ xs: 12 }}> 
+                          <Box  sx={{
+                            display: 'flex',
+                            justifyContent:'center',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            p: 1,   
+                            border:'1px solid',
+                            bgcolor:'white',
+                            borderColor: getColor(e),
+                            borderRadius: 2,
+                                }}>                    
+                                <Typography fontSize={'1.1rem'}>
+                                  {formatearFechaLarga(e.fechasAmpliadas[0])}
+                                </Typography>
+                                </Box>
+                                </Grid>
+                              ) : (
+                        <Grid container sx={{mt:1,}} spacing={0.5}>
+                        {e.fechasAmpliadas.map(fecha=> (
+                        <Grid size={{xs:6,md:4}} key={fecha}>
+                          <Box sx={{textAlign:'center', mb: 0.5,}}>
+                            <Chip                             
+                              label={formatearFechaCorta(fecha)}
+                              size="small"
+                              variant='outlined'
+                              sx={{
+                                fontSize: '1rem',
+                                p:0.5,
+                                bgcolor: 'white',
+                                color: getColor(e),
+                                borderColor: getColor(e),
+                                fontWeight: 600
+                              }}
+                            />
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                              )}
+                    </Box>
+                  )}
+
+                  {e.motivoAmpliacion && (
+
+                    <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
+                        <Typography variant="body2" display="block" fontWeight={600}>
+                          💬 Motivo de la Ampliación:
+                        </Typography>
+                        <Typography variant="body1" fontStyle='italic' sx={{ whiteSpace: 'pre-wrap' }}>
+                          "{e.motivoAmpliacion}"
+                        </Typography>
+                      </Box>
+                  )}
+                  <Box display="flex" justifyContent='space-between' alignItems="center" mt={0.5}>
+                    <Typography variant="body2" color="">
+                      Ampliado por:
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600} color="">
+                      {e.procesadaPor}
+                    </Typography>
+                  </Box>
+                </>
+              )}
+
+
               {(e.tipo === 'cancelacion_parcial'||e.tipo === 'cancelacion_total') && (
                 <>
                 {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (

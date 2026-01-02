@@ -38,11 +38,11 @@ const MisSolicitudesVacaciones = () => {
     solicitudesVacaciones,
     loadSolicitudesVacaciones, 
     eliminarSolicitudVacaciones,
-    cancelarDiasSolicitudVacaciones,  
-    cancelarVentaVacaciones, 
+    cancelarDiasSolicitudVacaciones,   
     puedeCancelarDias,
     obtenerDiasCancelados,      
-    obtenerDiasDisfrutados,      
+    obtenerDiasDisfrutados,
+    obtenerDiasAmpliados,
     loading 
   } = useVacacionesStore();
   const { showSuccess, showError } = useUIStore();
@@ -51,7 +51,7 @@ const MisSolicitudesVacaciones = () => {
   const [tabActual, setTabActual] = useState(0);
   const [solicitudExpandida, setSolicitudExpandida] = useState({});
   const [cancelacionesExpanded, setCancelacionesExpanded] = useState({});
-  
+  const [ampliacionesExpanded, setAmpliacionesExpanded] = useState({});
   // Estados para cancelación
   
   const [dialogoCancelacionDias, setDialogoCancelacionDias] = useState(false);
@@ -192,6 +192,14 @@ const MisSolicitudesVacaciones = () => {
       }
     };
 
+      // Toggle para acordeón de ampliaciones
+  const toggleAmpliacionesExpanded = (solicitudId) => {
+    setAmpliacionesExpanded(prev => ({
+      ...prev,
+      [solicitudId]: !prev[solicitudId]
+    }));
+  };
+
   //  Toggle para acordeón de cancelaciones parciales  
   const toggleCancelacionesExpanded = (solicitudId) => {
     setCancelacionesExpanded(prev => ({
@@ -222,7 +230,10 @@ const MisSolicitudesVacaciones = () => {
     const colorEstado = getColorEstado(solicitud.estado);
     const diasCancelados = obtenerDiasCancelados(solicitud.cancelaciones)
     const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
+    const diasAmpliados = obtenerDiasAmpliados(solicitud.ampliaciones);
     const cancelaciones = solicitud.cancelaciones || [];
+    const ampliaciones = solicitud.ampliaciones || [];
+    const tieneAmpliaciones = ampliaciones.length > 0;
     const tieneCancelaciones = cancelaciones.length > 0;    
     const [menuOpen, setMenuOpen] = useState(false);
     const menuButtonRef = React.useRef(null);
@@ -268,14 +279,6 @@ const MisSolicitudesVacaciones = () => {
                   Denegada: {formatearFechaCorta(solicitud.fechaAprobacionDenegacion)}
                   </Typography>
                 )}
-
-                  {tieneCancelaciones && (
-            
-                  <Typography variant="body1" fontWeight={600} sx={{color:"naranja.main"}}>
-                    {cancelaciones.length} Cancelación{cancelaciones.length > 1 ? 'es' : ''}
-                  </Typography>
-                    
-                  )}
                 </Box>
                   <Box sx={{flex:0}} >
                   <Chip
@@ -357,6 +360,20 @@ const MisSolicitudesVacaciones = () => {
                 )}
               </Box>
               </Box>
+              <Box >
+               {/* Historial de ampliaciones y cancelaciones */}
+                {tieneAmpliaciones && (          
+                  <Typography variant="body1" fontWeight={600} sx={{color:"verde.main"}}>
+                    {ampliaciones.length} {ampliaciones.length > 1 ? 'Ampliaciones' : 'Ampliación'}
+                  </Typography>                 
+                )}
+                {tieneCancelaciones && (          
+                  <Typography variant="body1" fontWeight={600} sx={{color:"naranja.main"}}>
+                    {cancelaciones.length} Cancelación{cancelaciones.length > 1 ? 'es' : ''}
+                  </Typography>
+                    
+                )}
+                </Box>
               <Box
                 onClick={() => toggleSolicitudExpanded(solicitud.id)}
                 sx={{
@@ -369,7 +386,7 @@ const MisSolicitudesVacaciones = () => {
               >
               {solicitud?.esAjusteSaldo 
             ? <Grid size={{ xs: 12 }}>
-            <Typography  sx={{ fontWeight: 600, fontSize:'1.3rem', mt:3, textAlign:'center' }}>
+            <Typography  sx={{ fontWeight: 600, fontSize:'1.3rem',textAlign:'center' }}>
               Ajuste de saldo             
              </Typography>
              <Typography  sx={{ fontWeight: 600, fontSize:'1.2rem', textAlign:'center', color: 
@@ -379,13 +396,13 @@ const MisSolicitudesVacaciones = () => {
             </Grid>
             : solicitud.esVenta ? (
               <Grid size={{ xs: 12 }}>
-              <Typography  sx={{ fontWeight: 600, fontSize:'1rem', mt:1 }}>
+              <Typography  sx={{ fontWeight: 600, fontSize:'1rem' }}>
                 Venta de Vacaciones: {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
               </Typography>
               </Grid>
             ):(
               <Grid size={{ xs: 12 }}>
-                  <Typography  sx={{ fontWeight: 600, fontSize:'1rem', mt:1 }}>
+                  <Typography  sx={{ fontWeight: 600, fontSize:'1rem' }}>
                 ✅ Días Solicitados: {formatearTiempoVacasLargo(solicitud.horasSolicitadas)}
                   </Typography>
               </Grid>
@@ -445,7 +462,7 @@ const MisSolicitudesVacaciones = () => {
           {/*  Lista de fechas con estados visuales */}
           {!solicitud?.esAjusteSaldo && !solicitud.esVenta && (
             <>
-          {(solicitud.fechas.length === 1)? (
+          {(solicitud.fechasActuales.length === 1)? (
             <Grid size={{ xs: 12 }}>
             <Box  justifyContent='space-around' alignItems={'center'} 
                 sx={{
@@ -463,7 +480,7 @@ const MisSolicitudesVacaciones = () => {
               sx={{textDecoration:solicitud.fechasActuales.length===0?'line-through':'none',
                 color:solicitud.fechasActuales.length===0?'error.main':''
                }}>
-              {solicitud.fechasActuales.length===0?'❌ ':''}{formatearFechaLarga(solicitud.fechas[0])}
+              {solicitud.fechasActuales.length===0?'❌ ':''}{formatearFechaLarga(solicitud.fechasActuales[0])}
             </Typography>
             {solicitud.horasSolicitadas<8 && (
               <Chip
@@ -499,60 +516,70 @@ const MisSolicitudesVacaciones = () => {
                   Fechas solicitadas ({solicitud.fechas.length})
                 </Typography>
               </Box>
-                <Grid container sx={{mt:0.5,}} spacing={0.5}>
-                  {ordenarFechas(solicitud.fechas).map(fecha => {
-                    const estaCancelado = diasCancelados.includes(fecha);
-                    const estaDisfrutado = diasDisfrutados.includes(fecha);
-                    // Determinar estilo y etiqueta según el estado REAL
-                    let colorTexto = 'text.primary'
-                    let etiqueta = '';
-                    let decoracion = 'none';
-                    let icono = '•';
-                    if (estaCancelado) {
-                      // Fecha cancelada
-                      colorTexto = 'error.main';
-                      decoracion = 'line-through';
-                      etiqueta = '(Cancelado)';
-                      icono = '❌';
-                    } 
-                    if (estaDisfrutado) {
-                      // Fecha disfrutada
-                      colorTexto = 'text.secondary';
-                      decoracion = 'none';
-                      etiqueta = '(Disfrutado)';
-                      icono = '✅';
-                    }
+                <Grid container sx={{mt:0.5}} spacing={0.5}>
+                  {(() => {
+                    const todasLasFechas = [...new Set([...solicitud.fechas, ...solicitud.fechasActuales])];
+                    return ordenarFechas(todasLasFechas).map(fecha => {
+                      const esPasada = esFechaPasadaOHoy(fecha);
+                      
+                      // Clasificación simple basada en presencia en cada array
+                      const estaEnOriginales = solicitud.fechas.includes(fecha);
+                      const estaEnActuales = solicitud.fechasActuales.includes(fecha);                        
+                      const esAgregada = !estaEnOriginales && estaEnActuales;
+                      const estaCancelada = estaEnOriginales && !estaEnActuales; 
+                  
+                  // Determinar estilo y etiqueta según el estado REAL
+                  let colorTexto = 'text.primary'
+                  let etiqueta = '';
+                  let decoracion = 'none';
+                  let icono = '•';
+                  
+                  if (estaCancelada) {
+                    // Fecha cancelada 
+                    colorTexto = 'error.main';
+                    decoracion = 'line-through';
+                    etiqueta = '(Cancelado)';
+                    icono = '❌';
+                  } else if (esAgregada) {
+                    // Fecha añadida 
+                    colorTexto = 'success.main';
+                    etiqueta = '(Añadido)';
+                    icono = '➕';
+                  }   
                     return (
                       <Grid size={{ xs: 6, sm: 4, md: 2 }} key={fecha}>
-                        <Box display="flex" justifyContent='center' alignItems="center" gap={0.5}>
-                          <Typography variant="body1"color={colorTexto}>
-                            {icono} 
-                          </Typography>
-                          
-                          <Typography
-                            variant="body1"
-                            color={colorTexto}
-                            sx={{ 
-                              textDecoration: decoracion,
-                              fontStyle: estaDisfrutado? 'italic': 'normal',
-                              fontWeight: 500
-                            }}
-                          >
-                            {formatearFechaCorta(fecha)}
-                          </Typography>
+                        <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+                          <Box display='flex' gap={1}>
+                            <Typography>
+                              {icono}
+                            </Typography>
+                            <Typography
+                              variant="body1"
+                              color={colorTexto}
+                              sx={{ 
+                                textDecoration: decoracion,
+                                opacity: esPasada ? 0.9 : 1,
+                                fontStyle: esPasada? 'italic': 'normal',
+                                fontWeight: 500
+                              }}
+                            >
+                              {formatearFechaCorta(fecha)}
+                            </Typography>
+                          </Box>
                           {etiqueta && (
                             <Typography 
-                              variant="caption" 
+                              variant="body1" 
                               color={colorTexto}
                               sx={{ fontStyle: 'italic' }}
                             >
                               
                             </Typography>
                           )}
-                          </Box>
+                        </Box>
                       </Grid>
-                    )
-                  })}
+                    );
+                  });
+                })()}
                 </Grid>
             </Grid>
           )}
@@ -570,7 +597,7 @@ const MisSolicitudesVacaciones = () => {
                 solicitud.estado === 'aprobada' ? 'green' : 
                 solicitud.estado === 'cancelado' ? 'brown' : 'red'}` }}>
                   <Typography variant="body1" display="block" fontWeight={600}>
-                    💬 Tus comentarios:
+                    {solicitud.esAjusteSaldo ? '' : '💬 Tus comentarios:'}
                   </Typography>
                   <Typography variant="body1" fontStyle='italic'>
                     "{solicitud.comentariosSolicitante}"
@@ -581,7 +608,7 @@ const MisSolicitudesVacaciones = () => {
 
         {solicitud.comentariosAdmin && (
             <Grid size={{ xs: 12 }}>
-              <Box sx={{ p: 1.5, mt:1,  bgcolor: '#e3f2fd', borderRadius: 2, borderLeft: '4px solid #2196F3' }}>
+              <Box sx={{ p: 1.5, my:1,  bgcolor: '#e3f2fd', borderRadius: 2, borderLeft: '4px solid #2196F3' }}>
                 <Typography variant="body1" display="block" fontWeight={600}>
                   👨‍💼 Respuesta de administración:
                 </Typography>
@@ -591,7 +618,172 @@ const MisSolicitudesVacaciones = () => {
               </Box>
             </Grid>
           )}
+          {/* Historial de ampliaciones */}
+          {solicitud.ampliaciones && solicitud.ampliaciones.length > 0 && (
+            <Grid size={{ xs: 12 }}>
+                <Divider sx={{ my: 2, bgcolor: 'black' }} />
+              <Typography sx={{ mb: 1, fontWeight: 600, fontSize: '1.1rem' }}>
+                  ➕ Días ampliados: {obtenerDiasAmpliados(solicitud.ampliaciones).length} {obtenerDiasAmpliados(solicitud.ampliaciones).length === 1 ? 'día' : 'días'}
+              </Typography>
+              <Box
+                onClick={() => toggleAmpliacionesExpanded(`ampliaciones-${solicitud.id}`)}
+                sx={{
+                  mb: 1,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  p: 1,
+                  bgcolor: 'success.lighter',
+                  borderRadius: 3,
+                  border: '2px solid',
+                  borderColor: 'success.main',
+                  '&:hover': { bgcolor: 'success.light' }
+                }}
+              >
+                <Typography variant="body1" color="success.dark"sx={{ fontWeight: 'bold' }}>
+                  {solicitud.ampliaciones.length} {solicitud.ampliaciones.length !== 1 ? ' Ampliaciones' : ' Ampliación'}
+                </Typography>
+                {ampliacionesExpanded[`ampliaciones-${solicitud.id}`] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </Box>
 
+              <Collapse in={ampliacionesExpanded[`ampliaciones-${solicitud.id}`]}>
+              <Box sx={{ mt: 1 }}>
+                {solicitud.ampliaciones.map((ampliacion, index) => (
+                  <Card
+                    key={index}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      mb: 2.5,
+                      bgcolor:  'verde.fondo',
+                      borderLeft: '4px solid',
+                      borderColor: 'success.main'
+                    }}
+                  >
+                    <Box display='flex' justifyContent='space-between'>
+                    <Typography variant="body2" fontWeight={700} sx={{ mb: 2, color: 'success.dark' }}>
+                      Ampliación #{index + 1}
+                    </Typography>
+                    </Box>
+                    {/* Fecha de ampliación */}
+                    <Box display="flex" justifyContent='space-between' alignItems="center"  mb={1.5}>
+                    <Typography variant="body1">
+                      Ampliado el:
+                      </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {formatearFechaCorta(ampliacion.fechaAmpliacion)}
+                    </Typography>
+                    </Box>
+
+                    {/* Días ampliados */}
+                    <Box mb={1.5}>
+                      {ampliacion.fechasAmpliadas?.length === 1? (
+                        <>
+                        <Typography  sx={{textAlign:'center', fontSize:'1rem'}}>
+                          Día Añadido 
+                        </Typography>  
+                        <Box  sx={{
+                              display: 'flex',
+                              justifyContent:'center',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              p: 1,   
+                              border:'1px solid',
+                              bgcolor:'white',
+                              borderColor: 'success.main',
+                              borderRadius: 2,
+                        }}>
+                    <Typography fontSize={'1.05rem'} sx={{fontWeight: 600}} >
+                      {formatearFechaLarga(ampliacion.fechasAmpliadas[0])}
+                    </Typography>
+                    </Box>
+                    </>
+                    ) : (
+                    <>
+                      <Typography variant="body1" textAlign={'center'} display="block" mb={0.5}>
+                        Días Añadidos ({ampliacion.fechasAmpliadas.length})
+                      </Typography>                       
+                      < Grid container sx={{ display: 'flex' }}>
+                        {ampliacion.fechasAmpliadas.map(fecha => (
+                          <Grid size={{xs:6,md:4}} key={fecha}>
+                          <Box sx={{textAlign:'center'}}>
+                          <Chip                             
+                            label={formatearFechaCorta(fecha)}
+                            size="small"
+                            variant='outlined'
+                            sx={{
+                              p:0.75,
+                              fontSize: '1rem',
+                              mb: 0.5,
+                              bgcolor: 'white',
+                              color: 'success.main',
+                              borderColor: 'success.main',
+                              fontWeight: 600
+                            }}
+                          />
+                          </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                      </>
+                    )}
+                    </Box>
+
+                    <Box sx={{ p:1, bgcolor: 'white', border:'1px solid', borderRadius:2, borderColor: 'success.main'}} >
+                      <Box display="flex" justifyContent='space-between' alignItems="center" mb={0}>
+                      <Typography variant="body1" display="block">
+                        Vacaciones añadidas:
+                      </Typography>
+                      <Typography variant="body1" display="block" fontWeight={600}>
+                        {formatearTiempoVacasLargo(ampliacion.horasAmpliadas)}
+                      </Typography>
+                        </Box>
+                        <Divider sx={{bgcolor:'black', mb:0.5}} />
+                          <Box display="flex" justifyContent='space-between' alignItems="center"  mb={0.5}>
+                          <Typography variant="body1" displaybody2="block" >
+                            Saldo antes:
+                          </Typography>
+                          <Typography variant="body1" display="block" fontWeight={600} >
+                            {formatearTiempoVacasLargo(ampliacion.horasDisponiblesAntesAmpliacion || 0)}
+                          </Typography>
+                        </Box>
+                        <Box display="flex" justifyContent='space-between' alignItems="center" mb={0.5}>
+                          <Typography variant="body1" display="block" >
+                            Saldo después:
+                          </Typography>
+                          <Typography variant="body1" display="block" fontWeight={600}>
+                            {formatearTiempoVacasLargo(ampliacion.horasDisponiblesDespuesAmpliacion || 0)}
+                          </Typography>
+                          </Box>
+                          </Box>
+
+                          {/* Motivo */}
+                          <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: 'success.main' }}>
+                          <Typography variant="body2" color="" fontWeight={600} display="block" mb={0.5}>
+                            💬 Motivo:
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
+                            "{ampliacion.motivoAmpliacion}"
+                          </Typography>
+                        </Box>
+
+                        {/* Quién amplió */}
+                        <Box display="flex" justifyContent='space-between' alignItems="center" mt={0.5}>
+                          <Typography variant="body2" color="">
+                            Ampliado por:
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600} color="">
+                            {ampliacion.procesadaPor}
+                          </Typography>
+                        </Box>
+                      </Card>
+                ))}
+                </Box>
+              </Collapse>
+            </Grid>
+          )}                
+                          
           {/* Acordeón de cancelaciones */}
           {tieneCancelaciones && (
               <Grid size={{ xs: 12 }}>
@@ -782,6 +974,14 @@ const MisSolicitudesVacaciones = () => {
                 </Collapse>
               </Grid>
           )}
+          {solicitud.esAdmin && (
+            <Grid size={{ xs: 12 }}>
+              <Divider sx={{ mt: 2, bgcolor: 'black' }} />
+              <Typography variant="body1" display="block" textAlign="center" fontWeight={600}>
+                  Creada por Administración
+                </Typography>
+            </Grid>
+            )}
           </Collapse>
           </Grid>
         </Grid>

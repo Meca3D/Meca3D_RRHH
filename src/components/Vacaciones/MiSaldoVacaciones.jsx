@@ -508,18 +508,19 @@ autoTable(doc, {
                   )}
                 </>
               )}
-              {(e.tipo === 'cancelacion_parcial'||e.tipo === 'cancelacion_total') && (
+
+              {(e.tipo === 'ampliacion') && (
                 <>
-                {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
+                {Array.isArray(e.fechasAmpliadas) && e.fechasAmpliadas.length > 0 && (
                     <Box>
                         <Typography fontWeight={600} variant="body1" sx={{textAlign:'center'}}>
-                        {e.fechasCanceladas.length === 1 ? 'Día Cancelado':'Días Cancelados'} 
+                        {e.fechasAmpliadas.length === 1 ? 'Día Añadido':'Días Añadidos'} 
                         </Typography>               
-                     {e.fechasCanceladas.length === 1 ? (
-                         <Grid size={{ xs: 12 }}> 
-                         <Box  sx={{
+                      {e.fechasAmpliadas.length === 1 ? (
+                          <Grid size={{ xs: 12 }}> 
+                          <Box  sx={{
                             display: 'flex',
-                            justifyContent:esHorasSueltas?'space-between':'center',
+                            justifyContent:'center',
                             alignItems: 'center',
                             cursor: 'pointer',
                             p: 1,   
@@ -529,25 +530,13 @@ autoTable(doc, {
                             borderRadius: 2,
                                 }}>                    
                                 <Typography fontSize={'1.1rem'}>
-                                  {formatearFechaLarga(e.fechasCanceladas[0])}
+                                  {formatearFechaLarga(e.fechasAmpliadas[0])}
                                 </Typography>
-                                {esHorasSueltas&& (
-                                  <Chip
-                                    label ={formatearTiempoVacasLargo(e.horasDevueltas)}
-                                    size="small"
-                                          sx={{ 
-                                            py:0.5,               
-                                            bgcolor: getColor(e), 
-                                            color: 'white', 
-                                            fontWeight: 700,
-                                          }}
-                                        />
-                                )}
                                 </Box>
                                 </Grid>
                               ) : (
                         <Grid container sx={{mt:1,}} spacing={0.5}>
-                        {e.fechasCanceladas.map(fecha=> (
+                        {e.fechasAmpliadas.map(fecha=> (
                         <Grid size={{xs:6,md:4}} key={fecha}>
                           <Box sx={{textAlign:'center', mb: 0.5,}}>
                             <Chip                             
@@ -571,35 +560,20 @@ autoTable(doc, {
                     </Box>
                   )}
 
-                  {e.esVenta && (
-                      <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
-                        <Typography variant="body2" display="block" fontWeight={600}>
-                          💵 Venta de Vacaciones: 
-                        </Typography>
-                        <Box display='flex' justifyContent='space-between'>
-                          <Typography variant="body1" fontStyle='italic'>
-                            Venta de {formatearTiempoVacasLargo(e.horasSolicitadas)}
-                          </Typography>
-                          <Typography variant="body1" fontStyle='italic'>
-                          ❌
-                        </Typography>                        
-                        </Box>
-                      </Box>
-                  )}
-                  {e.motivoCancelacion && (
+                  {e.motivoAmpliacion && (
 
                     <Box sx={{ mt:1.5, p: 1, bgcolor: 'white', borderRadius: 2, border: '1px solid', borderColor: getColor(e) }}>                                               
                         <Typography variant="body2" display="block" fontWeight={600}>
-                          💬 Motivo de Cancelación:
+                          💬 Motivo de la Ampliación:
                         </Typography>
                         <Typography variant="body1" fontStyle='italic' sx={{ whiteSpace: 'pre-wrap' }}>
-                          "{e.motivoCancelacion}"
+                          "{e.motivoAmpliacion}"
                         </Typography>
                       </Box>
                   )}
                   <Box display="flex" justifyContent='space-between' alignItems="center" mt={0.5}>
                     <Typography variant="body2" color="">
-                      Cancelado por:
+                      Ampliado por:
                     </Typography>
                     <Typography variant="body2" fontWeight={600} color="">
                       {e.procesadaPor}
@@ -608,7 +582,7 @@ autoTable(doc, {
                 </>
               )}
 
-               {e.tipo === 'ampliacion' && (
+              {(e.tipo === 'cancelacion_parcial'||e.tipo === 'cancelacion_total') && (
                 <>
                 {Array.isArray(e.fechasCanceladas) && e.fechasCanceladas.length > 0 && (
                     <Box>

@@ -277,7 +277,7 @@ export const useAusenciasStore = create((set, get) => {
     // Crear nueva ausencia
     crearAusencia: async (ausenciaData, esAdmin = false) => {
       try {
-        const { userProfile, sendNotification } = useAuthStore.getState();
+        const { sendNotification } = useAuthStore.getState();
         
         // Si es admin, NO evaluar auto-aprobación, siempre aprobar
         let estadoFinal;
@@ -508,6 +508,7 @@ export const useAusenciasStore = create((set, get) => {
 
         
         const nuevaEdicion = {
+          createdAt: new Date(),
           fechaEdicion: formatYMD(new Date()),
           fechasAgregadas: nuevasFechas,
           motivoEdicion: motivoEdicion || '',
@@ -581,6 +582,7 @@ export const useAusenciasStore = create((set, get) => {
         
         // Crear objeto de cancelación (mismo formato para parcial y total)
         const nuevaCancelacion = {
+          createdAt: new Date(),
           fechaCancelacion: formatYMD(new Date()),
           diasCancelados: diasACancelar,
           motivoCancelacion: motivoCancelacion.trim(),

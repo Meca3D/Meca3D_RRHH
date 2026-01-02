@@ -14,7 +14,7 @@ const SelectorDiasCancelacion = ({
 
  const { obtenerDiasCancelados, obtenerDiasDisfrutados } = useVacacionesStore();
   
- 
+
   const diasCancelados = obtenerDiasCancelados(solicitud.cancelaciones || []);
   const diasDisfrutados = obtenerDiasDisfrutados(solicitud);
   
@@ -79,7 +79,7 @@ const SelectorDiasCancelacion = ({
       </Box>
 
       <Grid container spacing={1} sx={{ mb: 2 }}>
-        {ordenarFechas(solicitud.fechas).map((fecha, index) => {
+        {ordenarFechas(solicitud.fechasActuales).map((fecha, index) => {
           const estaSeleccionado = diasSeleccionados.includes(fecha);
           const estaCancelado = diasCancelados.includes(fecha);
           const estaDisfrutado = diasDisfrutados.includes(fecha);

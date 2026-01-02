@@ -16,12 +16,10 @@ import {
 } from '@mui/icons-material';
 import { useGlobalData } from '../../hooks/useGlobalData';
 import { formatCurrency } from '../../utils/nominaUtils';
-import { useNominaStore} from '../../stores/nominaStore';
 import { useAuthStore } from '../../stores/authStore';
 
 const Nominas = () => {
   const { userProfile } = useAuthStore();
-  const { configuracionNomina }= useNominaStore()
   const navigate = useNavigate();
   const { userSalaryInfo } = useGlobalData();
   const isVisible = userProfile?.visible !== false;

@@ -1,19 +1,15 @@
 
 import { 
-  Grid, Card, CardContent, Typography, Box, 
-  CardActionArea, Container, Fab, Paper,
+  Grid, Card, CardContent, Typography, Box, Container, Paper,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import MarkEmailUnreadOutlinedIcon from '@mui/icons-material/MarkEmailUnreadOutlined';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
 import BeachAccessOutlinedIcon from '@mui/icons-material/BeachAccessOutlined';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
-import { AssessmentOutlined, SettingsOutlined } from '@mui/icons-material';
 import { useAdminStats } from '../../../hooks/useAdminStats';
-import { useVacacionesStore } from '../../../stores/vacacionesStore';
 
 const GestionVacaciones = () => {
   const navigate = useNavigate();
@@ -31,11 +27,11 @@ const GestionVacaciones = () => {
       bgColor: 'naranja.fondo',
     },
     {
-        id: 'calendario',
-        title: 'Calendario Vacaciones',
-        description: 'Calendario visual de vacaciones del personal',
-        icon: CalendarMonthOutlinedIcon,
-        route: '/admin/vacaciones/calendario',
+        id: 'crear',
+        title: 'Crear Solicitud',
+        description: 'Crear una nueva solicitud de vacaciones',
+        icon: AddCircleOutlineOutlinedIcon,
+        route: '/admin/vacaciones/crear-solicitud',
         color: 'verde.main',
         bgColor: 'verde.fondo',
     },

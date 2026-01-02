@@ -388,8 +388,8 @@ const RegistrarHorasExtras = () => {
                     onWheel={(e) => e.target.blur()}
                     onChange={(e) => setFormData({ ...formData, tarifa: e.target.value })}
                     helperText={sinConfiguracion 
-                      ? <Typography sx={{color:'rojo.main', fontSize:'0.75rem'}}>No hay configuración para este año</Typography>
-                      : <Typography sx={{fontSize:'0.75rem'}}>Tarifa automática según configuración</Typography>
+                      ? <Typography component="span" sx={{color:'rojo.main', fontSize:'0.75rem'}}>No hay configuración para este año</Typography>
+                      : <Typography component="span" sx={{fontSize:'0.75rem'}}>Tarifa automática según configuración</Typography>
                     }
                     slotProps={{
                       htmlInput:{

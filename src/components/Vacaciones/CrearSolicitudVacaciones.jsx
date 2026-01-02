@@ -19,7 +19,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useVacacionesStore } from '../../stores/vacacionesStore';
 import { useUIStore } from '../../stores/uiStore';
 import { formatearTiempoVacas, formatearTiempoVacasLargo, validarSolicitudVacaciones } from '../../utils/vacacionesUtils';
-import { ordenarFechas, formatearFechaCorta, formatYMD } from '../../utils/dateUtils';
+import { ordenarFechas, formatearFechaCorta } from '../../utils/dateUtils';
 import CalendarioVacaciones from './CalendarioVacaciones';
 
 const CrearSolicitudVacaciones = () => {
@@ -104,14 +104,13 @@ const CrearSolicitudVacaciones = () => {
   };
   // AÑADIR cálculo de fechas ya pedidas:
   const fechasYaPedidasSet = useMemo(() => {
-    const hoy = formatYMD(new Date());
     const set = new Set();
     
     solicitudesVacaciones
-      .filter(s => s.estado === 'aprobada')
+      .filter(s => (s.estado === 'aprobada'|| s.estado==='cancelado'))
       .forEach(s => {
         s.fechasActuales?.forEach(f => {
-          if (f >= hoy) {
+           {
             set.add(f);
           }
         });
@@ -296,7 +295,7 @@ const CrearSolicitudVacaciones = () => {
                       ? (<><Typography variant="h5" sx={{mt:1}} textAlign="center" fontWeight={600}>{formatearFechaCorta(fechasSeleccionadas[0])}</Typography></>)
                       :(
 
-                    
+                    <>
                       <Box display="flex" sx={{mt:1}} flexDirection="column" alignItems="center">
                           <Box
                               display="flex"
@@ -328,18 +327,18 @@ const CrearSolicitudVacaciones = () => {
                               </IconButton>
                               </Box>
                               </Box>
+                            </Box>
                           <Collapse in={mostrarListaFechas}>
                           <Grid container sx={{ mt: 1 }}>
                               {ordenarFechas(fechasSeleccionadas).map(f => (
-                              <Grid key={f} size={{xs:6}}>
-                              <Typography variant="h6" textAlign={'center'}>• {formatearFechaCorta(f)}</Typography>
+                              <Grid key={f} size={{xs:6}}>                             
+                              <Typography variant="h6" textAlign={'center'}>{formatearFechaCorta(f)}</Typography>
                               </Grid>
                               ))}
                           </Grid>
                           </Collapse>
-                      </Box>
-                      )
-                 }
+                     </>
+                )}
                 </Card>
                 </Grid>
 

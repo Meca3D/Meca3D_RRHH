@@ -26,7 +26,7 @@ import CalendarioAusencias from '../../Ausencias/CalendarioAusencias';
 
 const CrearAusenciaAdmin = () => {
   const navigate = useNavigate();
-  const { user, isAdminOrOwner } = useAuthStore();
+  const { isAdminOrOwner } = useAuthStore();
   const { crearAusencia, motivosPermisos, motivosBajas, loadConfigAusencias } = useAusenciasStore();
   const { empleados, fetchEmpleados } = useEmpleadosStore(); 
   const { showSuccess, showError } = useUIStore();
@@ -421,11 +421,12 @@ const CrearAusenciaAdmin = () => {
                       {mostrarListaFechas ? <ExpandLess sx={{fontSize:'1.5rem', color:tipo==="baja" ?'#d32f2f' :'#9C27B0'}}/> : <ExpandMore sx={{fontSize:'1.5rem', color:tipo==="baja" ?'#d32f2f' :'#9C27B0'}} />}
                     </Box>
                     <Collapse in={mostrarListaFechas}>
+                    <Divider sx={{ my: 1, bgcolor: tipo==="baja" ?'#d32f2f' :'#9C27B0' }} />
                       <Grid container mt={1}>
                         {ordenarFechas(fechasSeleccionadas).map(f => (
                           <Grid key={f} size={{xs:6}}>
                           <Typography  fontSize='1.1rem' textAlign={'center'}>
-                            • {formatearFechaCorta(f)}
+                            {formatearFechaCorta(f)}
                           </Typography>
                           </Grid>
                         ))}

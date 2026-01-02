@@ -23,7 +23,6 @@ export const useGlobalData = () => {
   const {
     calcularAñosServicio,
     nivelesSalariales,
-    loadNivelesSalariales,
     loadNivelesSalarialesAno, 
     getSalarioPorAño, 
     loading: nominaLoading,
